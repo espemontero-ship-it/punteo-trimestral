@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import GrupoProveedor from './components/GrupoProveedor';
 import SubirFactura from './components/SubirFactura';
+import SelectorTrimestre from './components/SelectorTrimestre';
 
 export default function Home() {
   const [trimestreId, setTrimestreId] = useState('');
-  const [trimestreInput, setTrimestreInput] = useState('');
   const [proveedores, setProveedores] = useState(null);
   const [resumen, setResumen] = useState(null);
   const [facturas, setFacturas] = useState(null);
@@ -17,10 +17,7 @@ export default function Home() {
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
-    if (guardado) {
-      setTrimestreId(guardado);
-      setTrimestreInput(guardado);
-    }
+    if (guardado) setTrimestreId(guardado);
   }, []);
 
   const cargar = useCallback(async id => {
@@ -44,10 +41,7 @@ export default function Home() {
     if (trimestreId) cargar(trimestreId);
   }, [trimestreId, cargar]);
 
-  function entrarTrimestre(e) {
-    e.preventDefault();
-    const id = trimestreInput.trim();
-    if (!id) return;
+  function entrarTrimestre(id) {
     localStorage.setItem('trimestreId', id);
     setTrimestreId(id);
   }
@@ -78,19 +72,7 @@ export default function Home() {
   }
 
   if (!trimestreId) {
-    return (
-      <div className="contenedor" style={{ paddingTop: '15vh' }}>
-        <div className="tarjeta">
-          <h1 style={{ marginTop: 0 }}>Punteo trimestral</h1>
-          <p className="muted">¿Qué trimestre vas a trabajar?</p>
-          <form onSubmit={entrarTrimestre}>
-            <input type="text" placeholder="ej. 2026-Q3" value={trimestreInput} onChange={e => setTrimestreInput(e.target.value)} />
-            <div style={{ height: 12 }} />
-            <button className="grande" type="submit">Continuar</button>
-          </form>
-        </div>
-      </div>
-    );
+    return <SelectorTrimestre onEntrar={entrarTrimestre} />;
   }
 
   const total = resumen?.total ?? 0;
