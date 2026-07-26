@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.env
+.env.local
+config.local.json
+*.log
+salida_puntear.xlsx
+.~lock.*

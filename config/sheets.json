@@ -1,0 +1,29 @@
+{
+  "_comentario": "Config de columnas por pestaña del excel del banco. Ajusta esto si BBVA/Openbank/PayPal cambian el formato de exportación.",
+  "sheets": [
+    {
+      "nombre": "bbva",
+      "dataStartRow": 3,
+      "textCols": ["E", "F", "G"],
+      "importeCol": "H",
+      "fechaCol": "B",
+      "notaCol": "M"
+    },
+    {
+      "nombre": "openbank",
+      "dataStartRow": 2,
+      "textCols": ["F"],
+      "importeCol": "H",
+      "fechaCol": "B",
+      "notaCol": "K"
+    },
+    {
+      "nombre": "paypal",
+      "dataStartRow": 1,
+      "textCols": ["E", "F", "S"],
+      "importeCol": "I",
+      "fechaCol": "B",
+      "notaCol": null
+    }
+  ]
+}
