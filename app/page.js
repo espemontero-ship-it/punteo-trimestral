@@ -2,15 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import GrupoProveedor from './components/GrupoProveedor';
+import SubirFactura from './components/SubirFactura';
 
 export default function Home() {
   const [trimestreId, setTrimestreId] = useState('');
   const [trimestreInput, setTrimestreInput] = useState('');
   const [proveedores, setProveedores] = useState(null);
   const [resumen, setResumen] = useState(null);
+  const [facturas, setFacturas] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [subiendoExcel, setSubiendoExcel] = useState(false);
   const [mensajeExcel, setMensajeExcel] = useState(null);
+  const [mensajeFacturaSuelta, setMensajeFacturaSuelta] = useState(null);
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -24,12 +27,14 @@ export default function Home() {
     if (!id) return;
     setCargando(true);
     try {
-      const [rp, rr] = await Promise.all([
+      const [rp, rr, rf] = await Promise.all([
         fetch(`/api/trimestres/${id}/proveedores`).then(r => r.json()),
         fetch(`/api/trimestres/${id}/resumen`).then(r => r.json()),
+        fetch(`/api/trimestres/${id}/facturas`).then(r => r.json()),
       ]);
       setProveedores(rp.proveedores || []);
       setResumen(rr);
+      setFacturas(rf.facturas || []);
     } finally {
       setCargando(false);
     }
@@ -125,6 +130,31 @@ export default function Home() {
           <button type="submit" disabled={subiendoExcel}>{subiendoExcel ? 'Subiendo...' : 'Subir'}</button>
         </form>
         {mensajeExcel && <p className="muted">{mensajeExcel}</p>}
+      </div>
+
+      <div className="tarjeta">
+        <strong>Subir factura suelta</strong>
+        <p className="muted">
+          Para cuando consigues una factura antes de tener el excel del banco (ej. una foto en el momento de comprar).
+          Se guarda y se intenta emparejar en cuanto subas o actualices el excel.
+        </p>
+        <SubirFactura
+          trimestreId={trimestreId}
+          etiqueta="Subir factura suelta"
+          onResultado={r => setMensajeFacturaSuelta(r.detalle)}
+        />
+        {mensajeFacturaSuelta && <p className="muted" style={{ marginTop: 8 }}>{mensajeFacturaSuelta}</p>}
+        {facturas && (() => {
+          const sueltas = facturas.filter(f => !f.proveedor_clave);
+          const pendientes = facturas.filter(f => f.estado !== 'matcheada');
+          if (facturas.length === 0) return null;
+          return (
+            <p className="muted" style={{ marginTop: 8 }}>
+              {facturas.length} factura(s) subida(s) — {pendientes.length} sin resolver todavía
+              {sueltas.length > 0 ? ` (${sueltas.length} sin proveedor asignado aún)` : ''}.
+            </p>
+          );
+        })()}
       </div>
 
       {cargando && <p className="muted">Cargando...</p>}

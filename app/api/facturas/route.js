@@ -4,8 +4,8 @@ const { procesarFacturaSubida } = require('../../../lib/facturaMatcher.cjs');
 
 export async function POST(request) {
   const { trimestreId, hoja, clave, rutaBlob, nombreOriginal } = await request.json();
-  if (!trimestreId || !hoja || !clave || !rutaBlob) {
-    return Response.json({ error: 'Faltan datos (trimestreId, hoja, clave, rutaBlob).' }, { status: 400 });
+  if (!trimestreId || !rutaBlob) {
+    return Response.json({ error: 'Faltan datos (trimestreId, rutaBlob).' }, { status: 400 });
   }
 
   const buffer = await descargarBlob(rutaBlob);

@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
 
-export default function SubirFactura({ trimestreId, hoja, clave, onResultado }) {
+export default function SubirFactura({ trimestreId, hoja, clave, etiqueta, onResultado }) {
   const inputRef = useRef(null);
   const [subiendo, setSubiendo] = useState(false);
 
@@ -14,7 +14,8 @@ export default function SubirFactura({ trimestreId, hoja, clave, onResultado }) 
 
     setSubiendo(true);
     try {
-      const blob = await uploadPresigned(`${trimestreId}/${hoja}-${clave}-${Date.now()}-${file.name}`, file, {
+      const prefijo = hoja && clave ? `${hoja}-${clave}` : 'sueltas';
+      const blob = await uploadPresigned(`${trimestreId}/${prefijo}-${Date.now()}-${file.name}`, file, {
         access: 'private',
         handleUploadUrl: '/api/blob-upload',
       });
@@ -48,7 +49,7 @@ export default function SubirFactura({ trimestreId, hoja, clave, onResultado }) 
         disabled={subiendo}
         onClick={() => inputRef.current?.click()}
       >
-        {subiendo ? 'Subiendo...' : '📎 Subir factura'}
+        {subiendo ? 'Subiendo...' : `📎 ${etiqueta || 'Subir factura'}`}
       </button>
     </div>
   );
