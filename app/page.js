@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import GrupoProveedor from './components/GrupoProveedor';
 import SubirFactura from './components/SubirFactura';
 import SelectorTrimestre from './components/SelectorTrimestre';
+import SeccionLotes from './components/SeccionLotes';
 
 export default function Home() {
   const [trimestreId, setTrimestreId] = useState('');
@@ -83,9 +84,14 @@ export default function Home() {
     <div className="contenedor">
       <div className="fila" style={{ marginTop: 16 }}>
         <h1 style={{ margin: 0 }}>{trimestreId}</h1>
-        <button className="secundario" onClick={() => { localStorage.removeItem('trimestreId'); setTrimestreId(''); setProveedores(null); }}>
-          Cambiar trimestre
-        </button>
+        <div>
+          <button className="secundario" onClick={() => { localStorage.removeItem('trimestreId'); setTrimestreId(''); setProveedores(null); }} style={{ marginRight: 8 }}>
+            Cambiar trimestre
+          </button>
+          <button className="secundario" onClick={async () => { await fetch('/api/logout', { method: 'POST' }); window.location.href = '/login'; }}>
+            Salir
+          </button>
+        </div>
       </div>
 
       <div className="tarjeta">
@@ -138,6 +144,8 @@ export default function Home() {
           );
         })()}
       </div>
+
+      <SeccionLotes trimestreId={trimestreId} />
 
       {cargando && <p className="muted">Cargando...</p>}
 

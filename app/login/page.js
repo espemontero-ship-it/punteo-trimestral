@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -17,14 +18,14 @@ export default function LoginPage() {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ usuario: usuario.trim() || undefined, password }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         setError(data.error || 'No se pudo iniciar sesión');
         return;
       }
-      router.push('/');
+      router.push(data.redirect || '/');
       router.refresh();
     } finally {
       setEnviando(false);
@@ -37,17 +38,28 @@ export default function LoginPage() {
         <h1 style={{ marginTop: 0 }}>Punteo trimestral</h1>
         <form onSubmit={onSubmit}>
           <input
+            type="text"
+            placeholder="Usuario (solo colaboradores)"
+            value={usuario}
+            onChange={e => setUsuario(e.target.value)}
+            autoComplete="username"
+          />
+          <div style={{ height: 12 }} />
+          <input
             type="password"
             placeholder="Contraseña"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            autoFocus
+            autoComplete="current-password"
           />
           <div style={{ height: 12 }} />
           <button className="grande" type="submit" disabled={enviando}>
             {enviando ? 'Entrando...' : 'Entrar'}
           </button>
           {error && <p className="error">{error}</p>}
+          <p className="muted" style={{ marginTop: 12 }}>
+            Si eres administradora, deja el usuario en blanco y pon solo la contraseña.
+          </p>
         </form>
       </div>
     </div>
