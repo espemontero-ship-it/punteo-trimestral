@@ -25,7 +25,7 @@ En [vercel.com](https://vercel.com) → **Add New → Project** → importa el r
 
 Desde el dashboard del proyecto en Vercel → pestaña **Storage**:
 - **Create Database → Postgres (Neon)** — esto añade automáticamente `DATABASE_URL` (o `POSTGRES_URL`) a las variables de entorno del proyecto.
-- **Create Database → Blob** — añade automáticamente `BLOB_READ_WRITE_TOKEN`.
+- **Create Database → Blob** — añade `BLOB_STORE_ID` y `BLOB_WEBHOOK_PUBLIC_KEY`. No hace falta ningún `BLOB_READ_WRITE_TOKEN`: la app se autentica con OIDC (el token corto que Vercel inyecta solo en Production/Preview), usando el patrón moderno `handleUploadPresigned`/`uploadPresigned` en vez del antiguo `handleUpload`.
 
 ## 4. Variables de entorno propias
 

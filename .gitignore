@@ -6,3 +6,6 @@ config.local.json
 *.log
 salida_puntear.xlsx
 .~lock.*
+
+.vercel
+.env*

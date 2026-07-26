@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
+import { uploadPresigned } from '@vercel/blob/client';
 
 export default function SubirFactura({ trimestreId, hoja, clave, onResultado }) {
   const inputRef = useRef(null);
@@ -14,8 +14,8 @@ export default function SubirFactura({ trimestreId, hoja, clave, onResultado }) 
 
     setSubiendo(true);
     try {
-      const blob = await upload(`${trimestreId}/${hoja}-${clave}-${Date.now()}-${file.name}`, file, {
-        access: 'public',
+      const blob = await uploadPresigned(`${trimestreId}/${hoja}-${clave}-${Date.now()}-${file.name}`, file, {
+        access: 'private',
         handleUploadUrl: '/api/blob-upload',
       });
 
