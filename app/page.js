@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import GrupoProveedor from './components/GrupoProveedor';
+import { useEffect, useState, useCallback } from 'react';
+import TablaMovimientos from './components/TablaMovimientos';
 import SubirFactura from './components/SubirFactura';
 import SelectorTrimestre from './components/SelectorTrimestre';
 import SeccionLotes from './components/SeccionLotes';
@@ -24,8 +24,6 @@ export default function Home() {
   const [mensajeExcel, setMensajeExcel] = useState(null);
   const [mensajeFacturaSuelta, setMensajeFacturaSuelta] = useState(null);
   const [pestana, setPestana] = useState('inicio');
-  const [busqueda, setBusqueda] = useState('');
-  const [soloPendientes, setSoloPendientes] = useState(true);
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -61,7 +59,6 @@ export default function Home() {
   }
 
   function irAPendientes() {
-    setSoloPendientes(true);
     setPestana('trimestre');
   }
 
@@ -88,16 +85,6 @@ export default function Home() {
       e.target.reset();
     }
   }
-
-  const proveedoresFiltrados = useMemo(() => {
-    if (!proveedores) return proveedores;
-    const texto = busqueda.trim().toLowerCase();
-    return proveedores.filter(g => {
-      if (soloPendientes && g.resueltas >= g.total) return false;
-      if (texto && !`${g.clave} ${g.hoja}`.toLowerCase().includes(texto)) return false;
-      return true;
-    });
-  }, [proveedores, busqueda, soloPendientes]);
 
   if (!trimestreId) {
     return <SelectorTrimestre onEntrar={entrarTrimestre} />;
@@ -193,32 +180,20 @@ export default function Home() {
             </div>
           </details>
 
-          <div className="buscador-fila">
-            <input
-              type="text"
-              placeholder="Buscar proveedor..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-            />
-            <label className="toggle-pendientes">
-              <input type="checkbox" checked={soloPendientes} onChange={e => setSoloPendientes(e.target.checked)} />
-              Solo pendientes
-            </label>
-          </div>
-
           {cargando && <p className="muted">Cargando...</p>}
 
           {proveedores && proveedores.length === 0 && (
             <p className="muted">Todavía no hay movimientos. Sube el excel del trimestre para empezar.</p>
           )}
 
-          {proveedoresFiltrados && proveedores && proveedores.length > 0 && proveedoresFiltrados.length === 0 && (
-            <p className="muted">Nada que coincida con este filtro.</p>
+          {proveedores && proveedores.length > 0 && (
+            <TablaMovimientos
+              trimestreId={trimestreId}
+              proveedores={proveedores}
+              proyectos={proyectos}
+              onCambio={() => cargar(trimestreId)}
+            />
           )}
-
-          {proveedoresFiltrados && proveedoresFiltrados.map(g => (
-            <GrupoProveedor key={g.id} trimestreId={trimestreId} grupo={g} proyectos={proyectos} onCambio={() => cargar(trimestreId)} />
-          ))}
         </>
       )}
 

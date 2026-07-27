@@ -2,6 +2,14 @@
 
 Este documento es la fuente de verdad del proyecto: qué es, qué decisiones se han tomado y por qué, y qué queda pendiente. Se actualiza cada vez que se toma una decisión de producto, alcance o diseño — no hace falta bucear en sesiones antiguas para reconstruirlo.
 
+## Regla de trabajo (fija, no negociable)
+
+**Se muestra antes de implementar. Se habla antes de implementar.** Esto aplica a cualquier cambio — código real, config, base de datos, y también mockups/maquetas.
+
+"Mostrar" = describir o previsualizar **sin tocar ningún archivo**. "Implementar" = editar el archivo (aunque sea un mockup) y volver a publicarlo. Son dos pasos distintos y no se saltan: si la usuaria pide "muéstramelo", la respuesta es una descripción o boceto en palabras, nunca una edición de archivo — ni siquiera de un mockup. Solo se edita después de una confirmación explícita a esa descripción. Una idea a medio formular, o una petición que "parece clara", no es autorización para tocar un archivo.
+
+Ver [[feedback-validate-before-coding]] en memoria — esta regla ya se incumplió más de una vez en la sesión del 2026-07-27 y hay que dejar de repetirlo.
+
 ## Qué es y para quién
 
 Aplicación para una asociación sin ánimo de lucro (carpeta de Drive: "NOT ONLY LARP" — administración). Cada trimestre hay que mandar a la gestoría el punteo del banco contra las facturas de gastos, para que preparen IVA, IRPF e IS.
@@ -133,8 +141,29 @@ Revisión de las 20 pantallas/componentes reales contra el flujo de arriba. Los 
 - Los `.etiqueta.fija/.mixta/.nueva/.pedida` que quedan (estado real aceptada/rechazada/pendiente en lotes y colaboradores) se mantienen coloreados a propósito — es estado semántico, no decoración — pero con tonos apagados (`--ok`/`--warn`/`--new` desaturados) en vez de verde/naranja/rojo saturados.
 - Tipografía: familia Calibri (`Calibri, Candara, "Segoe UI", system-ui, sans-serif`).
 - Tema oscuro descartado explícitamente (ya se había descartado antes, en la sesión anterior, por el mismo motivo de fatiga visual en sesiones largas) — no hay `prefers-color-scheme` ni variante oscura, un único tema.
-- **Aplicado** en `app/globals.css` (tokens, tipografía, `.etiqueta`, toasts, diálogos) y `app/components/GrupoProveedor.js` (categoría como texto). Verificado en `localhost:3000` contra un trimestre de prueba real: fondo blanco, botón `rgb(44,67,88)`, fuente Calibri confirmados por JS en el navegador.
+- **Aplicado** en `app/globals.css` (tokens, tipografía, `.etiqueta`, toasts, diálogos). Verificado en `localhost:3000` contra un trimestre de prueba real: fondo blanco, botón `rgb(44,67,88)`, fuente Calibri confirmados por JS en el navegador.
 - **Pendiente**: no se ha vuelto a subir el tamaño de letra al nivel de los mockups v3 (16.5px nombres / 16px botones-inputs) — los botones/inputs de la app ya estaban en 16px de base, pero no se revisó el resto letra por letra contra el mockup. Revisar si hace falta subir más.
+
+## Tabla plana de la pestaña Trimestre (2026-07-27, reemplaza el acordeón por proveedor)
+
+`GrupoProveedor.js` (acordeón: había que abrir cada tarjeta de proveedor para ver algo) se sustituyó por `app/components/TablaMovimientos.js`, una tabla continua real — motivado directamente porque con ~50-300 grupos, la mayoría de 1 sola línea, "un clic por grupo" era en la práctica "un clic por línea" (~300 clics para ver todo).
+
+**Estructura:**
+- Sin acordeón: todos los movimientos visibles de entrada. Agrupado visualmente por proveedor con una fila de cabecera gris (nombre, categoría, X de Y resueltas, **importe total real del grupo** — ojo, tiene que sumar sobre el grupo completo, no sobre lo que quede visible tras filtrar, es un bug real que ya se coló una vez) y, si hay una nota aprendida para ese proveedor, un texto ligero "sugerencia: X" junto a la meta-info — **no** un botón de "Confirmar", porque cada línea ya viene con la Nota prellenada con esa misma sugerencia.
+- **Columnas base, en este orden**: Fecha, Concepto, Proveedor (repite el nombre del grupo en cada fila, a propósito), Importe, Estado, Nota, Factura, Proyecto. Cada dato en su propia columna, nunca mezclados (ej. Nota/Factura/Estado no comparten celda).
+- **Columnas extra ocultables**: botón "Columnas" abre un panel con casillas — la lista sale dinámicamente de las claves presentes en `datos_originales` de los movimientos cargados (Beneficiario/Ordenante, Saldo, Observaciones, Código, Fecha valor, Divisa, Oficina, Remesa...), no hay que mantener una lista fija a mano. Ocultas por defecto.
+- **Buscador general**: filtra por texto en cualquier campo visible (no solo proveedor), incluidas las columnas extra activas.
+- **Ordenar por columna**: clic en cualquier cabecera ordena por ese campo (asc → desc → vuelve a agrupado), con flecha indicando la dirección. Al ordenar se pierde el agrupado visual (es el comportamiento esperado de una tabla real).
+- **Nota**: un único `<input>`, guarda con Enter — **sin botón visible** (se quitó a propósito: guardar al salir del campo ya se había descartado por poco fiable en móvil, pero un botón "OK" tampoco hacía falta, Enter es suficiente y es una acción igual de explícita). Se prellena en azul con la sugerencia aprendida cuando existe.
+- **Estado**: desplegable pendiente/pedida (acción individual por línea, además de que ya no hay botón de grupo para esto — se quitó el bulto "Marcar pedida" del grupo por la misma razón que el de "Confirmar como X": redundante si cada línea ya tiene su propio control). Una vez resuelta, es una etiqueta de solo lectura, no un desplegable.
+- **Factura**: enlace directo "Ver factura →" si ya hay una emparejada, columna vacía si no.
+- **Proyecto**: igual que ya estaba (desplegable + sugerencia de un clic "¿Wield 2?").
+
+**Base de datos**: nueva columna `movimientos.datos_originales JSONB` — guarda **todas** las columnas de la fila del excel tal cual, con el nombre real de cada columna (no solo las que ya se usaban para calcular concepto/importe/clave, que siguen igual). Es lo que alimenta las columnas extra ocultables. Funciona igual para bbva/openbank/paypal aunque tengan columnas distintas entre sí — no hace falta definir campos a mano por banco. Migración `db/migration_datos_originales.sql`, aplicada contra la base real. `lib/importarExcel.cjs` lee la fila de cabecera (justo antes de `dataStartRow`) para saber los nombres de columna de cada banco.
+
+**Nuevo endpoint**: `POST /api/movimientos/:id/estado` (`{ pedida: true|false }`) — cambia el estado individual de una línea, vía `lib/agrupador.cjs#marcarLineaPendiente`.
+
+Verificado insertando datos de prueba realistas (con `datos_originales`) directamente en la base de datos local y probando en el navegador: agrupado con total correcto, ordenar por columna, buscador por cualquier campo (incluidas columnas extra), mostrar/ocultar columnas, nota prellenada, cambio de estado, enlace a factura.
 
 ## Registro de decisiones
 
@@ -151,3 +180,6 @@ Cada decisión de producto/alcance/diseño se anota aquí en cuanto se toma, con
 - **2026-07-27** — Corregido el formato de columnas de la tabla de movimientos: de dos líneas por fila a una tabla real (`<table>`) con Fecha/Concepto/Proveedor/Importe/Nota — la usuaria lo pidió explícitamente como "tabla", no como tarjetas con texto corrido.
 - **2026-07-27** — Feedback de proceso de la usuaria, importante para todo el proyecto en adelante: **el flujo de trabajo es idea → validar en palabras → implementar, en ese orden.** No escribir código a partir de una idea a medio formular sin confirmarla antes explícitamente, aunque parezca clara. Motivo: la usuaria corrigió dos veces seguidas en esta sesión ("y proyecto", "y proveedor") mientras ya se estaba implementando código sin haber confirmado el alcance completo primero.
 - **2026-07-27** — Añadida la columna/funcionalidad "Proyecto": lista fija (no ligada a trimestre ni, de momento, a año — eso se aparca para cuando haga falta poner estados activo/cerrado), gestionada en su propio apartado `/proyectos` enlazado desde el menú general — explícitamente **no** dentro de la pestaña Trimestre (se preguntó y se corrigió esa colocación antes de terminar). Inferencia por coincidencia de texto contra los proyectos ya creados, nunca auto-asigna sin confirmar.
+- **2026-07-27** — Regla de trabajo elevada de una entrada del registro a sección propia al principio del documento ("Regla de trabajo (fija, no negociable)"), porque se volvió a incumplir (se editó un mockup con `sed` justo después de que la usuaria pidiera "muéstramelo"). Aclarado explícitamente: "mostrar" = describir sin tocar archivos; "implementar" = editar y publicar. Son pasos separados, incluso para mockups desechables.
+- **2026-07-27** — El campo `movimientos.concepto` ya guardado (usado para agrupar/matchear) es en realidad varias columnas del excel original ya fusionadas en un solo texto (`config/sheets.json`) — no había forma de ver esas columnas por separado en pantalla. Se decide guardar la fila completa aparte, sin tocar cómo se calcula `concepto` (ver sección "Tabla plana" arriba) — la usuaria confirma que los formatos de columnas pueden cambiar por banco en el futuro, pero decide no diseñar para eso todavía ("ya cruzaremos ese puente").
+- **2026-07-27** — Rediseñada la pestaña Trimestre entera: de acordeón por proveedor (un clic por grupo para ver nada) a tabla plana continua, con columnas mostrables/ocultables, buscador general y orden por columna. Ver sección "Tabla plana de la pestaña Trimestre" arriba para el detalle completo — fue la sesión de iteración más larga del día, con varias rondas de "quita botones" hasta llegar a: Nota sin botón (Enter guarda), Estado como desplegable (no icono de acción), Sugerencia de grupo como texto (no botón), Sugerencia por línea prellenando el campo (no botón de aceptar separado).

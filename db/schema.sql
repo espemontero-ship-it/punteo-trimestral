@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS movimientos (
   clave TEXT NOT NULL,                -- clave normalizada (lib/normalize.js)
   estado TEXT NOT NULL DEFAULT 'sin_resolver', -- sin_resolver | resuelta | pedida_pendiente
   nota_final TEXT,
-  proyecto_id BIGINT REFERENCES proyectos(id)
+  proyecto_id BIGINT REFERENCES proyectos(id),
+  datos_originales JSONB -- todas las columnas de la fila del excel, {nombre_columna: valor}, para poder mostrarlas/ocultarlas en pantalla sin perder nada
 );
 
 CREATE TABLE IF NOT EXISTS movimiento_facturas (
