@@ -11,7 +11,7 @@ const ETIQUETAS = {
   nueva: 'nueva',
 };
 
-export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
+export default function GrupoProveedor({ trimestreId, grupo, proyectos, onCambio }) {
   const [abierto, setAbierto] = useState(false);
   const [notasManual, setNotasManual] = useState({});
   const [mensajes, setMensajes] = useState({});
@@ -69,6 +69,15 @@ export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
     }
   }
 
+  async function asignarProyecto(movimientoId, proyectoId) {
+    const r = await apiFetch(`/api/movimientos/${movimientoId}/proyecto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proyectoId: proyectoId || null }),
+    }, { mensajeError: 'No se pudo guardar el proyecto.' });
+    if (r) onCambio();
+  }
+
   async function elegirCandidato(opcion) {
     const nota = opcion.esCombo ? `${opcion.numero} + ${opcion.otraFacturaNumero}` : String(opcion.numero);
     const facturaIds = opcion.esCombo ? [opcion.facturaId, opcion.otraFacturaId] : [opcion.facturaId];
@@ -107,64 +116,105 @@ export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
               Marcar como pedida, esperando al proveedor
             </button>
           )}
-          <div className="lista-movimientos">
-            {grupo.movimientos.map(m => {
-              const resuelta = m.estado === 'resuelta';
-              const facturaIds = m.factura_ids || [];
-              return (
-                <div key={m.id} className="fila-movimiento">
-                  <div className="fila-movimiento-linea1">
-                    <span className="fila-movimiento-concepto">{m.concepto?.slice(0, 60)}</span>
-                    <span className="num fila-movimiento-importe">{Number(m.importe).toFixed(2)}€</span>
-                  </div>
-                  <div className="fila-movimiento-linea2 muted">
-                    <span>{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</span>
-                    {resuelta && <span className="fila-movimiento-nota">Nota: {m.nota_final}</span>}
-                    {facturaIds.length > 0 && (
-                      <a className="ver-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">
-                        Ver factura{facturaIds.length > 1 ? 's' : ''} →
-                      </a>
-                    )}
-                    {m.estado === 'pedida_pendiente' && <span className="etiqueta pedida">pedida</span>}
-                  </div>
-
-                  {!resuelta && (
-                    <>
-                      {grupo.categoria === 'factura_propia' ? (
-                        <SubirFactura
-                          trimestreId={trimestreId}
-                          hoja={grupo.hoja}
-                          clave={grupo.clave}
-                          onResultado={r => onResultadoFactura(m, r)}
-                        />
-                      ) : (
-                        <div className="fila" style={{ marginTop: 8 }}>
-                          <input
-                            type="text"
-                            placeholder="Nota (ej. stripe, devolución...)"
-                            value={notasManual[m.id] || ''}
-                            onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
-                          />
-                          <button onClick={() => confirmarLineaManual(m.id)}>Confirmar</button>
-                        </div>
-                      )}
-
-                      {mensajes[m.id] && <p className="muted" style={{ marginTop: 6 }}>{mensajes[m.id]}</p>}
-
-                      {Object.values(ambiguos).flat().filter(o => o.movimientoId === m.id).length > 0 &&
-                        Object.entries(ambiguos).map(([facturaId, opciones]) =>
-                          opciones.filter(o => o.movimientoId === m.id).map((o, i) => (
-                            <button key={`${facturaId}-${i}`} className="secundario" style={{ marginTop: 6 }} onClick={() => elegirCandidato(o)}>
-                              {o.esCombo ? `Confirmar combinación: factura ${o.numero} + ${o.otraFacturaNumero}` : `Es esta línea (factura ${o.numero})`}
-                            </button>
-                          ))
+          <div className="tabla-movimientos-envoltura">
+            <table className="tabla-movimientos">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Concepto</th>
+                  <th>Proveedor</th>
+                  <th className="col-importe">Importe</th>
+                  <th>Nota</th>
+                  <th>Proyecto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grupo.movimientos.map(m => {
+                  const resuelta = m.estado === 'resuelta';
+                  const facturaIds = m.factura_ids || [];
+                  return (
+                    <tr key={m.id}>
+                      <td className="muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</td>
+                      <td>{m.concepto?.slice(0, 60)}</td>
+                      <td className="muted">{grupo.clave}</td>
+                      <td className="num col-importe">{Number(m.importe).toFixed(2)}€</td>
+                      <td>
+                        {resuelta ? (
+                          <>
+                            {m.nota_final}
+                            {facturaIds.length > 0 && (
+                              <>
+                                {' — '}
+                                <a className="ver-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">
+                                  Ver factura{facturaIds.length > 1 ? 's' : ''} →
+                                </a>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          m.estado === 'pedida_pendiente' && <span className="etiqueta pedida">pedida</span>
                         )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
+                      </td>
+                      <td>
+                        <select
+                          value={m.proyecto_id || ''}
+                          onChange={e => asignarProyecto(m.id, e.target.value)}
+                          className="select-proyecto"
+                        >
+                          <option value="">—</option>
+                          {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                        </select>
+                        {!m.proyecto_id && m.proyecto_sugerido && (
+                          <button
+                            type="button"
+                            className="sugerencia-proyecto"
+                            onClick={() => asignarProyecto(m.id, m.proyecto_sugerido.id)}
+                          >
+                            ¿{m.proyecto_sugerido.nombre}?
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+
+          {grupo.movimientos.filter(m => m.estado !== 'resuelta').map(m => (
+            <div key={m.id} className="tarjeta" style={{ background: 'transparent' }}>
+              <p className="muted" style={{ marginTop: 0 }}>{m.concepto?.slice(0, 60)} · {Number(m.importe).toFixed(2)}€</p>
+              {grupo.categoria === 'factura_propia' ? (
+                <SubirFactura
+                  trimestreId={trimestreId}
+                  hoja={grupo.hoja}
+                  clave={grupo.clave}
+                  onResultado={r => onResultadoFactura(m, r)}
+                />
+              ) : (
+                <div className="fila">
+                  <input
+                    type="text"
+                    placeholder="Nota (ej. stripe, devolución...)"
+                    value={notasManual[m.id] || ''}
+                    onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
+                  />
+                  <button onClick={() => confirmarLineaManual(m.id)}>Confirmar</button>
+                </div>
+              )}
+
+              {mensajes[m.id] && <p className="muted" style={{ marginTop: 6 }}>{mensajes[m.id]}</p>}
+
+              {Object.values(ambiguos).flat().filter(o => o.movimientoId === m.id).length > 0 &&
+                Object.entries(ambiguos).map(([facturaId, opciones]) =>
+                  opciones.filter(o => o.movimientoId === m.id).map((o, i) => (
+                    <button key={`${facturaId}-${i}`} className="secundario" style={{ marginTop: 6 }} onClick={() => elegirCandidato(o)}>
+                      {o.esCombo ? `Confirmar combinación: factura ${o.numero} + ${o.otraFacturaNumero}` : `Es esta línea (factura ${o.numero})`}
+                    </button>
+                  ))
+                )}
+            </div>
+          ))}
         </div>
       )}
     </div>

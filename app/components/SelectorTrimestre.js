@@ -47,7 +47,10 @@ export default function SelectorTrimestre({ onEntrar }) {
   return (
     <div className="contenedor" style={{ paddingTop: '8vh' }}>
       <div className="tarjeta">
-        <h1 style={{ marginTop: 0 }}>Punteo trimestral</h1>
+        <div className="fila">
+          <h1 style={{ margin: 0 }}>Punteo trimestral</h1>
+          <a href="/proyectos"><button className="secundario">Proyectos</button></a>
+        </div>
 
         {trimestres === null && <p className="muted">Cargando trimestres...</p>}
 

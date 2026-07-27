@@ -48,6 +48,15 @@ CREATE TABLE IF NOT EXISTS facturas (
   motivo_rechazo TEXT
 );
 
+-- Lista fija de proyectos/eventos (ej. "Wield 2"), creada una vez y reutilizada
+-- entre trimestres. Un movimiento puede etiquetarse con uno, inferido por texto
+-- o asignado a mano.
+CREATE TABLE IF NOT EXISTS proyectos (
+  id BIGSERIAL PRIMARY KEY,
+  nombre TEXT NOT NULL UNIQUE,
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS movimientos (
   id BIGSERIAL PRIMARY KEY,
   trimestre_id TEXT NOT NULL REFERENCES trimestres(id) ON DELETE CASCADE,
@@ -58,7 +67,8 @@ CREATE TABLE IF NOT EXISTS movimientos (
   importe NUMERIC(12,2) NOT NULL,
   clave TEXT NOT NULL,                -- clave normalizada (lib/normalize.js)
   estado TEXT NOT NULL DEFAULT 'sin_resolver', -- sin_resolver | resuelta | pedida_pendiente
-  nota_final TEXT
+  nota_final TEXT,
+  proyecto_id BIGINT REFERENCES proyectos(id)
 );
 
 CREATE TABLE IF NOT EXISTS movimiento_facturas (
@@ -104,6 +114,7 @@ CREATE TABLE IF NOT EXISTS memoria_proveedores (
   PRIMARY KEY (hoja, clave, nota)
 );
 
+CREATE INDEX IF NOT EXISTS idx_movimientos_proyecto ON movimientos(proyecto_id);
 CREATE INDEX IF NOT EXISTS idx_movimientos_trimestre ON movimientos(trimestre_id);
 CREATE INDEX IF NOT EXISTS idx_movimientos_clave ON movimientos(trimestre_id, clave);
 CREATE INDEX IF NOT EXISTS idx_facturas_trimestre ON facturas(trimestre_id);

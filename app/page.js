@@ -18,6 +18,7 @@ export default function Home() {
   const [proveedores, setProveedores] = useState(null);
   const [resumen, setResumen] = useState(null);
   const [facturas, setFacturas] = useState(null);
+  const [proyectos, setProyectos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [subiendoExcel, setSubiendoExcel] = useState(false);
   const [mensajeExcel, setMensajeExcel] = useState(null);
@@ -35,14 +36,16 @@ export default function Home() {
     if (!id) return;
     setCargando(true);
     try {
-      const [rp, rr, rf] = await Promise.all([
+      const [rp, rr, rf, rpy] = await Promise.all([
         apiFetch(`/api/trimestres/${id}/proveedores`, undefined, { mensajeError: 'No se pudieron cargar los proveedores.' }),
         apiFetch(`/api/trimestres/${id}/resumen`, undefined, { mensajeError: 'No se pudo cargar el resumen.' }),
         apiFetch(`/api/trimestres/${id}/facturas`, undefined, { mensajeError: 'No se pudieron cargar las facturas.' }),
+        apiFetch('/api/proyectos', undefined, { mensajeError: 'No se pudieron cargar los proyectos.' }),
       ]);
       setProveedores((rp && rp.proveedores) || []);
       setResumen(rr);
       setFacturas((rf && rf.facturas) || []);
+      setProyectos((rpy && rpy.proyectos) || []);
     } finally {
       setCargando(false);
     }
@@ -214,7 +217,7 @@ export default function Home() {
           )}
 
           {proveedoresFiltrados && proveedoresFiltrados.map(g => (
-            <GrupoProveedor key={g.id} trimestreId={trimestreId} grupo={g} onCambio={() => cargar(trimestreId)} />
+            <GrupoProveedor key={g.id} trimestreId={trimestreId} grupo={g} proyectos={proyectos} onCambio={() => cargar(trimestreId)} />
           ))}
         </>
       )}
