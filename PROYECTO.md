@@ -114,7 +114,7 @@ Revisión de las 20 pantallas/componentes reales contra el flujo de arriba. Los 
 ## Línea visual (decidida 2026-07-27, aplicada al código el mismo día)
 
 - Fondo blanco puro / neutro, sin ningún tinte de color en tarjetas ni bordes.
-- Acento único: azul oscuro `#2c4358` para botón principal, barra de progreso y punto de "pendiente" — nada más lleva color decorativo.
+- Acento único: azul de la identidad de NOT ONLY LARP, `#1d5da6` (antes un azul `#2c4358` inventado) — para botón principal, barra de progreso y punto de "pendiente". Texto y gris neutro también alineados con la marca: texto `#231f20`, gris `#58595b` (estimados a ojo del logo en PDF, no hay hex exactos documentados — corregir si aparecen). Decisión 2026-07-27: mantener Calibri (no la Montserrat Extrabold del logo), pero sí adoptar la paleta de color de la asociación.
 - Categorías de proveedor (fija/factura propia/mixta/nueva) como texto simple junto al nombre (`.categoria-texto`), no insignias de colores — el "semáforo" de colores por categoría es justo lo que se rechazó.
 - Los `.etiqueta.fija/.mixta/.nueva/.pedida` que quedan (estado real aceptada/rechazada/pendiente en lotes y colaboradores) se mantienen coloreados a propósito — es estado semántico, no decoración — pero con tonos apagados (`--ok`/`--warn`/`--new` desaturados) en vez de verde/naranja/rojo saturados.
 - Tipografía: familia Calibri (`Calibri, Candara, "Segoe UI", system-ui, sans-serif`).
@@ -133,3 +133,4 @@ Cada decisión de producto/alcance/diseño se anota aquí en cuanto se toma, con
 - **2026-07-27** — Acordado el flujo de facturas que llegan tarde: atajo opcional "es una de las pendientes" al subir, sin forzarlo como paso obligatorio (2-10 casos/trimestre vs. 200-500 líneas totales).
 - **2026-07-27** — Auditoría de UX completa de las 20 pantallas/componentes, hecha contra el flujo real (no una checklist genérica). El hallazgo principal no era una lista de bugs sueltos: una sola pantalla mezclaba los tres momentos de uso sin distinguirlos.
 - **2026-07-27** — Acordada la reorganización en 3 pestañas dentro del trimestre: Inicio / Trimestre / Colaboradores (ver "Arquitectura de información"). La pestaña de proveedores se llama "Trimestre", no "Proveedores". Estructura acordada primero; el acabado visual de esta reorganización queda para después ("vamos poco a poco").
+- **2026-07-27** — Adoptada la paleta de color real de NOT ONLY LARP (azul `#1d5da6`, texto `#231f20`, gris `#58595b`) en vez del azul inventado en los mockups, a partir del logo/brand kit en PDF que pasó la usuaria. Se mantiene Calibri, no Montserrat. Colores estimados a ojo (sin hex documentado), verificado en el navegador contra el trimestre real.
