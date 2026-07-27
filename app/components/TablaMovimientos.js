@@ -481,6 +481,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
                     c === 'Fecha' ? 'fija col-fecha' : '',
                     c === 'Concepto' ? 'fija col-concepto th-concepto' : '',
                   ].join(' ').trim()}
+                  style={{ width: anchoDe(c) }}
                 >
                   <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
                     {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
@@ -489,7 +490,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
                 </th>
               ))}
               {columnasVisiblesExtra.map(c => (
-                <th key={c}>
+                <th key={c} style={{ width: anchoDe(c) }}>
                   <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
                     {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
                   </span>
