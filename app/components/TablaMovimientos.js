@@ -22,6 +22,14 @@ function nombreGrupo(clave) {
   return (clave || '').replace(/ #\d+$/, '');
 }
 
+// La cabecera del grupo muestra el nombre corto de Proveedor si ya se ha
+// puesto en alguna línea del grupo — si no, cae al texto de la clave (el
+// mismo que se usaba antes de que existiera el campo Proveedor).
+function nombreGrupoMostrado(g) {
+  const conProveedor = g.movimientos.find(m => m.proveedor);
+  return conProveedor ? conProveedor.proveedor : nombreGrupo(g.clave);
+}
+
 export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio }) {
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(true);
@@ -31,6 +39,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   const [notasManual, setNotasManual] = useState({});
   const [proveedoresManual, setProveedoresManual] = useState({});
   const [notasGrupo, setNotasGrupo] = useState({});
+  const [proveedoresGrupo, setProveedoresGrupo] = useState({});
   const [mensajes, setMensajes] = useState({});
   const [ambiguos, setAmbiguos] = useState({});
   const [anchos, setAnchos] = useState({});
@@ -199,6 +208,15 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (r) onCambio();
   }
 
+  async function guardarProveedorGrupo(g, valor) {
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/proveedor-grupo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hoja: g.hoja, clave: g.clave, proveedor: (valor ?? '').trim() }),
+    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    if (r) onCambio();
+  }
+
   async function separarDeGrupo(movimientoId) {
     const r = await apiFetch(`/api/movimientos/${movimientoId}/separar`, {
       method: 'POST',
@@ -211,6 +229,15 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ proyectoId: proyectoId || null }),
+    }, { mensajeError: 'No se pudo guardar el proyecto.' });
+    if (r) onCambio();
+  }
+
+  async function asignarProyectoGrupo(g, proyectoId) {
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/proyecto-grupo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hoja: g.hoja, clave: g.clave, proyectoId: proyectoId || null }),
     }, { mensajeError: 'No se pudo guardar el proyecto.' });
     if (r) onCambio();
   }
@@ -281,7 +308,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       <input
         className={`campo-nota${prellenado ? ' prellenado' : ''}`}
         type="text"
-        placeholder="Nota..."
+        placeholder=""
         value={valorActual}
         onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNota(m.id, e.target.value); } }}
@@ -323,9 +350,9 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     );
   }
 
-  function filaMovimiento(m, g) {
+  function filaMovimiento(m, g, esInicioGrupo) {
     return (
-      <tr key={m.id}>
+      <tr key={m.id} className={esInicioGrupo ? 'inicio-grupo' : undefined}>
         <td className="fija col-fecha muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</td>
         <td className="fija col-concepto concepto">{m.concepto?.slice(0, 80)}</td>
         <td className="proveedor">
@@ -364,10 +391,19 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       <tr className="fila-grupo" key={`g-${g.id}`}>
         <td className="fija col-fecha" />
         <td className="fija col-concepto">
-          <div className="grupo-nombre">{nombreGrupo(g.clave)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
+          <div className="grupo-nombre">{nombreGrupoMostrado(g)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
           <div className="meta">{g.resueltas} de {g.total} resueltas</div>
         </td>
-        <td />
+        <td>
+          <input
+            className="campo-proveedor"
+            type="text"
+            placeholder=""
+            value={proveedoresGrupo[g.id] || ''}
+            onChange={e => setProveedoresGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedorGrupo(g, e.target.value); } }}
+          />
+        </td>
         <td className="col-importe num">{g.importeTotal.toFixed(2)}€</td>
         <td>
           {permiteAccionesGrupo && (
@@ -389,7 +425,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
               <input
                 className="campo-nota"
                 type="text"
-                placeholder={g.sugerenciaNota ? 'o algo distinto...' : `Nota para las ${pendientesGrupo}...`}
+                placeholder=""
                 value={notasGrupo[g.id] || ''}
                 onChange={e => setNotasGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNotaGrupo(g, e.target.value); } }}
@@ -397,7 +433,13 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
             </>
           )}
         </td>
-        <td />
+        <td>
+          <select className="select-proyecto" defaultValue="" onChange={e => { asignarProyectoGrupo(g, e.target.value === '__quitar__' ? '' : e.target.value); e.target.value = ''; }}>
+            <option value="" disabled>proyecto...</option>
+            <option value="__quitar__">— (quitar)</option>
+            {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+        </td>
         {columnasVisiblesExtra.map(c => <td key={c} />)}
       </tr>
     );
@@ -468,7 +510,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
               : grupos.map(g => (
                   <Fragment key={g.id}>
                     {filaGrupo(g)}
-                    {g.movimientos.map(m => filaMovimiento(m, g))}
+                    {g.movimientos.map((m, i) => filaMovimiento(m, g, g.total <= 1 && i === 0))}
                   </Fragment>
                 ))}
           </tbody>

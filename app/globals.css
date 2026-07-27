@@ -312,6 +312,10 @@ tr.fila-grupo td {
   background: var(--surface-alt); border-bottom: 1px solid var(--border);
   white-space: normal; vertical-align: top;
 }
+/* Un grupo de 1 sola línea no tiene cabecera propia — para que no se
+   confunda con el grupo real de arriba, su única fila lleva el mismo gris
+   que la cabecera de un grupo real, en vez de una simple línea separadora. */
+tr.inicio-grupo td { background: var(--surface-alt); }
 tr.fila-grupo .grupo-nombre { font-weight: 700; }
 tr.fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
 tr.fila-grupo select.select-estado, tr.fila-grupo input.campo-nota { width: 100%; }
