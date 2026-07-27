@@ -12,6 +12,15 @@ const ETIQUETAS = {
 };
 
 const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Proveedor', 'Importe', 'Estado', 'Nota', 'Proyecto'];
+const ANCHO_DEFECTO = { Fecha: 90, Concepto: 280, Proveedor: 190, Importe: 90, Estado: 150, Nota: 190, Proyecto: 130 };
+const ANCHO_EXTRA_DEFECTO = 140;
+
+// Un movimiento separado de su grupo lleva su id como sufijo en la clave
+// (ver lib/agrupador.cjs#separarDeGrupo) para que quede aparte pero el
+// nombre en pantalla siga siendo el original.
+function nombreGrupo(clave) {
+  return (clave || '').replace(/ #\d+$/, '');
+}
 
 export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio }) {
   const [busqueda, setBusqueda] = useState('');
@@ -23,6 +32,34 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   const [notasGrupo, setNotasGrupo] = useState({});
   const [mensajes, setMensajes] = useState({});
   const [ambiguos, setAmbiguos] = useState({});
+  const [anchos, setAnchos] = useState({});
+
+  function anchoDe(col) {
+    return anchos[col] ?? ANCHO_DEFECTO[col] ?? ANCHO_EXTRA_DEFECTO;
+  }
+
+  // Escucha en window (no en el propio tirador) para que el arrastre siga
+  // funcionando aunque el cursor se salga de la franja de 12px durante el
+  // movimiento. setPointerCapture se intenta como mejora, pero envuelto en
+  // try/catch: puede lanzar una excepción en algunos navegadores/casos, y si
+  // no se protege, esa excepción mata la función entera antes de que se
+  // lleguen a registrar los listeners — eso hacía que el arrastre no
+  // hiciera nada aunque el cursor sí cambiase (el cursor es solo CSS).
+  function iniciarArrastre(e, col) {
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    const startX = e.clientX;
+    const startWidth = anchoDe(col);
+    function mover(ev) {
+      const nuevo = Math.max(50, startWidth + (ev.clientX - startX));
+      setAnchos(prev => ({ ...prev, [col]: nuevo }));
+    }
+    function soltar() {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', soltar);
+    }
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', soltar);
+  }
 
   const columnasExtra = useMemo(() => {
     const nombres = new Set();
@@ -128,7 +165,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hoja: g.hoja, clave: g.clave, nota: limpia }),
-    }, { mensajeOk: `${g.sinResolver} línea(s) confirmadas`, mensajeError: 'No se pudo confirmar el grupo.' });
+    }, { mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`, mensajeError: 'No se pudo confirmar el grupo.' });
     if (r) onCambio();
   }
 
@@ -150,6 +187,13 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       }, { mensajeOk: 'Marcadas como pedida, esperando al proveedor', mensajeError: 'No se pudo marcar.' });
       if (r) onCambio();
     }
+  }
+
+  async function separarDeGrupo(movimientoId) {
+    const r = await apiFetch(`/api/movimientos/${movimientoId}/separar`, {
+      method: 'POST',
+    }, { mensajeOk: 'Sacado del grupo', mensajeError: 'No se pudo sacar del grupo.' });
+    if (r) onCambio();
   }
 
   async function asignarProyecto(movimientoId, proyectoId) {
@@ -274,7 +318,14 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       <tr key={m.id}>
         <td className="fija col-fecha muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</td>
         <td className="fija col-concepto concepto">{m.concepto?.slice(0, 80)}</td>
-        <td className="proveedor">{g.clave}</td>
+        <td className="proveedor">
+          {nombreGrupo(g.clave)}
+          {g.total > 1 && (
+            <button type="button" className="quitar-grupo" onClick={() => separarDeGrupo(m.id)} title="Sacar esta línea del grupo, que quede aparte">
+              · sacar del grupo
+            </button>
+          )}
+        </td>
         <td className="importe col-importe num">{Number(m.importe).toFixed(2)}€</td>
         <td>{celdaEstado(m)}</td>
         <td>{celdaNota(m, g)}</td>
@@ -290,23 +341,24 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     // Solo se agrupa visualmente cuando hay mas de una linea de verdad (contando el
     // total real del grupo, no lo que quede tras filtrar).
     if (g.total <= 1) return null;
-    const permiteAccionesGrupo = g.categoria !== 'factura_propia' && g.sinResolver > 0;
+    const pendientesGrupo = g.total - g.resueltas;
+    const permiteAccionesGrupo = g.categoria !== 'factura_propia' && pendientesGrupo > 0;
     return (
       <tr className="fila-grupo" key={`g-${g.id}`}>
         <td colSpan={totalColumnas}>
           <div className="cab-fila">
             <span className="cab-izq">
-              {g.clave} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span>
+              {nombreGrupo(g.clave)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span>
               <span className="meta">{g.resueltas} de {g.total} resueltas · {g.importeTotal.toFixed(2)}€</span>
             </span>
             {permiteAccionesGrupo && (
               <span className="acciones-grupo">
                 {g.sugerenciaNota && (
                   <button type="button" className="chip-sugerencia" onClick={() => confirmarNotaGrupo(g, g.sugerenciaNota)}>
-                    ¿Aplicar &quot;{g.sugerenciaNota}&quot; a las {g.sinResolver}?
+                    ¿Aplicar &quot;{g.sugerenciaNota}&quot; a las {pendientesGrupo}?
                   </button>
                 )}
-                <span className="etiqueta-accion">{g.sugerenciaNota ? 'o algo distinto:' : `Aplicar a las ${g.sinResolver} sin resolver:`}</span>
+                <span className="etiqueta-accion">{g.sugerenciaNota ? 'o algo distinto:' : `Aplicar a las ${pendientesGrupo} sin resolver:`}</span>
                 <input
                   className="campo-nota"
                   type="text"
@@ -356,8 +408,12 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
       {grupos.length === 0 && <p className="muted">Nada que coincida con este filtro.</p>}
 
-      <div className="tabla-movimientos-envoltura">
-        <table>
+      <div className="tabla-movimientos-envoltura" style={{ '--ancho-fecha': `${anchoDe('Fecha')}px` }}>
+        <table style={{ tableLayout: 'fixed' }}>
+          <colgroup>
+            {COLUMNAS_BASE.map(c => <col key={c} style={{ width: anchoDe(c) }} />)}
+            {columnasVisiblesExtra.map(c => <col key={c} style={{ width: anchoDe(c) }} />)}
+          </colgroup>
           <thead>
             <tr>
               {COLUMNAS_BASE.map(c => (
@@ -367,16 +423,20 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
                     c === 'Importe' ? 'col-importe' : '',
                     c === 'Fecha' ? 'fija col-fecha' : '',
                     c === 'Concepto' ? 'fija col-concepto th-concepto' : '',
-                    'orden',
                   ].join(' ').trim()}
-                  onClick={() => alternarOrden(c)}
                 >
-                  {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
+                  <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
+                    {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
+                  </span>
+                  <span className="resize-handle" onPointerDown={e => iniciarArrastre(e, c)} />
                 </th>
               ))}
               {columnasVisiblesExtra.map(c => (
-                <th key={c} className="orden" onClick={() => alternarOrden(c)}>
-                  {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
+                <th key={c}>
+                  <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
+                    {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
+                  </span>
+                  <span className="resize-handle" onPointerDown={e => iniciarArrastre(e, c)} />
                 </th>
               ))}
             </tr>

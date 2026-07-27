@@ -5,6 +5,7 @@ import TablaMovimientos from './components/TablaMovimientos';
 import SubirFactura from './components/SubirFactura';
 import SelectorTrimestre from './components/SelectorTrimestre';
 import SeccionLotes from './components/SeccionLotes';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { apiFetch } from './lib/toast';
 
 const PESTANAS = [
@@ -24,6 +25,7 @@ export default function Home() {
   const [mensajeExcel, setMensajeExcel] = useState(null);
   const [mensajeFacturaSuelta, setMensajeFacturaSuelta] = useState(null);
   const [pestana, setPestana] = useState('inicio');
+  const [confirmarCierre, setConfirmarCierre] = useState(false);
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -152,13 +154,20 @@ export default function Home() {
 
       {pestana === 'trimestre' && (
         <>
-          <div className="tarjeta">
-            <div className="muted">{resueltas} de {total} líneas resueltas</div>
-            <div className="progreso"><div style={{ width: `${porcentaje}%` }} /></div>
-            <a href={`/api/trimestres/${trimestreId}/cerrar`}>
-              <button className="grande">Cerrar trimestre (descargar .zip)</button>
-            </a>
+          <div className="resumen-mini">
+            <div>
+              <span>{resueltas} de {total} líneas resueltas</span>
+              <div className="progreso" style={{ width: 200, margin: '6px 0 0' }}><div style={{ width: `${porcentaje}%` }} /></div>
+            </div>
           </div>
+
+          <details className="excel-toggle">
+            <summary>+ Cerrar trimestre</summary>
+            <div className="tarjeta">
+              <p className="muted">Descarga el .zip con las facturas numeradas y el excel final con las notas — hazlo cuando ya esté todo punteado.</p>
+              <button className="grande" onClick={() => setConfirmarCierre(true)}>Cerrar trimestre (descargar .zip)</button>
+            </div>
+          </details>
 
           <details className="excel-toggle">
             <summary>+ Añadir excel del banco / paypal</summary>
@@ -200,6 +209,15 @@ export default function Home() {
       {pestana === 'colaboradores' && (
         <SeccionLotes trimestreId={trimestreId} />
       )}
+
+      <ConfirmDialog
+        abierto={confirmarCierre}
+        titulo="¿Cerrar el trimestre?"
+        mensaje="Se descarga el .zip con las facturas numeradas y el excel final con las notas."
+        textoConfirmar="Descargar"
+        onConfirmar={() => { setConfirmarCierre(false); window.location.href = `/api/trimestres/${trimestreId}/cerrar`; }}
+        onCancelar={() => setConfirmarCierre(false)}
+      />
     </div>
   );
 }

@@ -257,29 +257,48 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
 
 /* Tabla plana de movimientos (pestaña Trimestre) */
 .tabla-movimientos-envoltura { overflow-x: auto; margin-top: 4px; border: 1px solid var(--border); border-radius: 8px; }
-.tabla-movimientos-envoltura table { border-collapse: separate; border-spacing: 0; font-size: 13px; width: max-content; min-width: 100%; }
+.tabla-movimientos-envoltura table { border-collapse: separate; border-spacing: 0; font-size: 13px; table-layout: fixed; }
 .tabla-movimientos-envoltura thead th {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
   color: var(--muted); font-weight: 700; padding: 9px 12px; border-bottom: 2px solid var(--border);
   white-space: nowrap; background: var(--surface-alt); position: sticky; top: 0; z-index: 2;
+  overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 0;
 }
-th.orden { cursor: pointer; user-select: none; }
-th.orden:hover { color: var(--text); }
+.etiqueta-orden { cursor: pointer; user-select: none; }
+.etiqueta-orden:hover { color: var(--text); }
 .tabla-movimientos-envoltura tbody td {
   padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap;
-  background: var(--bg);
+  background: var(--bg); overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 0;
 }
-td.concepto, th.th-concepto { white-space: normal; min-width: 200px; }
+td.concepto, th.th-concepto { white-space: normal; }
 td.proveedor { color: var(--muted); }
+.quitar-grupo {
+  font: inherit; font-size: 11px; color: var(--muted); text-decoration: underline;
+  background: none; border: none; padding: 0; margin-left: 8px; cursor: pointer;
+}
+.quitar-grupo:hover { color: var(--text); }
 td.importe { font-weight: 600; }
 th.col-importe, td.col-importe { text-align: right; }
 .vacio { color: var(--border); }
 
-/* Fecha y Concepto se quedan fijas al hacer scroll horizontal */
+/* Arrastrar el borde derecho de una cabecera para hacer la columna mas
+   estrecha o mas ancha (a demanda, no se guarda entre sesiones). La zona de
+   agarre real es de 8px, pero se ve una linea fina siempre visible en el
+   borde para que se note que ahi se puede arrastrar. */
+.resize-handle { position: absolute; top: 0; right: 0; width: 12px; height: 100%; cursor: col-resize; touch-action: none; user-select: none; }
+.resize-handle::after {
+  content: ''; position: absolute; top: 4px; bottom: 4px; right: 3px; width: 2px;
+  background: var(--border); border-radius: 2px;
+}
+.resize-handle:hover::after, .resize-handle:active::after { background: var(--accent); }
+
+/* Fecha y Concepto se quedan fijas al hacer scroll horizontal. La anchura de
+   Fecha es variable (se puede redimensionar), asi que el left de Concepto
+   sigue esa misma anchura via --ancho-fecha en vez de un valor fijo. */
 th.fija, td.fija { position: sticky; z-index: 3; }
 th.fija { z-index: 4; }
-.col-fecha { left: 0; width: 90px; }
-.col-concepto { left: 90px; }
+.col-fecha { left: 0; width: var(--ancho-fecha, 90px); }
+.col-concepto { left: var(--ancho-fecha, 90px); }
 td.col-concepto, th.col-concepto { box-shadow: 3px 0 6px -3px rgba(0,0,0,.12); }
 
 /* Fila de cabecera de grupo (proveedor) — solo para grupos de mas de 1 linea */
@@ -298,7 +317,7 @@ tr.fila-grupo .etiqueta-accion { font-size: 11px; color: var(--muted); text-tran
 /* Nota: campo único, guarda con Enter, se prellena en azul si hay sugerencia */
 input.campo-nota {
   font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
-  width: 140px; background: var(--surface-alt); color: var(--text);
+  width: 100%; background: var(--surface-alt); color: var(--text);
 }
 input.campo-nota.prellenado { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
 .nota-texto { font-size: 13px; }
