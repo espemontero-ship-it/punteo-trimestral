@@ -1,14 +1,17 @@
 :root {
-  --bg: #0f1115;
-  --card: #171a21;
-  --border: #2a2e38;
-  --text: #e8e8ea;
-  --muted: #9aa0ab;
-  --accent: #4f8cff;
-  --ok: #2ecc71;
-  --warn: #f5a623;
-  --new: #e35d6a;
-  color-scheme: dark;
+  --bg: #ffffff;
+  --card: #ffffff;
+  --surface-alt: #fafafa;
+  --border: #e3e3e1;
+  --text: #191918;
+  --muted: #6c6b66;
+  --accent: #2c4358;
+  --accent-soft: rgba(44, 67, 88, .08);
+  --accent-text: #ffffff;
+  --ok: #3f7d5c;
+  --warn: #a67c2e;
+  --new: #a8402c;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -18,7 +21,7 @@ html, body {
   padding: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: Calibri, Candara, "Segoe UI", system-ui, sans-serif;
 }
 
 a { color: var(--accent); }
@@ -43,7 +46,7 @@ button, input[type="submit"] {
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--accent);
-  color: white;
+  color: var(--accent-text);
   cursor: pointer;
 }
 
@@ -64,7 +67,7 @@ select {
   padding: 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #0d0f13;
+  background: var(--surface-alt);
   color: var(--text);
   width: 100%;
 }
@@ -74,9 +77,14 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   padding: 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #0d0f13;
+  background: var(--surface-alt);
   color: var(--text);
   width: 100%;
+}
+
+.categoria-texto {
+  color: var(--muted);
+  font-weight: 400;
 }
 
 .etiqueta {
@@ -86,11 +94,10 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   font-size: 12px;
   font-weight: 600;
 }
-.etiqueta.fija { background: rgba(46,204,113,.15); color: var(--ok); }
-.etiqueta.factura_propia { background: rgba(79,140,255,.15); color: var(--accent); }
-.etiqueta.mixta { background: rgba(245,166,35,.15); color: var(--warn); }
-.etiqueta.nueva { background: rgba(227,93,106,.15); color: var(--new); }
-.etiqueta.pedida { background: rgba(154,160,171,.15); color: var(--muted); }
+.etiqueta.fija { background: rgba(63,125,92,.12); color: var(--ok); }
+.etiqueta.mixta { background: rgba(166,124,46,.12); color: var(--warn); }
+.etiqueta.nueva { background: rgba(168,64,44,.12); color: var(--new); }
+.etiqueta.pedida { background: rgba(108,107,102,.1); color: var(--muted); }
 
 .progreso {
   height: 8px;
@@ -101,7 +108,7 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 }
 .progreso > div {
   height: 100%;
-  background: var(--ok);
+  background: var(--accent);
 }
 
 .fila {
@@ -125,22 +132,23 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   font-size: 13px;
   max-width: 360px;
   pointer-events: auto;
-  border: 1px solid;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
 }
-.toast.ok { background: #132018; border-color: #1f3527; color: #cdeedb; }
-.toast.error { background: #241a17; border-color: #3a2620; color: #f3d4cc; }
 .toast-icono {
   width: 20px; height: 20px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; flex-shrink: 0;
 }
-.toast.ok .toast-icono { background: #1f3527; color: #5fce8f; }
-.toast.error .toast-icono { background: #3a2620; color: #e8a598; }
+.toast.ok .toast-icono { background: rgba(63,125,92,.14); color: var(--ok); }
+.toast.error .toast-icono { background: rgba(168,64,44,.14); color: var(--new); }
 
 /* Diálogos (sustituyen a confirm()/prompt()) */
 .dialogo-fondo {
   position: fixed; inset: 0; z-index: 999;
-  background: rgba(0,0,0,0.55);
+  background: rgba(25, 25, 24, 0.45);
   display: flex; align-items: center; justify-content: center;
   padding: 16px;
 }
@@ -164,12 +172,12 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   font-size: 13px;
   cursor: pointer;
 }
-.radio-fila.selected { background: #132018; border-color: #1f3527; color: #cdeedb; }
+.radio-fila.selected { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
 .radio-punto {
   width: 16px; height: 16px; border-radius: 50%;
   border: 1.5px solid var(--muted);
   flex-shrink: 0;
 }
 .radio-fila.selected .radio-punto {
-  background: #5fce8f; border-color: #5fce8f;
+  background: var(--accent); border-color: var(--accent);
 }

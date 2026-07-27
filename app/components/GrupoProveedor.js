@@ -84,8 +84,7 @@ export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
     <div className="tarjeta">
       <div className="fila" onClick={() => setAbierto(!abierto)} style={{ cursor: 'pointer' }}>
         <div>
-          <span className={`etiqueta ${grupo.categoria}`}>{ETIQUETAS[grupo.categoria]}</span>{' '}
-          <strong>{grupo.clave}</strong>
+          <strong>{grupo.clave}</strong> <span className="categoria-texto">· {ETIQUETAS[grupo.categoria]}</span>
           <div className="muted">{grupo.hoja} · {grupo.resueltas}/{grupo.total} resueltas{grupo.pedidaPendiente ? ` · ${grupo.pedidaPendiente} pedida(s)` : ''}</div>
         </div>
         <div>{abierto ? '▲' : '▼'}</div>

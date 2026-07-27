@@ -46,15 +46,16 @@ Alternativas descartadas, con motivo real:
 - **Fase 2 — pendiente**: buscador/filtro en la lista de proveedores (con ~290 grupos, desplazarse a mano es un suplicio); separar el panel de admin en pestañas (gestión del trimestre vs. colaboradores/lotes) en vez de un único scroll largo.
 - **Fase 3 — pendiente**: botones de guardar explícitos en móvil (el guardado solo por `onBlur` falla con el teclado virtual), botón de copiar la contraseña generada de un colaborador, estados vacíos con guía, accesibilidad (el estado no debe depender solo del color), formato consistente de números/fechas.
 
-## Línea visual (decidida 2026-07-27, pendiente de aplicar al código)
+## Línea visual (decidida 2026-07-27, aplicada al código el mismo día)
 
 - Fondo blanco puro / neutro, sin ningún tinte de color en tarjetas ni bordes.
-- Acento único: azul oscuro `#2c4358` (claro) para botón principal, barra de progreso y punto de "pendiente" — nada más lleva color.
-- Categorías de proveedor (fija/factura propia/mixta/nueva) como texto simple junto al nombre, no insignias de colores — el "semáforo" de colores por categoría es justo lo que se rechazó.
-- Tipografía: familia Calibri (`Calibri, Candara, "Segoe UI", sans-serif`).
-- Tamaño de letra notablemente más grande que un UI por defecto — la app se usa muchas horas seguidas: nombres de proveedor ~16.5px, texto secundario ~14.5px, botones/inputs 16px.
-- Tema oscuro descartado explícitamente (ya se había descartado antes, en la sesión anterior, por el mismo motivo de fatiga visual en sesiones largas).
-- Aún no aplicado a `app/globals.css` ni a los componentes reales — de momento vive solo en mockups (Artifacts).
+- Acento único: azul oscuro `#2c4358` para botón principal, barra de progreso y punto de "pendiente" — nada más lleva color decorativo.
+- Categorías de proveedor (fija/factura propia/mixta/nueva) como texto simple junto al nombre (`.categoria-texto`), no insignias de colores — el "semáforo" de colores por categoría es justo lo que se rechazó.
+- Los `.etiqueta.fija/.mixta/.nueva/.pedida` que quedan (estado real aceptada/rechazada/pendiente en lotes y colaboradores) se mantienen coloreados a propósito — es estado semántico, no decoración — pero con tonos apagados (`--ok`/`--warn`/`--new` desaturados) en vez de verde/naranja/rojo saturados.
+- Tipografía: familia Calibri (`Calibri, Candara, "Segoe UI", system-ui, sans-serif`).
+- Tema oscuro descartado explícitamente (ya se había descartado antes, en la sesión anterior, por el mismo motivo de fatiga visual en sesiones largas) — no hay `prefers-color-scheme` ni variante oscura, un único tema.
+- **Aplicado** en `app/globals.css` (tokens, tipografía, `.etiqueta`, toasts, diálogos) y `app/components/GrupoProveedor.js` (categoría como texto). Verificado en `localhost:3000` contra un trimestre de prueba real: fondo blanco, botón `rgb(44,67,88)`, fuente Calibri confirmados por JS en el navegador.
+- **Pendiente**: no se ha vuelto a subir el tamaño de letra al nivel de los mockups v3 (16.5px nombres / 16px botones-inputs) — los botones/inputs de la app ya estaban en 16px de base, pero no se revisó el resto letra por letra contra el mockup. Revisar si hace falta subir más.
 
 ## Registro de decisiones
 
@@ -62,3 +63,4 @@ Cada decisión de producto/alcance/diseño se anota aquí en cuanto se toma, con
 
 - **2026-07-27** — Se reconstruyó este documento desde cero leyendo la sesión anterior completa (1598 mensajes), porque no existía como archivo — vivía solo dentro del modo Plan de esa conversación y se perdió el hilo entre sesiones. A partir de ahora se mantiene aquí para que no vuelva a pasar.
 - **2026-07-27** — Aclarado que nada de la app está realmente testado en uso real: la "verificación con datos reales" fue solo a nivel técnico/API. El desastre se descubrió al intentar usarla de verdad, no antes. No dar por hecho que ninguna pantalla/flujo funciona bien en la práctica solo porque el código compile o la API responda.
+- **2026-07-27** — Aplicada la línea visual acordada al código real (`globals.css` + `GrupoProveedor.js`), verificado en el navegador contra datos reales de prueba. Los badges de estado real (aceptada/rechazada/pendiente en lotes/colaboradores) se mantuvieron coloreados pero apagados — solo se quitó el color de las categorías de proveedor, que era decorativo, no de estado.

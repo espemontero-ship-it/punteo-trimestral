@@ -13,7 +13,7 @@ export function ConfirmDialog({ abierto, titulo, mensaje, textoConfirmar = 'Conf
         <button className="secundario" onClick={onCancelar} style={{ flex: 1 }}>Cancelar</button>
         <button
           onClick={onConfirmar}
-          style={{ flex: 1, background: peligroso ? '#c2493a' : undefined, color: peligroso ? '#fff' : undefined }}
+          style={{ flex: 1, background: peligroso ? 'var(--new)' : undefined, color: peligroso ? 'var(--accent-text)' : undefined }}
         >
           {textoConfirmar}
         </button>
