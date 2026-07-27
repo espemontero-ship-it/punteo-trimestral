@@ -69,7 +69,7 @@ select {
   width: 100%;
 }
 
-input[type="password"], input[type="text"] {
+input[type="password"], input[type="text"], input[type="number"], input[type="date"] {
   font-size: 16px;
   padding: 12px;
   border-radius: 10px;
@@ -114,3 +114,62 @@ input[type="password"], input[type="text"] {
 .muted { color: var(--muted); font-size: 14px; }
 
 .error { color: var(--new); font-size: 14px; margin-top: 8px; }
+
+/* Toasts */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 13px;
+  max-width: 360px;
+  pointer-events: auto;
+  border: 1px solid;
+}
+.toast.ok { background: #132018; border-color: #1f3527; color: #cdeedb; }
+.toast.error { background: #241a17; border-color: #3a2620; color: #f3d4cc; }
+.toast-icono {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; flex-shrink: 0;
+}
+.toast.ok .toast-icono { background: #1f3527; color: #5fce8f; }
+.toast.error .toast-icono { background: #3a2620; color: #e8a598; }
+
+/* Diálogos (sustituyen a confirm()/prompt()) */
+.dialogo-fondo {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.dialogo {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  width: 100%;
+  max-width: 340px;
+}
+.dialogo-titulo { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+.dialogo-cuerpo { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0; }
+.dialogo-botones { display: flex; gap: 10px; margin-top: 18px; }
+
+.radio-fila {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.radio-fila.selected { background: #132018; border-color: #1f3527; color: #cdeedb; }
+.radio-punto {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--muted);
+  flex-shrink: 0;
+}
+.radio-fila.selected .radio-punto {
+  background: #5fce8f; border-color: #5fce8f;
+}

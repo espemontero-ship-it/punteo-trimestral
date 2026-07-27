@@ -5,6 +5,7 @@ import GrupoProveedor from './components/GrupoProveedor';
 import SubirFactura from './components/SubirFactura';
 import SelectorTrimestre from './components/SelectorTrimestre';
 import SeccionLotes from './components/SeccionLotes';
+import { apiFetch } from './lib/toast';
 
 export default function Home() {
   const [trimestreId, setTrimestreId] = useState('');
@@ -26,13 +27,13 @@ export default function Home() {
     setCargando(true);
     try {
       const [rp, rr, rf] = await Promise.all([
-        fetch(`/api/trimestres/${id}/proveedores`).then(r => r.json()),
-        fetch(`/api/trimestres/${id}/resumen`).then(r => r.json()),
-        fetch(`/api/trimestres/${id}/facturas`).then(r => r.json()),
+        apiFetch(`/api/trimestres/${id}/proveedores`, undefined, { mensajeError: 'No se pudieron cargar los proveedores.' }),
+        apiFetch(`/api/trimestres/${id}/resumen`, undefined, { mensajeError: 'No se pudo cargar el resumen.' }),
+        apiFetch(`/api/trimestres/${id}/facturas`, undefined, { mensajeError: 'No se pudieron cargar las facturas.' }),
       ]);
-      setProveedores(rp.proveedores || []);
+      setProveedores((rp && rp.proveedores) || []);
       setResumen(rr);
-      setFacturas(rf.facturas || []);
+      setFacturas((rf && rf.facturas) || []);
     } finally {
       setCargando(false);
     }
@@ -58,11 +59,10 @@ export default function Home() {
       const formData = new FormData();
       formData.append('file', file);
       if (hoja) formData.append('hoja', hoja);
-      const res = await fetch(`/api/trimestres/${trimestreId}/excels`, { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!res.ok) {
-        setMensajeExcel(data.error);
-      } else {
+      const data = await apiFetch(`/api/trimestres/${trimestreId}/excels`, { method: 'POST', body: formData }, {
+        mensajeError: 'No se pudo importar el excel.',
+      });
+      if (data) {
         setMensajeExcel(`Importado: ${data.hojas.join(', ')}`);
         await cargar(trimestreId);
       }

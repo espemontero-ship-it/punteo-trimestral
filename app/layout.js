@@ -1,4 +1,5 @@
 import './globals.css';
+import ToastHost from './components/ToastHost';
 
 export const metadata = {
   title: 'Punteo trimestral',
@@ -13,7 +14,10 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <ToastHost />
+        {children}
+      </body>
     </html>
   );
 }

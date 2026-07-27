@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import SubirFactura from './SubirFactura';
+import { apiFetch } from '../lib/toast';
 
 const ETIQUETAS = {
   fija: 'fija',
@@ -9,15 +10,6 @@ const ETIQUETAS = {
   mixta: 'mixta',
   nueva: 'nueva',
 };
-
-async function post(url, body) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return res.json();
-}
 
 export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
   const [abierto, setAbierto] = useState(false);
@@ -28,22 +20,32 @@ export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
   const pendientes = grupo.movimientos.filter(m => m.estado !== 'resuelta');
 
   async function confirmarGrupoCompleto() {
-    await post(`/api/trimestres/${trimestreId}/proveedores/confirmar-grupo`, {
-      hoja: grupo.hoja, clave: grupo.clave, nota: grupo.sugerenciaNota,
-    });
-    onCambio();
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/confirmar-grupo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hoja: grupo.hoja, clave: grupo.clave, nota: grupo.sugerenciaNota }),
+    }, { mensajeOk: `${grupo.sinResolver} línea(s) confirmadas`, mensajeError: 'No se pudo confirmar el grupo.' });
+    if (r) onCambio();
   }
 
   async function marcarPendiente() {
-    await post(`/api/trimestres/${trimestreId}/proveedores/pendiente`, { hoja: grupo.hoja, clave: grupo.clave });
-    onCambio();
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/pendiente`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hoja: grupo.hoja, clave: grupo.clave }),
+    }, { mensajeOk: 'Marcado como pedida, esperando al proveedor', mensajeError: 'No se pudo marcar.' });
+    if (r) onCambio();
   }
 
   async function confirmarLineaManual(movimientoId) {
     const nota = notasManual[movimientoId];
     if (!nota) return;
-    await post(`/api/movimientos/${movimientoId}/confirmar`, { nota });
-    onCambio();
+    const r = await apiFetch(`/api/movimientos/${movimientoId}/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nota }),
+    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    if (r) onCambio();
   }
 
   function onResultadoFactura(movimiento, resultado) {
@@ -70,8 +72,12 @@ export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
   async function elegirCandidato(opcion) {
     const nota = opcion.esCombo ? `${opcion.numero} + ${opcion.otraFacturaNumero}` : String(opcion.numero);
     const facturaIds = opcion.esCombo ? [opcion.facturaId, opcion.otraFacturaId] : [opcion.facturaId];
-    await post(`/api/movimientos/${opcion.movimientoId}/confirmar`, { nota, facturaIds });
-    onCambio();
+    const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nota, facturaIds }),
+    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    if (r) onCambio();
   }
 
   return (

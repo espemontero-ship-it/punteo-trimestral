@@ -1,15 +1,18 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { ConfirmDialog } from './ConfirmDialog';
+import { apiFetch } from '../lib/toast';
 
 export default function SelectorTrimestre({ onEntrar }) {
   const [trimestres, setTrimestres] = useState(null);
   const [nuevoId, setNuevoId] = useState('');
   const [creando, setCreando] = useState(false);
+  const [aBorrar, setABorrar] = useState(null);
 
   const cargar = useCallback(async () => {
-    const r = await fetch('/api/trimestres').then(res => res.json());
-    setTrimestres(r.trimestres || []);
+    const r = await apiFetch('/api/trimestres', undefined, { mensajeError: 'No se pudo cargar la lista de trimestres.' });
+    setTrimestres((r && r.trimestres) || []);
   }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
@@ -20,22 +23,25 @@ export default function SelectorTrimestre({ onEntrar }) {
     if (!id) return;
     setCreando(true);
     try {
-      await fetch('/api/trimestres', {
+      const r = await apiFetch('/api/trimestres', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
-      });
-      onEntrar(id);
+      }, { mensajeError: 'No se pudo crear el trimestre.' });
+      if (r) onEntrar(id);
     } finally {
       setCreando(false);
     }
   }
 
-  async function borrar(id, e) {
-    e.stopPropagation();
-    if (!window.confirm(`¿Borrar el trimestre "${id}" y todo lo que tenga (movimientos, facturas)? No se puede deshacer.`)) return;
-    await fetch(`/api/trimestres/${id}`, { method: 'DELETE' });
-    cargar();
+  async function confirmarBorrado() {
+    const id = aBorrar;
+    setABorrar(null);
+    const r = await apiFetch(`/api/trimestres/${id}`, { method: 'DELETE' }, {
+      mensajeOk: `Trimestre "${id}" borrado.`,
+      mensajeError: 'No se pudo borrar el trimestre.',
+    });
+    if (r) cargar();
   }
 
   return (
@@ -62,7 +68,7 @@ export default function SelectorTrimestre({ onEntrar }) {
                     <strong>{t.id}</strong>{t.cerrado ? <span className="etiqueta pedida" style={{ marginLeft: 8 }}>cerrado</span> : null}
                     <div className="muted">{total > 0 ? `${resueltas}/${total} resueltas` : 'sin movimientos todavía'}</div>
                   </div>
-                  <button className="secundario" onClick={e => borrar(t.id, e)}>🗑</button>
+                  <button className="secundario" onClick={e => { e.stopPropagation(); setABorrar(t.id); }}>🗑</button>
                 </div>
               );
             })}
@@ -87,6 +93,16 @@ export default function SelectorTrimestre({ onEntrar }) {
           </button>
         </form>
       </div>
+
+      <ConfirmDialog
+        abierto={!!aBorrar}
+        titulo={`¿Borrar el trimestre "${aBorrar}"?`}
+        mensaje="Se borran sus movimientos y facturas. No se puede deshacer."
+        textoConfirmar="Borrar"
+        peligroso
+        onConfirmar={confirmarBorrado}
+        onCancelar={() => setABorrar(null)}
+      />
     </div>
   );
 }

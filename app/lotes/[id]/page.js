@@ -1,23 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback, use } from 'react';
+import { ConfirmDialog, MotivoDialog } from '../../components/ConfirmDialog';
+import { apiFetch } from '../../lib/toast';
 
-async function post(url, body) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return res.json();
-}
-async function patch(url, body) {
-  const res = await fetch(url, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return res.json();
-}
+const MOTIVOS_RECHAZO = ['Ticket, no factura', 'Duplicada', 'Importe no coincide'];
 
 export default function LotePage({ params }) {
   const { id } = use(params);
@@ -27,50 +14,70 @@ export default function LotePage({ params }) {
   const [totales, setTotales] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
   const [nuevoPago, setNuevoPago] = useState({ importe: '', fecha: '', nota: '' });
+  const [aRechazar, setARechazar] = useState(null);
+  const [aBorrar, setABorrar] = useState(null);
 
   const cargar = useCallback(async () => {
-    const r = await fetch(`/api/lotes/${id}`).then(res => res.json());
+    const r = await apiFetch(`/api/lotes/${id}`, undefined, { mensajeError: 'No se pudo cargar el lote.' });
+    if (!r) return;
     setLote(r.lote);
     setFacturas(r.facturas || []);
     setPagos(r.pagos || []);
     setTotales(r.totales);
     if (r.lote) {
-      const rm = await fetch(`/api/trimestres/${r.lote.trimestre_id}/movimientos-pendientes`).then(res => res.json());
-      setMovimientos(rm.movimientos || []);
+      const rm = await apiFetch(`/api/trimestres/${r.lote.trimestre_id}/movimientos-pendientes`);
+      setMovimientos((rm && rm.movimientos) || []);
     }
   }, [id]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  async function guardarFactura(facturaId, campos) {
-    await patch(`/api/lotes/${id}/facturas/${facturaId}`, campos);
-    cargar();
+  async function guardarFactura(facturaId, campos, opciones = {}) {
+    const r = await apiFetch(`/api/lotes/${id}/facturas/${facturaId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(campos),
+    }, { mensajeOk: opciones.mensajeOk, mensajeError: 'No se pudo guardar.' });
+    if (r) cargar();
   }
 
-  async function rechazar(facturaId) {
-    const motivo = window.prompt('Motivo del rechazo (ej. "ticket, no factura"):', 'ticket, no factura');
-    if (motivo === null) return;
-    await guardarFactura(facturaId, { estadoRevision: 'rechazada', motivoRechazo: motivo });
+  async function confirmarRechazo(motivo) {
+    const facturaId = aRechazar;
+    setARechazar(null);
+    await guardarFactura(facturaId, { estadoRevision: 'rechazada', motivoRechazo: motivo }, { mensajeOk: 'Factura rechazada' });
   }
 
-  async function borrarFactura(facturaId) {
-    if (!window.confirm('¿Borrar esta factura del lote?')) return;
-    await fetch(`/api/lotes/${id}/facturas/${facturaId}`, { method: 'DELETE' });
-    cargar();
+  async function confirmarBorrado() {
+    const facturaId = aBorrar;
+    setABorrar(null);
+    const r = await apiFetch(`/api/lotes/${id}/facturas/${facturaId}`, { method: 'DELETE' }, {
+      mensajeOk: 'Factura borrada', mensajeError: 'No se pudo borrar.',
+    });
+    if (r) cargar();
   }
 
   async function crearPago(e) {
     e.preventDefault();
     if (!nuevoPago.importe) return;
-    await post(`/api/lotes/${id}/pagos`, nuevoPago);
-    setNuevoPago({ importe: '', fecha: '', nota: '' });
-    cargar();
+    const r = await apiFetch(`/api/lotes/${id}/pagos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nuevoPago),
+    }, { mensajeOk: 'Pago añadido', mensajeError: 'No se pudo añadir el pago.' });
+    if (r) {
+      setNuevoPago({ importe: '', fecha: '', nota: '' });
+      cargar();
+    }
   }
 
   async function vincularPago(pagoId, movimientoId, facturaIds) {
     if (!movimientoId) return;
-    await post(`/api/pagos/${pagoId}/vincular`, { movimientoId: Number(movimientoId), facturaIds });
-    cargar();
+    const r = await apiFetch(`/api/pagos/${pagoId}/vincular`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movimientoId: Number(movimientoId), facturaIds }),
+    }, { mensajeOk: 'Pago vinculado a la línea del banco', mensajeError: 'No se pudo vincular.' });
+    if (r) cargar();
   }
 
   if (!lote) return <div className="contenedor"><p className="muted">Cargando...</p></div>;
@@ -103,7 +110,13 @@ export default function LotePage({ params }) {
         <strong>Facturas</strong>
         {facturas.length === 0 && <p className="muted">Todavía no ha subido ninguna.</p>}
         {facturas.map(f => (
-          <FilaFactura key={f.id} factura={f} onGuardar={c => guardarFactura(f.id, c)} onRechazar={() => rechazar(f.id)} onBorrar={() => borrarFactura(f.id)} />
+          <FilaFactura
+            key={f.id}
+            factura={f}
+            onGuardar={c => guardarFactura(f.id, c, { mensajeOk: 'Guardado' })}
+            onRechazar={() => setARechazar(f.id)}
+            onBorrar={() => setABorrar(f.id)}
+          />
         ))}
       </div>
 
@@ -140,6 +153,22 @@ export default function LotePage({ params }) {
           <button type="submit">+ Añadir pago</button>
         </form>
       </div>
+
+      <MotivoDialog
+        abierto={!!aRechazar}
+        titulo="Rechazar factura"
+        opciones={MOTIVOS_RECHAZO}
+        onConfirmar={confirmarRechazo}
+        onCancelar={() => setARechazar(null)}
+      />
+      <ConfirmDialog
+        abierto={!!aBorrar}
+        titulo="¿Borrar esta factura del lote?"
+        textoConfirmar="Borrar"
+        peligroso
+        onConfirmar={confirmarBorrado}
+        onCancelar={() => setABorrar(null)}
+      />
     </div>
   );
 }
