@@ -239,4 +239,23 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 details.excel-toggle { margin-bottom: 14px; }
 details.excel-toggle > summary { cursor: pointer; font-size: 13px; color: var(--accent); font-weight: 600; list-style: none; }
 details.excel-toggle > summary::-webkit-details-marker { display: none; }
+
+/* Cabecera del grupo de proveedor: importe total como columna clara a la derecha */
+.fila-cab-derecha { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.importe-grupo { font-weight: 700; }
+
+/* Lista de movimientos dentro de un grupo, en columnas claras (concepto/importe, fecha/nota) */
+.lista-movimientos { border-top: 1px solid var(--border); margin-top: 8px; }
+.fila-movimiento { border-bottom: 1px solid var(--border); padding: 10px 0; }
+.fila-movimiento-linea1 {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+}
+.fila-movimiento-concepto { font-size: 14px; }
+.fila-movimiento-importe { font-weight: 600; white-space: nowrap; }
+.fila-movimiento-linea2 {
+  display: flex; align-items: center; gap: 10px; margin-top: 3px; font-size: 12.5px; flex-wrap: wrap;
+}
+.fila-movimiento-nota { color: var(--text); }
+.ver-factura { color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.ver-factura:hover { text-decoration: underline; }
 details.excel-toggle[open] > summary { margin-bottom: 10px; }

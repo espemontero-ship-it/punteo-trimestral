@@ -17,7 +17,7 @@ export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
   const [mensajes, setMensajes] = useState({});
   const [ambiguos, setAmbiguos] = useState({});
 
-  const pendientes = grupo.movimientos.filter(m => m.estado !== 'resuelta');
+  const importeTotal = grupo.movimientos.reduce((s, m) => s + Number(m.importe), 0);
 
   async function confirmarGrupoCompleto() {
     const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/confirmar-grupo`, {
@@ -87,7 +87,10 @@ export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
           <strong>{grupo.clave}</strong> <span className="categoria-texto">· {ETIQUETAS[grupo.categoria]}</span>
           <div className="muted">{grupo.hoja} · {grupo.resueltas}/{grupo.total} resueltas{grupo.pedidaPendiente ? ` · ${grupo.pedidaPendiente} pedida(s)` : ''}</div>
         </div>
-        <div>{abierto ? '▲' : '▼'}</div>
+        <div className="fila-cab-derecha">
+          <span className="num importe-grupo">{importeTotal.toFixed(2)}€</span>
+          <span>{abierto ? '▲' : '▼'}</span>
+        </div>
       </div>
 
       {grupo.categoria === 'fija' && grupo.sinResolver > 0 && (
@@ -104,48 +107,64 @@ export default function GrupoProveedor({ trimestreId, grupo, onCambio }) {
               Marcar como pedida, esperando al proveedor
             </button>
           )}
-          {pendientes.map(m => (
-            <div key={m.id} className="tarjeta" style={{ background: 'transparent' }}>
-              <div className="fila">
-                <div>
-                  <div>{m.concepto?.slice(0, 60)}</div>
-                  <div className="muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''} · {Number(m.importe).toFixed(2)}€
-                    {m.estado === 'pedida_pendiente' && <span className="etiqueta pedida" style={{ marginLeft: 8 }}>pedida</span>}
+          <div className="lista-movimientos">
+            {grupo.movimientos.map(m => {
+              const resuelta = m.estado === 'resuelta';
+              const facturaIds = m.factura_ids || [];
+              return (
+                <div key={m.id} className="fila-movimiento">
+                  <div className="fila-movimiento-linea1">
+                    <span className="fila-movimiento-concepto">{m.concepto?.slice(0, 60)}</span>
+                    <span className="num fila-movimiento-importe">{Number(m.importe).toFixed(2)}€</span>
                   </div>
+                  <div className="fila-movimiento-linea2 muted">
+                    <span>{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</span>
+                    {resuelta && <span className="fila-movimiento-nota">Nota: {m.nota_final}</span>}
+                    {facturaIds.length > 0 && (
+                      <a className="ver-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">
+                        Ver factura{facturaIds.length > 1 ? 's' : ''} →
+                      </a>
+                    )}
+                    {m.estado === 'pedida_pendiente' && <span className="etiqueta pedida">pedida</span>}
+                  </div>
+
+                  {!resuelta && (
+                    <>
+                      {grupo.categoria === 'factura_propia' ? (
+                        <SubirFactura
+                          trimestreId={trimestreId}
+                          hoja={grupo.hoja}
+                          clave={grupo.clave}
+                          onResultado={r => onResultadoFactura(m, r)}
+                        />
+                      ) : (
+                        <div className="fila" style={{ marginTop: 8 }}>
+                          <input
+                            type="text"
+                            placeholder="Nota (ej. stripe, devolución...)"
+                            value={notasManual[m.id] || ''}
+                            onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
+                          />
+                          <button onClick={() => confirmarLineaManual(m.id)}>Confirmar</button>
+                        </div>
+                      )}
+
+                      {mensajes[m.id] && <p className="muted" style={{ marginTop: 6 }}>{mensajes[m.id]}</p>}
+
+                      {Object.values(ambiguos).flat().filter(o => o.movimientoId === m.id).length > 0 &&
+                        Object.entries(ambiguos).map(([facturaId, opciones]) =>
+                          opciones.filter(o => o.movimientoId === m.id).map((o, i) => (
+                            <button key={`${facturaId}-${i}`} className="secundario" style={{ marginTop: 6 }} onClick={() => elegirCandidato(o)}>
+                              {o.esCombo ? `Confirmar combinación: factura ${o.numero} + ${o.otraFacturaNumero}` : `Es esta línea (factura ${o.numero})`}
+                            </button>
+                          ))
+                        )}
+                    </>
+                  )}
                 </div>
-              </div>
-
-              {grupo.categoria === 'factura_propia' ? (
-                <SubirFactura
-                  trimestreId={trimestreId}
-                  hoja={grupo.hoja}
-                  clave={grupo.clave}
-                  onResultado={r => onResultadoFactura(m, r)}
-                />
-              ) : (
-                <div className="fila" style={{ marginTop: 8 }}>
-                  <input
-                    type="text"
-                    placeholder="Nota (ej. stripe, devolución...)"
-                    value={notasManual[m.id] || ''}
-                    onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
-                  />
-                  <button onClick={() => confirmarLineaManual(m.id)}>Confirmar</button>
-                </div>
-              )}
-
-              {mensajes[m.id] && <p className="muted" style={{ marginTop: 6 }}>{mensajes[m.id]}</p>}
-
-              {Object.values(ambiguos).flat().filter(o => o.movimientoId === m.id).length > 0 &&
-                Object.entries(ambiguos).map(([facturaId, opciones]) =>
-                  opciones.filter(o => o.movimientoId === m.id).map((o, i) => (
-                    <button key={`${facturaId}-${i}`} className="secundario" style={{ marginTop: 6 }} onClick={() => elegirCandidato(o)}>
-                      {o.esCombo ? `Confirmar combinación: factura ${o.numero} + ${o.otraFacturaNumero}` : `Es esta línea (factura ${o.numero})`}
-                    </button>
-                  ))
-                )}
-            </div>
-          ))}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
