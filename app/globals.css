@@ -31,6 +31,9 @@ a { color: var(--accent); }
   margin: 0 auto;
   padding: 16px;
 }
+.contenedor.contenedor-ancho {
+  max-width: 1400px;
+}
 
 .tarjeta {
   background: var(--card);
@@ -253,35 +256,44 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
 .fila-checkbox input { accent-color: var(--accent); }
 
 /* Tabla plana de movimientos (pestaña Trimestre) */
-.tabla-movimientos-envoltura { overflow-x: auto; margin-top: 4px; }
-.tabla-movimientos-envoltura table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabla-movimientos-envoltura { overflow-x: auto; margin-top: 4px; border: 1px solid var(--border); border-radius: 8px; }
+.tabla-movimientos-envoltura table { border-collapse: separate; border-spacing: 0; font-size: 13px; width: max-content; min-width: 100%; }
 .tabla-movimientos-envoltura thead th {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
-  color: var(--muted); font-weight: 700; padding: 0 10px 8px 0; border-bottom: 2px solid var(--border);
-  white-space: nowrap;
+  color: var(--muted); font-weight: 700; padding: 9px 12px; border-bottom: 2px solid var(--border);
+  white-space: nowrap; background: var(--surface-alt); position: sticky; top: 0; z-index: 2;
 }
 th.orden { cursor: pointer; user-select: none; }
 th.orden:hover { color: var(--text); }
 .tabla-movimientos-envoltura tbody td {
-  padding: 8px 10px 8px 0; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap;
+  padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap;
+  background: var(--bg);
 }
-td.concepto { white-space: normal; min-width: 180px; }
+td.concepto, th.th-concepto { white-space: normal; min-width: 200px; }
 td.proveedor { color: var(--muted); }
 td.importe { font-weight: 600; }
 th.col-importe, td.col-importe { text-align: right; }
 .vacio { color: var(--border); }
 
-.ver-factura { color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
-.ver-factura:hover { text-decoration: underline; }
+/* Fecha y Concepto se quedan fijas al hacer scroll horizontal */
+th.fija, td.fija { position: sticky; z-index: 3; }
+th.fija { z-index: 4; }
+.col-fecha { left: 0; width: 90px; }
+.col-concepto { left: 90px; }
+td.col-concepto, th.col-concepto { box-shadow: 3px 0 6px -3px rgba(0,0,0,.12); }
 
-/* Fila de cabecera de grupo (proveedor), visual, sin colapsar */
+/* Fila de cabecera de grupo (proveedor) — solo para grupos de mas de 1 linea */
 tr.fila-grupo td {
-  background: var(--surface-alt); font-weight: 700; padding: 9px 10px; border-bottom: 1px solid var(--border);
+  background: var(--surface-alt); font-weight: 700; padding: 9px 12px; border-bottom: 1px solid var(--border);
   white-space: normal;
 }
+tr.fila-grupo .cab-fila { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 tr.fila-grupo .cab-izq { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 tr.fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; }
-tr.fila-grupo .meta-sugerencia { font-weight: 400; color: var(--accent); font-size: 12px; }
+tr.fila-grupo .acciones-grupo { display: flex; align-items: center; gap: 8px; font-weight: 400; flex-wrap: wrap; }
+tr.fila-grupo .acciones-grupo .campo-nota { width: 170px; }
+tr.fila-grupo .acciones-grupo select { width: auto; }
+tr.fila-grupo .etiqueta-accion { font-size: 11px; color: var(--muted); text-transform: none; letter-spacing: 0; }
 
 /* Nota: campo único, guarda con Enter, se prellena en azul si hay sugerencia */
 input.campo-nota {
@@ -289,12 +301,13 @@ input.campo-nota {
   width: 140px; background: var(--surface-alt); color: var(--text);
 }
 input.campo-nota.prellenado { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
-.nota-texto{ font-size: 13px; }
+.nota-texto { font-size: 13px; }
 
-/* Estado: desplegable pendiente/pedida, o etiqueta si ya está resuelta */
-.etiqueta-estado { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
-.etiqueta-estado.resuelta { background: rgba(63,125,92,.12); color: var(--ok); }
+/* Estado: siempre un desplegable editable (pendiente/pedida/resuelta); si hay
+   factura emparejada, un enlace subrayado normal debajo, sin flecha ni color nuevo */
+.celda-estado { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 select.select-estado { font-size: 13px; padding: 5px 8px; border-radius: 6px; width: auto; }
+.link-factura { color: var(--accent); font-size: 12px; text-decoration: underline; }
 
 select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; width: auto; min-width: 90px; }
 .chip-sugerencia {

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, Fragment } from 'react';
 import SubirFactura from './SubirFactura';
-import { apiFetch } from '../lib/toast';
+import { apiFetch, mostrarToast } from '../lib/toast';
 
 const ETIQUETAS = {
   fija: 'fija',
@@ -11,7 +11,7 @@ const ETIQUETAS = {
   nueva: 'nueva',
 };
 
-const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Proveedor', 'Importe', 'Estado', 'Nota', 'Factura', 'Proyecto'];
+const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Proveedor', 'Importe', 'Estado', 'Nota', 'Proyecto'];
 
 export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio }) {
   const [busqueda, setBusqueda] = useState('');
@@ -20,6 +20,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [columnasExtraVisibles, setColumnasExtraVisibles] = useState(() => new Set());
   const [notasManual, setNotasManual] = useState({});
+  const [notasGrupo, setNotasGrupo] = useState({});
   const [mensajes, setMensajes] = useState({});
   const [ambiguos, setAmbiguos] = useState({});
 
@@ -102,13 +103,53 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (r) onCambio();
   }
 
-  async function cambiarEstado(movimientoId, pedida) {
-    const r = await apiFetch(`/api/movimientos/${movimientoId}/estado`, {
+  async function cambiarEstado(m, nuevoEstado) {
+    if (nuevoEstado === 'resuelta') {
+      const nota = (notasManual[m.id] ?? m.nota_final ?? '').trim();
+      if (!nota) {
+        mostrarToast('Escribe una nota antes de marcar como resuelta.', 'error');
+        return;
+      }
+      await confirmarNota(m.id, nota);
+      return;
+    }
+    const r = await apiFetch(`/api/movimientos/${m.id}/estado`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pedida }),
+      body: JSON.stringify({ estado: nuevoEstado }),
     }, { mensajeError: 'No se pudo cambiar el estado.' });
     if (r) onCambio();
+  }
+
+  async function confirmarNotaGrupo(g, nota) {
+    const limpia = (nota ?? '').trim();
+    if (!limpia) return;
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/confirmar-grupo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hoja: g.hoja, clave: g.clave, nota: limpia }),
+    }, { mensajeOk: `${g.sinResolver} línea(s) confirmadas`, mensajeError: 'No se pudo confirmar el grupo.' });
+    if (r) onCambio();
+  }
+
+  async function cambiarEstadoGrupo(g, nuevoEstado) {
+    if (nuevoEstado === 'resuelta') {
+      const nota = (notasGrupo[g.id] ?? '').trim();
+      if (!nota) {
+        mostrarToast('Escribe una nota antes de marcar el grupo como resuelto.', 'error');
+        return;
+      }
+      await confirmarNotaGrupo(g, nota);
+      return;
+    }
+    if (nuevoEstado === 'pedida') {
+      const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/pendiente`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hoja: g.hoja, clave: g.clave }),
+      }, { mensajeOk: 'Marcadas como pedida, esperando al proveedor', mensajeError: 'No se pudo marcar.' });
+      if (r) onCambio();
+    }
   }
 
   async function asignarProyecto(movimientoId, proyectoId) {
@@ -154,6 +195,12 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
   const columnasVisiblesExtra = columnasExtra.filter(c => columnasExtraVisibles.has(c));
 
+  function valorEstadoSelect(m) {
+    if (m.estado === 'resuelta') return 'resuelta';
+    if (m.estado === 'pedida_pendiente') return 'pedida';
+    return 'pendiente';
+  }
+
   function celdaNota(m, g) {
     const resuelta = m.estado === 'resuelta';
     if (resuelta) return <span className="nota-texto">{m.nota_final}</span>;
@@ -189,19 +236,21 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   }
 
   function celdaEstado(m) {
-    if (m.estado === 'resuelta') return <span className="etiqueta-estado resuelta">resuelta</span>;
-    return (
-      <select className="select-estado" value={m.estado === 'pedida_pendiente' ? 'pedida' : 'pendiente'} onChange={e => cambiarEstado(m.id, e.target.value === 'pedida')}>
-        <option value="pendiente">pendiente</option>
-        <option value="pedida">pedida</option>
-      </select>
-    );
-  }
-
-  function celdaFactura(m) {
     const facturaIds = m.factura_ids || [];
-    if (facturaIds.length === 0) return <span className="vacio">—</span>;
-    return <a className="ver-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">Ver factura{facturaIds.length > 1 ? 's' : ''} →</a>;
+    return (
+      <div className="celda-estado">
+        <select className="select-estado" value={valorEstadoSelect(m)} onChange={e => cambiarEstado(m, e.target.value)}>
+          <option value="pendiente">pendiente</option>
+          <option value="pedida">pedida</option>
+          <option value="resuelta">resuelta</option>
+        </select>
+        {m.estado === 'resuelta' && facturaIds.length > 0 && (
+          <a className="link-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">
+            ver factura{facturaIds.length > 1 ? 's' : ''}
+          </a>
+        )}
+      </div>
+    );
   }
 
   function celdaProyecto(m) {
@@ -223,17 +272,58 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   function filaMovimiento(m, g) {
     return (
       <tr key={m.id}>
-        <td className="muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</td>
-        <td className="concepto">{m.concepto?.slice(0, 80)}</td>
+        <td className="fija col-fecha muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</td>
+        <td className="fija col-concepto concepto">{m.concepto?.slice(0, 80)}</td>
         <td className="proveedor">{g.clave}</td>
         <td className="importe col-importe num">{Number(m.importe).toFixed(2)}€</td>
         <td>{celdaEstado(m)}</td>
         <td>{celdaNota(m, g)}</td>
-        <td>{celdaFactura(m)}</td>
         <td>{celdaProyecto(m)}</td>
         {columnasVisiblesExtra.map(c => (
           <td key={c} className="muted">{m.datos_originales?.[c] ?? <span className="vacio">—</span>}</td>
         ))}
+      </tr>
+    );
+  }
+
+  function filaGrupo(g) {
+    // Solo se agrupa visualmente cuando hay mas de una linea de verdad (contando el
+    // total real del grupo, no lo que quede tras filtrar).
+    if (g.total <= 1) return null;
+    const permiteAccionesGrupo = g.categoria !== 'factura_propia' && g.sinResolver > 0;
+    return (
+      <tr className="fila-grupo" key={`g-${g.id}`}>
+        <td colSpan={totalColumnas}>
+          <div className="cab-fila">
+            <span className="cab-izq">
+              {g.clave} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span>
+              <span className="meta">{g.resueltas} de {g.total} resueltas · {g.importeTotal.toFixed(2)}€</span>
+            </span>
+            {permiteAccionesGrupo && (
+              <span className="acciones-grupo">
+                {g.sugerenciaNota && (
+                  <button type="button" className="chip-sugerencia" onClick={() => confirmarNotaGrupo(g, g.sugerenciaNota)}>
+                    ¿Aplicar &quot;{g.sugerenciaNota}&quot; a las {g.sinResolver}?
+                  </button>
+                )}
+                <span className="etiqueta-accion">{g.sugerenciaNota ? 'o algo distinto:' : `Aplicar a las ${g.sinResolver} sin resolver:`}</span>
+                <input
+                  className="campo-nota"
+                  type="text"
+                  placeholder="Nota para todo el grupo..."
+                  value={notasGrupo[g.id] || ''}
+                  onChange={e => setNotasGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNotaGrupo(g, e.target.value); } }}
+                />
+                <select className="select-estado" defaultValue="" onChange={e => { if (e.target.value) cambiarEstadoGrupo(g, e.target.value); e.target.value = ''; }}>
+                  <option value="" disabled>estado...</option>
+                  <option value="pedida">pedida</option>
+                  <option value="resuelta">resuelta</option>
+                </select>
+              </span>
+            )}
+          </div>
+        </td>
       </tr>
     );
   }
@@ -271,7 +361,16 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <thead>
             <tr>
               {COLUMNAS_BASE.map(c => (
-                <th key={c} className={c === 'Importe' ? 'col-importe orden' : 'orden'} onClick={() => alternarOrden(c)}>
+                <th
+                  key={c}
+                  className={[
+                    c === 'Importe' ? 'col-importe' : '',
+                    c === 'Fecha' ? 'fija col-fecha' : '',
+                    c === 'Concepto' ? 'fija col-concepto th-concepto' : '',
+                    'orden',
+                  ].join(' ').trim()}
+                  onClick={() => alternarOrden(c)}
+                >
                   {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
                 </th>
               ))}
@@ -287,17 +386,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
               ? filasOrdenadas.map(({ m, g }) => filaMovimiento(m, g))
               : grupos.map(g => (
                   <Fragment key={g.id}>
-                    <tr className="fila-grupo">
-                      <td colSpan={totalColumnas}>
-                        <span className="cab-izq">
-                          {g.clave} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span>
-                          <span className="meta">{g.resueltas} de {g.total} resueltas · {g.importeTotal.toFixed(2)}€</span>
-                          {g.sugerenciaNota && g.categoria !== 'factura_propia' && (
-                            <span className="meta-sugerencia">· sugerencia: &quot;{g.sugerenciaNota}&quot;</span>
-                          )}
-                        </span>
-                      </td>
-                    </tr>
+                    {filaGrupo(g)}
                     {g.movimientos.map(m => filaMovimiento(m, g))}
                   </Fragment>
                 ))}
