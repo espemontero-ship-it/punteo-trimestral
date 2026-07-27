@@ -29,6 +29,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [columnasExtraVisibles, setColumnasExtraVisibles] = useState(() => new Set());
   const [notasManual, setNotasManual] = useState({});
+  const [proveedoresManual, setProveedoresManual] = useState({});
   const [notasGrupo, setNotasGrupo] = useState({});
   const [mensajes, setMensajes] = useState({});
   const [ambiguos, setAmbiguos] = useState({});
@@ -189,6 +190,15 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     }
   }
 
+  async function guardarProveedor(movimientoId, valor) {
+    const r = await apiFetch(`/api/movimientos/${movimientoId}/proveedor`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proveedor: (valor ?? '').trim() }),
+    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    if (r) onCambio();
+  }
+
   async function separarDeGrupo(movimientoId) {
     const r = await apiFetch(`/api/movimientos/${movimientoId}/separar`, {
       method: 'POST',
@@ -271,7 +281,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       <input
         className={`campo-nota${prellenado ? ' prellenado' : ''}`}
         type="text"
-        placeholder="Nota... (Enter guarda)"
+        placeholder="Nota..."
         value={valorActual}
         onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNota(m.id, e.target.value); } }}
@@ -319,10 +329,17 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         <td className="fija col-fecha muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</td>
         <td className="fija col-concepto concepto">{m.concepto?.slice(0, 80)}</td>
         <td className="proveedor">
-          {nombreGrupo(g.clave)}
+          <input
+            className={`campo-proveedor${!proveedoresManual[m.id] && !m.proveedor && m.proveedor_sugerido ? ' prellenado' : ''}`}
+            type="text"
+            placeholder="Proveedor..."
+            value={proveedoresManual[m.id] ?? (m.proveedor || m.proveedor_sugerido || '')}
+            onChange={e => setProveedoresManual(prev => ({ ...prev, [m.id]: e.target.value }))}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedor(m.id, e.target.value); } }}
+          />
           {g.total > 1 && (
             <button type="button" className="quitar-grupo" onClick={() => separarDeGrupo(m.id)} title="Sacar esta línea del grupo, que quede aparte">
-              · sacar del grupo
+              sacar del grupo
             </button>
           )}
         </td>
@@ -345,42 +362,46 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     const permiteAccionesGrupo = g.categoria !== 'factura_propia' && pendientesGrupo > 0;
     return (
       <tr className="fila-grupo" key={`g-${g.id}`}>
-        <td colSpan={totalColumnas}>
-          <div className="cab-fila">
-            <span className="cab-izq">
-              {nombreGrupo(g.clave)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span>
-              <span className="meta">{g.resueltas} de {g.total} resueltas · {g.importeTotal.toFixed(2)}€</span>
-            </span>
-            {permiteAccionesGrupo && (
-              <span className="acciones-grupo">
-                {g.sugerenciaNota && (
-                  <button type="button" className="chip-sugerencia" onClick={() => confirmarNotaGrupo(g, g.sugerenciaNota)}>
-                    ¿Aplicar &quot;{g.sugerenciaNota}&quot; a las {pendientesGrupo}?
-                  </button>
-                )}
-                <span className="etiqueta-accion">{g.sugerenciaNota ? 'o algo distinto:' : `Aplicar a las ${pendientesGrupo} sin resolver:`}</span>
-                <input
-                  className="campo-nota"
-                  type="text"
-                  placeholder="Nota para todo el grupo..."
-                  value={notasGrupo[g.id] || ''}
-                  onChange={e => setNotasGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNotaGrupo(g, e.target.value); } }}
-                />
-                <select className="select-estado" defaultValue="" onChange={e => { if (e.target.value) cambiarEstadoGrupo(g, e.target.value); e.target.value = ''; }}>
-                  <option value="" disabled>estado...</option>
-                  <option value="pedida">pedida</option>
-                  <option value="resuelta">resuelta</option>
-                </select>
-              </span>
-            )}
-          </div>
+        <td className="fija col-fecha" />
+        <td className="fija col-concepto">
+          <div className="grupo-nombre">{nombreGrupo(g.clave)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
+          <div className="meta">{g.resueltas} de {g.total} resueltas</div>
         </td>
+        <td />
+        <td className="col-importe num">{g.importeTotal.toFixed(2)}€</td>
+        <td>
+          {permiteAccionesGrupo && (
+            <select className="select-estado" defaultValue="" onChange={e => { if (e.target.value) cambiarEstadoGrupo(g, e.target.value); e.target.value = ''; }}>
+              <option value="" disabled>estado...</option>
+              <option value="pedida">pedida</option>
+              <option value="resuelta">resuelta</option>
+            </select>
+          )}
+        </td>
+        <td>
+          {permiteAccionesGrupo && (
+            <>
+              {g.sugerenciaNota && (
+                <button type="button" className="chip-sugerencia" onClick={() => confirmarNotaGrupo(g, g.sugerenciaNota)}>
+                  ¿Aplicar &quot;{g.sugerenciaNota}&quot; a las {pendientesGrupo}?
+                </button>
+              )}
+              <input
+                className="campo-nota"
+                type="text"
+                placeholder={g.sugerenciaNota ? 'o algo distinto...' : `Nota para las ${pendientesGrupo}...`}
+                value={notasGrupo[g.id] || ''}
+                onChange={e => setNotasGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNotaGrupo(g, e.target.value); } }}
+              />
+            </>
+          )}
+        </td>
+        <td />
+        {columnasVisiblesExtra.map(c => <td key={c} />)}
       </tr>
     );
   }
-
-  const totalColumnas = COLUMNAS_BASE.length + columnasVisiblesExtra.length;
 
   return (
     <div>

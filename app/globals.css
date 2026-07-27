@@ -271,10 +271,13 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
   background: var(--bg); overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 0;
 }
 td.concepto, th.th-concepto { white-space: normal; }
-td.proveedor { color: var(--muted); }
+input.campo-proveedor {
+  font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
+  width: 100%; background: var(--surface-alt); color: var(--text);
+}
 .quitar-grupo {
   font: inherit; font-size: 11px; color: var(--muted); text-decoration: underline;
-  background: none; border: none; padding: 0; margin-left: 8px; cursor: pointer;
+  background: none; border: none; padding: 0; margin-top: 3px; cursor: pointer; display: block;
 }
 .quitar-grupo:hover { color: var(--text); }
 td.importe { font-weight: 600; }
@@ -301,25 +304,25 @@ th.fija { z-index: 4; }
 .col-concepto { left: var(--ancho-fecha, 90px); }
 td.col-concepto, th.col-concepto { box-shadow: 3px 0 6px -3px rgba(0,0,0,.12); }
 
-/* Fila de cabecera de grupo (proveedor) — solo para grupos de mas de 1 linea */
+/* Fila de cabecera de grupo (proveedor) — solo para grupos de mas de 1 linea.
+   Usa las mismas columnas que las filas normales (Estado, Nota...), en vez de
+   una sola celda combinada, para que quede claro que cada control actua
+   sobre todo el grupo por estar alineado bajo esa columna. */
 tr.fila-grupo td {
-  background: var(--surface-alt); font-weight: 700; padding: 9px 12px; border-bottom: 1px solid var(--border);
-  white-space: normal;
+  background: var(--surface-alt); border-bottom: 1px solid var(--border);
+  white-space: normal; vertical-align: top;
 }
-tr.fila-grupo .cab-fila { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-tr.fila-grupo .cab-izq { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-tr.fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; }
-tr.fila-grupo .acciones-grupo { display: flex; align-items: center; gap: 8px; font-weight: 400; flex-wrap: wrap; }
-tr.fila-grupo .acciones-grupo .campo-nota { width: 170px; }
-tr.fila-grupo .acciones-grupo select { width: auto; }
-tr.fila-grupo .etiqueta-accion { font-size: 11px; color: var(--muted); text-transform: none; letter-spacing: 0; }
+tr.fila-grupo .grupo-nombre { font-weight: 700; }
+tr.fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
+tr.fila-grupo select.select-estado, tr.fila-grupo input.campo-nota { width: 100%; }
+tr.fila-grupo .chip-sugerencia { display: block; margin-bottom: 4px; }
 
 /* Nota: campo único, guarda con Enter, se prellena en azul si hay sugerencia */
 input.campo-nota {
   font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
   width: 100%; background: var(--surface-alt); color: var(--text);
 }
-input.campo-nota.prellenado { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
+input.campo-nota.prellenado, input.campo-proveedor.prellenado { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
 .nota-texto { font-size: 13px; }
 
 /* Estado: siempre un desplegable editable (pendiente/pedida/resuelta); si hay
