@@ -25,7 +25,7 @@ async function main() {
 
   console.log('Resumen:');
   for (const r of resumen) {
-    console.log(`  ${r.hoja}: ${r.nuevas} nuevas, ${r.fijas} con sugerencia fija, ${r.propias} factura propia/patrón, ${r.mixtas} mixtas/revisar`);
+    console.log(`  ${r.hoja}: ${r.nuevas} nuevas, ${r.fijas} con sugerencia fija, ${r.mixtas} mixtas/revisar`);
   }
   console.log(`\nGuardado en: ${outputPath}`);
 }

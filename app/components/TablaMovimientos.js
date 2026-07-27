@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useMemo, Fragment } from 'react';
-import SubirFactura from './SubirFactura';
 import { apiFetch } from '../lib/toast';
 
 const ETIQUETAS = {
   fija: 'fija',
-  factura_propia: 'factura propia',
   mixta: 'mixta',
   nueva: 'nueva',
 };
@@ -40,8 +38,6 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   const [proveedoresManual, setProveedoresManual] = useState({});
   const [notasGrupo, setNotasGrupo] = useState({});
   const [proveedoresGrupo, setProveedoresGrupo] = useState({});
-  const [mensajes, setMensajes] = useState({});
-  const [ambiguos, setAmbiguos] = useState({});
   const [anchos, setAnchos] = useState({});
 
   function anchoDe(col) {
@@ -141,7 +137,6 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
   async function confirmarNota(movimientoId, valor) {
     const nota = (valor ?? '').trim();
-    if (!nota) return;
     const r = await apiFetch(`/api/movimientos/${movimientoId}/confirmar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -172,7 +167,6 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
   async function confirmarNotaGrupo(g, nota) {
     const limpia = (nota ?? '').trim();
-    if (!limpia) return;
     const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/confirmar-grupo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -246,38 +240,6 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (r) onCambio();
   }
 
-  function onResultadoFactura(movimiento, resultado) {
-    setMensajes(prev => ({ ...prev, [movimiento.id]: resultado.detalle }));
-    if (resultado.tipo === 'match_directo') {
-      onCambio();
-    } else if (resultado.tipo === 'ambiguo') {
-      setAmbiguos(prev => ({ ...prev, [resultado.facturaId]: resultado.candidatos.map(c => ({ ...c, numero: resultado.numero, facturaId: resultado.facturaId })) }));
-    } else if (resultado.tipo === 'combo_sugerido') {
-      setAmbiguos(prev => ({
-        ...prev,
-        [resultado.facturaId]: [{
-          movimientoId: resultado.movimientoId,
-          esCombo: true,
-          numero: resultado.numero,
-          otraFacturaNumero: resultado.otraFacturaNumero,
-          facturaId: resultado.facturaId,
-          otraFacturaId: resultado.otraFacturaId,
-        }],
-      }));
-    }
-  }
-
-  async function elegirCandidato(opcion) {
-    const nota = opcion.esCombo ? `${opcion.numero} + ${opcion.otraFacturaNumero}` : String(opcion.numero);
-    const facturaIds = opcion.esCombo ? [opcion.facturaId, opcion.otraFacturaId] : [opcion.facturaId];
-    const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nota, facturaIds }),
-    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
-    if (r) onCambio();
-  }
-
   const columnasVisiblesExtra = columnasExtra.filter(c => columnasExtraVisibles.has(c));
 
   function valorEstadoSelect(m) {
@@ -289,22 +251,6 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   function celdaNota(m, g) {
     const resuelta = m.estado === 'resuelta';
     if (resuelta) return <span className="nota-texto">{m.nota_final}</span>;
-    if (g.categoria === 'factura_propia') {
-      return (
-        <div>
-          <SubirFactura trimestreId={trimestreId} hoja={g.hoja} clave={g.clave} etiqueta="Subir factura" onResultado={r => onResultadoFactura(m, r)} />
-          {mensajes[m.id] && <div className="muted" style={{ marginTop: 4, fontSize: 11 }}>{mensajes[m.id]}</div>}
-          {Object.values(ambiguos).flat().filter(o => o.movimientoId === m.id).length > 0 &&
-            Object.entries(ambiguos).map(([facturaId, opciones]) =>
-              opciones.filter(o => o.movimientoId === m.id).map((o, i) => (
-                <button key={`${facturaId}-${i}`} className="secundario" style={{ marginTop: 4, fontSize: 11, padding: '4px 8px' }} onClick={() => elegirCandidato(o)}>
-                  {o.esCombo ? `Combinar con factura ${o.otraFacturaNumero}` : `Es la factura ${o.numero}`}
-                </button>
-              ))
-            )}
-        </div>
-      );
-    }
     const sugerencia = g.sugerenciaNota;
     const valorActual = notasManual[m.id] ?? (sugerencia || '');
     const prellenado = !notasManual[m.id] && !!sugerencia;
@@ -390,7 +336,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     // total real del grupo, no lo que quede tras filtrar).
     if (g.total <= 1) return null;
     const pendientesGrupo = g.total - g.resueltas;
-    const permiteAccionesGrupo = g.categoria !== 'factura_propia' && pendientesGrupo > 0;
+    const permiteAccionesGrupo = pendientesGrupo > 0;
     const sugerenciaProveedorGrupo = g.movimientos.find(m => m.proveedor_sugerido)?.proveedor_sugerido || null;
     return (
       <tr className="fila-grupo" key={`g-${g.id}`}>

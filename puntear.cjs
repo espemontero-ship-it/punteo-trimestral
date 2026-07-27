@@ -30,7 +30,7 @@ async function main() {
   const resumenClasificacion = aplicarClasificacion(wb, memoria);
   escribirResumenClasificacion(wb, resumenClasificacion);
   for (const r of resumenClasificacion) {
-    console.log(`  ${r.hoja}: ${r.nuevas} nuevas, ${r.fijas} fijas, ${r.propias} factura propia/patrón, ${r.mixtas} mixtas`);
+    console.log(`  ${r.hoja}: ${r.nuevas} nuevas, ${r.fijas} fijas, ${r.mixtas} mixtas`);
   }
 
   console.log('\nCruzando contra las facturas de la carpeta...');

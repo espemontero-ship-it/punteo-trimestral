@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
 
-export default function SubirFactura({ trimestreId, hoja, clave, etiqueta, onResultado }) {
+export default function SubirFactura({ trimestreId, hoja, clave, etiqueta, onResultado, className = 'secundario' }) {
   const inputRef = useRef(null);
   const [subiendo, setSubiendo] = useState(false);
 
@@ -45,7 +45,8 @@ export default function SubirFactura({ trimestreId, hoja, clave, etiqueta, onRes
         style={{ display: 'none' }}
       />
       <button
-        className="secundario"
+        type="button"
+        className={className}
         disabled={subiendo}
         onClick={() => inputRef.current?.click()}
       >
