@@ -2,7 +2,7 @@
 
 import { useState, useMemo, Fragment } from 'react';
 import SubirFactura from './SubirFactura';
-import { apiFetch, mostrarToast } from '../lib/toast';
+import { apiFetch } from '../lib/toast';
 
 const ETIQUETAS = {
   fija: 'fija',
@@ -152,12 +152,14 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
   async function cambiarEstado(m, nuevoEstado) {
     if (nuevoEstado === 'resuelta') {
+      // La nota es opcional: se guarda si hay algo escrito, pero no bloquea marcar como resuelta.
       const nota = (notasManual[m.id] ?? m.nota_final ?? '').trim();
-      if (!nota) {
-        mostrarToast('Escribe una nota antes de marcar como resuelta.', 'error');
-        return;
-      }
-      await confirmarNota(m.id, nota);
+      const r = await apiFetch(`/api/movimientos/${m.id}/confirmar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nota }),
+      }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+      if (r) onCambio();
       return;
     }
     const r = await apiFetch(`/api/movimientos/${m.id}/estado`, {
@@ -181,12 +183,14 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
   async function cambiarEstadoGrupo(g, nuevoEstado) {
     if (nuevoEstado === 'resuelta') {
+      // La nota es opcional: se guarda si hay algo escrito, pero no bloquea marcar el grupo como resuelto.
       const nota = (notasGrupo[g.id] ?? '').trim();
-      if (!nota) {
-        mostrarToast('Escribe una nota antes de marcar el grupo como resuelto.', 'error');
-        return;
-      }
-      await confirmarNotaGrupo(g, nota);
+      const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/confirmar-grupo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hoja: g.hoja, clave: g.clave, nota }),
+      }, { mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`, mensajeError: 'No se pudo confirmar el grupo.' });
+      if (r) onCambio();
       return;
     }
     if (nuevoEstado === 'pedida') {
@@ -387,6 +391,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (g.total <= 1) return null;
     const pendientesGrupo = g.total - g.resueltas;
     const permiteAccionesGrupo = g.categoria !== 'factura_propia' && pendientesGrupo > 0;
+    const sugerenciaProveedorGrupo = g.movimientos.find(m => m.proveedor_sugerido)?.proveedor_sugerido || null;
     return (
       <tr className="fila-grupo" key={`g-${g.id}`}>
         <td className="fija col-fecha" />
@@ -396,10 +401,10 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         </td>
         <td>
           <input
-            className="campo-proveedor"
+            className={`campo-proveedor${!proveedoresGrupo[g.id] && sugerenciaProveedorGrupo ? ' prellenado' : ''}`}
             type="text"
             placeholder=""
-            value={proveedoresGrupo[g.id] || ''}
+            value={proveedoresGrupo[g.id] ?? (sugerenciaProveedorGrupo || '')}
             onChange={e => setProveedoresGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedorGrupo(g, e.target.value); } }}
           />

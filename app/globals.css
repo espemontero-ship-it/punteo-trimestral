@@ -262,13 +262,16 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
   color: var(--muted); font-weight: 700; padding: 9px 12px; border-bottom: 2px solid var(--border);
   white-space: nowrap; background: var(--surface-alt); position: sticky; top: 0; z-index: 2;
-  overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 0;
+  overflow: hidden; text-overflow: ellipsis;
 }
-.etiqueta-orden { cursor: pointer; user-select: none; }
+.etiqueta-orden {
+  cursor: pointer; user-select: none; display: inline-block; max-width: calc(100% - 14px);
+  overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
+}
 .etiqueta-orden:hover { color: var(--text); }
 .tabla-movimientos-envoltura tbody td {
   padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap;
-  background: var(--bg); overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 0;
+  background: var(--bg); overflow: hidden; text-overflow: ellipsis;
 }
 td.concepto, th.th-concepto { white-space: normal; }
 input.campo-proveedor {
