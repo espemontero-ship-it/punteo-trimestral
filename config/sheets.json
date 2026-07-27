@@ -3,9 +3,9 @@
   "sheets": [
     {
       "nombre": "bbva",
-      "dataStartRow": 3,
-      "textCols": ["E", "F", "G"],
-      "importeCol": "H",
+      "dataStartRow": 2,
+      "textCols": ["E", "F"],
+      "importeCol": "G",
       "fechaCol": "B",
       "notaCol": "M"
     },
