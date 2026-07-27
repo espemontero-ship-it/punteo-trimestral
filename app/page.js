@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import TablaMovimientos from './components/TablaMovimientos';
 import SubirFactura from './components/SubirFactura';
+import SubirFacturasLote from './components/SubirFacturasLote';
 import SelectorTrimestre from './components/SelectorTrimestre';
 import SeccionLotes from './components/SeccionLotes';
 import { ConfirmDialog } from './components/ConfirmDialog';
@@ -26,6 +27,7 @@ export default function Home() {
   const [mensajeFacturaSuelta, setMensajeFacturaSuelta] = useState(null);
   const [pestana, setPestana] = useState('inicio');
   const [confirmarCierre, setConfirmarCierre] = useState(false);
+  const [lote, setLote] = useState(null);
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -86,6 +88,39 @@ export default function Home() {
       setSubiendoExcel(false);
       e.target.reset();
     }
+  }
+
+  // Junta los resultados de una subida en lote: qué líneas quedaron
+  // resueltas solas, cuáles tienen varias facturas con el mismo importe
+  // (para elegir en la tabla) y qué archivos no encontraron ninguna línea.
+  async function completarLote(resultados) {
+    const ids = new Set();
+    const ambiguos = {};
+    const sinEncontrar = [];
+
+    for (const { nombreArchivo, resultado } of resultados) {
+      if (resultado.tipo === 'match_directo') {
+        ids.add(resultado.movimientoId);
+      } else if (resultado.tipo === 'ambiguo') {
+        for (const c of resultado.candidatos) {
+          ids.add(c.movimientoId);
+          ambiguos[c.movimientoId] = ambiguos[c.movimientoId] || [];
+          ambiguos[c.movimientoId].push({ movimientoId: c.movimientoId, numero: resultado.numero, facturaId: resultado.facturaId });
+        }
+      } else if (resultado.tipo === 'combo_sugerido') {
+        ids.add(resultado.movimientoId);
+        ambiguos[resultado.movimientoId] = ambiguos[resultado.movimientoId] || [];
+        ambiguos[resultado.movimientoId].push({
+          movimientoId: resultado.movimientoId, esCombo: true, numero: resultado.numero,
+          otraFacturaNumero: resultado.otraFacturaNumero, facturaId: resultado.facturaId, otraFacturaId: resultado.otraFacturaId,
+        });
+      } else {
+        sinEncontrar.push({ nombreArchivo, detalle: resultado.detalle });
+      }
+    }
+
+    setLote({ ids, ambiguos, sinEncontrar, total: resultados.length });
+    await cargar(trimestreId);
   }
 
   if (!trimestreId) {
@@ -154,6 +189,8 @@ export default function Home() {
 
       {pestana === 'trimestre' && (
         <>
+          <SubirFacturasLote trimestreId={trimestreId} onCompletado={completarLote} />
+
           <div className="resumen-mini">
             <div>
               <span>{resueltas} de {total} líneas resueltas</span>
@@ -201,6 +238,8 @@ export default function Home() {
               proveedores={proveedores}
               proyectos={proyectos}
               onCambio={() => cargar(trimestreId)}
+              filtroLote={lote}
+              onQuitarFiltro={() => setLote(null)}
             />
           )}
         </>

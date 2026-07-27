@@ -28,7 +28,7 @@ function nombreGrupoMostrado(g) {
   return conProveedor ? conProveedor.proveedor : nombreGrupo(g.clave);
 }
 
-export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio }) {
+export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro }) {
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [ordenPor, setOrdenPor] = useState(null); // { campo, dir } | null (null = agrupado por proveedor)
@@ -84,6 +84,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         ...g,
         importeTotal: g.movimientos.reduce((s, m) => s + Number(m.importe), 0),
         movimientos: g.movimientos.filter(m => {
+          if (filtroLote) return filtroLote.ids.has(m.id);
           if (soloPendientes && m.estado === 'resuelta') return false;
           if (!texto) return true;
           const campos = [m.concepto, g.clave, m.nota_final, m.importe, m.fecha, ...(m.datos_originales ? Object.values(m.datos_originales) : [])];
@@ -91,7 +92,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         }),
       }))
       .filter(g => g.movimientos.length > 0);
-  }, [proveedores, busqueda, soloPendientes]);
+  }, [proveedores, busqueda, soloPendientes, filtroLote]);
 
   const filasOrdenadas = useMemo(() => {
     if (!ordenPor) return null;
@@ -215,6 +216,17 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (r) onCambio();
   }
 
+  async function elegirCandidato(opcion) {
+    const nota = opcion.esCombo ? `${opcion.numero} + ${opcion.otraFacturaNumero}` : String(opcion.numero);
+    const facturaIds = opcion.esCombo ? [opcion.facturaId, opcion.otraFacturaId] : [opcion.facturaId];
+    const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nota, facturaIds }),
+    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    if (r) onCambio();
+  }
+
   async function separarDeGrupo(movimientoId) {
     const r = await apiFetch(`/api/movimientos/${movimientoId}/separar`, {
       method: 'POST',
@@ -251,6 +263,19 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   function celdaNota(m, g) {
     const resuelta = m.estado === 'resuelta';
     if (resuelta) return <span className="nota-texto">{m.nota_final}</span>;
+    const opcionesLote = filtroLote?.ambiguos?.[m.id];
+    if (opcionesLote?.length) {
+      return (
+        <div className="opciones-lote">
+          <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>Varias facturas con este importe:</p>
+          {opcionesLote.map((o, i) => (
+            <button key={i} className="secundario" style={{ display: 'block', marginTop: 4, fontSize: 11, padding: '4px 8px' }} onClick={() => elegirCandidato(o)}>
+              {o.esCombo ? `Combinar con factura ${o.otraFacturaNumero}` : `Es la factura ${o.numero}`}
+            </button>
+          ))}
+        </div>
+      );
+    }
     const sugerencia = g.sugerenciaNota;
     const valorActual = notasManual[m.id] ?? (sugerencia || '');
     const prellenado = !notasManual[m.id] && !!sugerencia;
@@ -398,6 +423,24 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
   return (
     <div>
+      {filtroLote && (
+        <div className="barra-filtro-lote">
+          <span>Mostrando {filtroLote.ids.size} línea(s) de la última subida ({filtroLote.total} archivo(s) subidos).</span>
+          <button type="button" className="secundario" onClick={onQuitarFiltro}>Ver todo el trimestre</button>
+        </div>
+      )}
+      {filtroLote?.sinEncontrar?.length > 0 && (
+        <div className="lista-sin-encontrar">
+          <p className="muted" style={{ margin: '0 0 8px' }}>{filtroLote.sinEncontrar.length} archivo(s) sin ninguna línea parecida — revisa a mano:</p>
+          {filtroLote.sinEncontrar.map((f, i) => (
+            <div key={i} className="fila-sin-encontrar">
+              <span>{f.nombreArchivo}</span>
+              <span className="muted">{f.detalle}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="buscador-fila">
         <input type="text" placeholder="Buscar en cualquier columna..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
         <label className="toggle-pendientes">
