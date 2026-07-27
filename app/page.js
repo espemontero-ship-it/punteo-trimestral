@@ -95,7 +95,7 @@ export default function Home() {
   const porcentaje = total ? Math.round((resueltas / total) * 100) : 0;
 
   return (
-    <div className="contenedor">
+    <div className={pestana === 'trimestre' ? 'contenedor contenedor-ancho' : 'contenedor'}>
       <div className="fila" style={{ marginTop: 16 }}>
         <h1 style={{ margin: 0 }}>{trimestreId}</h1>
         <div>

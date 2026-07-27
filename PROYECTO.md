@@ -8,6 +8,8 @@ Este documento es la fuente de verdad del proyecto: qué es, qué decisiones se 
 
 "Mostrar" = describir o previsualizar **sin tocar ningún archivo**. "Implementar" = editar el archivo (aunque sea un mockup) y volver a publicarlo. Son dos pasos distintos y no se saltan: si la usuaria pide "muéstramelo", la respuesta es una descripción o boceto en palabras, nunca una edición de archivo — ni siquiera de un mockup. Solo se edita después de una confirmación explícita a esa descripción. Una idea a medio formular, o una petición que "parece clara", no es autorización para tocar un archivo.
 
+**2026-07-27, regla ampliada — "mockup siempre":** para cualquier cambio visual/de layout (no solo funcionalidad nueva), la validación previa tiene que ser un **mockup visual real**, no basta con describirlo en palabras — el comportamiento de CSS (scroll, sticky, anchos) es demasiado fácil de imaginar mal en texto. Construir el mockup, enseñarlo, y solo tras confirmación explícita aplicarlo al código real de la app.
+
 Ver [[feedback-validate-before-coding]] en memoria — esta regla ya se incumplió más de una vez en la sesión del 2026-07-27 y hay que dejar de repetirlo.
 
 ## Qué es y para quién
