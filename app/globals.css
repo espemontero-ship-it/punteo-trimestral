@@ -181,3 +181,62 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .radio-fila.selected .radio-punto {
   background: var(--accent); border-color: var(--accent);
 }
+
+/* Pestañas del trimestre (Inicio / Trimestre / Colaboradores) */
+.tabbar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin: 14px 0 18px;
+}
+.tabbar button {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+}
+.tabbar button.activa { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Tarjeta de acción principal (pestaña Inicio) */
+.cta-principal {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: 12px;
+  padding: 22px 18px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.cta-principal p { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
+.cta-principal .sub { font-size: 12.5px; opacity: .85; margin-bottom: 14px; font-weight: 400; }
+.cta-principal button.secundario {
+  background: #fff;
+  color: var(--accent);
+  border-color: #fff;
+  font-weight: 700;
+}
+
+.resumen-mini {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--surface-alt); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 12px; font-size: 13px;
+}
+.resumen-mini a { color: var(--accent); font-size: 12.5px; font-weight: 600; text-decoration: none; }
+
+/* Buscador y filtro de la pestaña Trimestre */
+.buscador-fila { display: flex; gap: 8px; margin-bottom: 10px; }
+.buscador-fila input[type="text"] { flex: 1; }
+.toggle-pendientes {
+  display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted);
+  white-space: nowrap; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; cursor: pointer;
+}
+.toggle-pendientes input { accent-color: var(--accent); }
+
+details.excel-toggle { margin-bottom: 14px; }
+details.excel-toggle > summary { cursor: pointer; font-size: 13px; color: var(--accent); font-weight: 600; list-style: none; }
+details.excel-toggle > summary::-webkit-details-marker { display: none; }
+details.excel-toggle[open] > summary { margin-bottom: 10px; }
