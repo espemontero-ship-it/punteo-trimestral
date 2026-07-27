@@ -34,7 +34,7 @@ Alternativas descartadas, con motivo real:
 
 1. **Motor CLI** (`aprender`/`clasificar`/`matchear`/`puntear`) — aprende de las líneas ya punteadas históricamente (492 líneas la primera vez).
 2. **Webapp**: checklist agrupado por proveedor, subida de factura con matching automático por importe (incluidas combinaciones de 2 facturas), estado "pedida, pendiente de recibir", todo persistido en base de datos (no en el navegador), captura de cámara en móvil, "Cerrar trimestre" genera zip de facturas numeradas + xlsx final.
-3. Desplegado y verificado con datos reales: 291 grupos de proveedores (50 fijos, 201 factura propia, 31 nuevos), 310 combinaciones proveedor→nota migradas desde `memoria_proveedores.json`.
+3. Desplegado y verificado con datos reales: 291 grupos de proveedores (50 fijos, 201 factura propia, 31 nuevos), 310 combinaciones proveedor→nota migradas desde `memoria_proveedores.json`. **Ojo: esto fue verificación técnica/API (que los datos se procesan y guardan bien), no un uso real.** Nadie había probado a *usar* la app de verdad hasta después — fue al intentarlo cuando se vio que era un desastre en general, lo que disparó la auditoría de UX de más abajo.
 4. Fix: subir el excel dos veces fusiona en vez de borrar las notas ya confirmadas. Las facturas sueltas se pueden subir antes de que exista el excel del trimestre.
 5. Fix: bug de `pdf-parse` roto en el entorno serverless de Vercel (`DOMMatrix is not defined`) — solucionado bajando de v2 a v1.
 6. Selector de trimestre (listar / crear / borrar) para poder probar sin ensuciar datos reales.
@@ -61,3 +61,4 @@ Alternativas descartadas, con motivo real:
 Cada decisión de producto/alcance/diseño se anota aquí en cuanto se toma, con fecha.
 
 - **2026-07-27** — Se reconstruyó este documento desde cero leyendo la sesión anterior completa (1598 mensajes), porque no existía como archivo — vivía solo dentro del modo Plan de esa conversación y se perdió el hilo entre sesiones. A partir de ahora se mantiene aquí para que no vuelva a pasar.
+- **2026-07-27** — Aclarado que nada de la app está realmente testado en uso real: la "verificación con datos reales" fue solo a nivel técnico/API. El desastre se descubrió al intentar usarla de verdad, no antes. No dar por hecho que ninguna pantalla/flujo funciona bien en la práctica solo porque el código compile o la API responda.
