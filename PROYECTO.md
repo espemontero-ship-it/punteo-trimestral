@@ -21,6 +21,31 @@ Proceso manual que sustituye: bajar el excel del banco, subirlo a Drive, buscar 
 
 No adivina proveedores por su cuenta: aprende de las notas ya escritas en trimestres anteriores. Agrupa por proveedor (no línea a línea). Al subir una factura, la cruza automáticamente contra las líneas pendientes de ese proveedor, incluida la detección de que dos facturas juntas sumen el importe de una línea.
 
+El flujo real, tal como lo especificó la usuaria el 2026-07-27 (corrigiendo una lectura anterior errónea que mezclaba esto con "leer una carpeta de Drive"), tiene tres bloques separados. Importante para usabilidad — cada punto es un requisito propio, no una idea general:
+
+### Antes de cerrar el trimestre
+
+- Me ayudaría poder subir facturas sueltas o en grupo, para tenerlas listas para cuando vayamos a cerrar el trimestre.
+
+### Cuando voy a cerrar el trimestre
+
+- Subo excels para conciliación.
+- Agrupamos por proveedor, para que tarde menos en la búsqueda.
+- No subo de una en una — el fin es poder guardar todas las de un proveedor (ej. todas las de Amazon) y subirlas todas de golpe, y que el sistema haga el match.
+- Necesito ver los proveedores que queden pendientes de buscar factura.
+- Algunos proveedores me mandan la factura más tarde y se marcan pendientes. **Resuelto** (ver más abajo): atajo opcional "es una de las pendientes" al subirla.
+- Cierro en determinado momento y mando la info a gestoría — necesito tener guardada en mi Drive toda la info.
+
+### Gestión de proyectos concretos (va aparte de lo anterior)
+
+- Crear colaborador.
+- Que suba facturas.
+- Aprobar facturas y hacer pagos y adelantos.
+
+*(Esto último es la funcionalidad de colaboradores/lotes/pagos ya construida — confirmado que es una pista independiente del flujo de conciliación trimestral, no parte de él.)*
+
+**Facturas que llegan tarde** — decisión tomada el 2026-07-27: al subir esa factura más tarde, hay un atajo **opcional** para decir "esto es una de mis pendientes" y elegirla de la propia lista de pedidas-esperando — match directo, sin depender de que el importe adivine bien. Es opcional y no el camino por defecto porque estos casos son raros (2-10 por trimestre) frente al volumen normal (200-500 líneas/trimestre) — forzar el paso extra siempre sería más fricción de la que ahorra.
+
 ## Stack técnico (y por qué, no solo qué)
 
 **Next.js + Neon Postgres (vía integración de Vercel) + Vercel Blob + GitHub privado**, desplegado en Vercel.
@@ -39,6 +64,12 @@ Alternativas descartadas, con motivo real:
 5. Fix: bug de `pdf-parse` roto en el entorno serverless de Vercel (`DOMMatrix is not defined`) — solucionado bajando de v2 a v1.
 6. Selector de trimestre (listar / crear / borrar) para poder probar sin ensuciar datos reales.
 7. **Colaboradores, lotes y pagos**: la gente del equipo sube facturas de un evento a su propio "lote" (usuario/contraseña, no enlace mágico — se mezclan entre personas). El total gastado se ve en caliente desde la primera factura (control de gasto en curso, no solo al cierre). Cada factura se acepta o rechaza (ticket ≠ factura válida; las rechazadas nunca llegan a la gestoría). El pago se puede repartir en varios "pagos" independientes — un anticipo y su diferencia posterior son dos movimientos de banco distintos, no uno.
+
+## Huecos identificados (2026-07-27, pendientes de construir)
+
+- **Subida en lote de facturas.** Hoy [SubirFactura.js](app/components/SubirFactura.js) coge `e.target.files[0]` y el input no tiene `multiple` — solo se puede subir una factura por acción, aunque el flujo real necesita seleccionar varias a la vez (ej. todas las de Amazon) y que el sistema las procese y empareje todas. Es el hueco fundamental del flujo de cierre, no un "nice to have".
+- **Atajo "es una de las pendientes"** al subir una factura que llegó tarde (ver flujo arriba) — diseño acordado, sin construir todavía.
+- Sobre el CLI (`aprender`/`clasificar`/`matchear`/`puntear`): **no se archiva ni se borra sin más.** La lógica de fondo (`lib/normalize.js`, `lib/clasificarCore.js`, `lib/facturas.js`, `lib/matchearCore.js`) ya es compartida con el webapp, así que no se pierde nada ahí. Lo único específico del CLI es que `matchear.cjs` procesa una carpeta entera de golpe — que es exactamente la misma necesidad que "subida en lote" de arriba, solo que resuelta del lado del CLI en vez del navegador. Construir la subida en lote en el webapp es lo que de verdad haría al CLI prescindible; hasta entonces, tocarlo sería quitar una capacidad real sin sustituto.
 
 ## Plan de UX (auditoría, 3 fases)
 
@@ -64,3 +95,5 @@ Cada decisión de producto/alcance/diseño se anota aquí en cuanto se toma, con
 - **2026-07-27** — Se reconstruyó este documento desde cero leyendo la sesión anterior completa (1598 mensajes), porque no existía como archivo — vivía solo dentro del modo Plan de esa conversación y se perdió el hilo entre sesiones. A partir de ahora se mantiene aquí para que no vuelva a pasar.
 - **2026-07-27** — Aclarado que nada de la app está realmente testado en uso real: la "verificación con datos reales" fue solo a nivel técnico/API. El desastre se descubrió al intentar usarla de verdad, no antes. No dar por hecho que ninguna pantalla/flujo funciona bien en la práctica solo porque el código compile o la API responda.
 - **2026-07-27** — Aplicada la línea visual acordada al código real (`globals.css` + `GrupoProveedor.js`), verificado en el navegador contra datos reales de prueba. Los badges de estado real (aceptada/rechazada/pendiente en lotes/colaboradores) se mantuvieron coloreados pero apagados — solo se quitó el color de las categorías de proveedor, que era decorativo, no de estado.
+- **2026-07-27** — Corregido un error de concepto propio: la funcionalidad fundamental que faltaba no era "leer una carpeta de Drive desde el CLI", era la subida en lote de varias facturas a la vez desde el propio webapp (ver "Huecos identificados"). Se decide no tocar el CLI hasta que esto esté construido, porque hoy es lo único que cubre esa necesidad.
+- **2026-07-27** — Acordado el flujo de facturas que llegan tarde: atajo opcional "es una de las pendientes" al subir, sin forzarlo como paso obligatorio (2-10 casos/trimestre vs. 200-500 líneas totales).
