@@ -71,11 +71,45 @@ Alternativas descartadas, con motivo real:
 - **Atajo "es una de las pendientes"** al subir una factura que llegó tarde (ver flujo arriba) — diseño acordado, sin construir todavía.
 - Sobre el CLI (`aprender`/`clasificar`/`matchear`/`puntear`): **no se archiva ni se borra sin más.** La lógica de fondo (`lib/normalize.js`, `lib/clasificarCore.js`, `lib/facturas.js`, `lib/matchearCore.js`) ya es compartida con el webapp, así que no se pierde nada ahí. Lo único específico del CLI es que `matchear.cjs` procesa una carpeta entera de golpe — que es exactamente la misma necesidad que "subida en lote" de arriba, solo que resuelta del lado del CLI en vez del navegador. Construir la subida en lote en el webapp es lo que de verdad haría al CLI prescindible; hasta entonces, tocarlo sería quitar una capacidad real sin sustituto.
 
+## Arquitectura de información — 3 pestañas por momento de uso (acordado 2026-07-27)
+
+El problema de fondo detectado en la auditoría completa (más abajo) no era una lista de bugs sueltos: era que **una sola pantalla mezclaba todos los momentos de uso**, sin importar por qué se abría la app. Se decidió dividir la vista de un trimestre en 3 pestañas, cada una pensada para un momento concreto (mockup en Artifact, verificado con la usuaria antes de escribir código):
+
+- **Inicio** — el momento de "voy a subir una foto rápida y ya". Lo primero y más grande que se ve es "Subir factura suelta". Debajo, un resumen mínimo (X de Y resueltas) con un enlace a "ver pendientes". Nada de excel, nada de checklist, nada de colaboradores.
+- **Trimestre** (nombrada así, no "Proveedores") — la sesión de cierre: subida en lote destacada arriba, buscador + toggle "solo pendientes", el excel colapsado en un desplegable (no se toca cada vez que se entra), el checklist agrupado, y "Cerrar trimestre" al final — es parte de esta sesión, no una acción de un vistazo.
+- **Colaboradores** — su propio espacio, ya no comparte scroll ni interrumpe las otras dos.
+
+Esto sustituye y concreta el ítem suelto que había en la Fase 2 de la auditoría anterior ("separar en pestañas"). Línea visual de la reorganización: pendiente ("ya veríamos, vamos poco a poco" — la estructura se acordó antes que el acabado visual final).
+
+## Auditoría de UX completa (2026-07-27)
+
+Revisión de las 20 pantallas/componentes reales contra el flujo de arriba. Los ítems de arquitectura (🔴 1-3) ya se resolvieron con la reorganización en pestañas; el resto sigue pendiente de construir.
+
+**Antes de cerrar / Trimestre** (`page.js`, `GrupoProveedor.js`, `SubirFactura.js`)
+- 🔴 Sin subida en lote — ver "Huecos identificados".
+- 🔴 Sin buscador/filtro de proveedores — con 290 grupos, encontrar uno es scroll a ciegas.
+- 🔴 Sin vista "solo lo pendiente" — resueltos y no resueltos se listan mezclados.
+- 🟠 Nada distingue visualmente los grupos "un clic y resuelto" (fija) de los que dan trabajo, salvo texto pequeño.
+- 🟠 El estado "pedida, pendiente" no tiene vista propia — no hay un sitio único para ver todo lo que se está esperando de proveedores.
+- 🟠 Confirmar un grupo entero no tiene deshacer.
+- 🟡 El selector de excel no confirma qué detectó hasta después de subirlo.
+
+**Colaboradores y lotes** (`SeccionLotes.js`, `SubirFacturaLote.js`, `lotes/[id]/page.js`, `colaborador/page.js`)
+- 🔴 `SubirFacturaLote` tampoco admite varios archivos — y aquí pesa más, porque es la propia colaboradora quien repite la subida una a una por cada recibo de un evento.
+- 🟠 La contraseña de colaborador se enseña una vez sin botón de copiar, y no se puede regenerar sin borrar el colaborador entero.
+- 🟠 "Ver archivo" de una factura abre en pestaña aparte — se revisa importe/concepto sin ver la imagen a la vez.
+- 🟠 Vincular un pago a una línea del banco es un `<select>` con todos los movimientos del trimestre sin filtrar.
+
+**Transversal**
+- 🟠 Un único formulario de login sirve para admin y colaboradora (usuario en blanco = admin) — fácil de equivocarse.
+- 🟡 "Volver" desde un lote siempre lleva a "/", sin recordar desde qué trimestre se entró.
+- 🟡 Formato de número inconsistente entre pantallas.
+
 ## Plan de UX (auditoría, 3 fases)
 
 - **Fase 1 — confianza** ✅ hecho (commit `576d64c`, 2026-07-27): toasts de guardado/error, diálogos propios (`ConfirmDialog`, `MotivoDialog`) en vez de `window.confirm`/`window.prompt`, manejo de errores consistente en las llamadas a la API (`apiFetch`).
-- **Fase 2 — pendiente**: buscador/filtro en la lista de proveedores (con ~290 grupos, desplazarse a mano es un suplicio); separar el panel de admin en pestañas (gestión del trimestre vs. colaboradores/lotes) en vez de un único scroll largo.
-- **Fase 3 — pendiente**: botones de guardar explícitos en móvil (el guardado solo por `onBlur` falla con el teclado virtual), botón de copiar la contraseña generada de un colaborador, estados vacíos con guía, accesibilidad (el estado no debe depender solo del color), formato consistente de números/fechas.
+- **Fase 2 — en curso**: arquitectura en 3 pestañas ✅ acordada (ver arriba); dentro de "Trimestre" siguen pendientes el buscador/filtro, el toggle "solo pendientes" y la subida en lote.
+- **Fase 3 — pendiente**: botones de guardar explícitos en móvil (el guardado solo por `onBlur` falla con el teclado virtual), botón de copiar la contraseña generada de un colaborador (+ forma de regenerarla), estados vacíos con guía, accesibilidad (el estado no debe depender solo del color), formato consistente de números/fechas, "ver archivo" de factura junto a los campos en vez de en pestaña aparte, buscador en el `<select>` de vincular pago.
 
 ## Línea visual (decidida 2026-07-27, aplicada al código el mismo día)
 
@@ -97,3 +131,5 @@ Cada decisión de producto/alcance/diseño se anota aquí en cuanto se toma, con
 - **2026-07-27** — Aplicada la línea visual acordada al código real (`globals.css` + `GrupoProveedor.js`), verificado en el navegador contra datos reales de prueba. Los badges de estado real (aceptada/rechazada/pendiente en lotes/colaboradores) se mantuvieron coloreados pero apagados — solo se quitó el color de las categorías de proveedor, que era decorativo, no de estado.
 - **2026-07-27** — Corregido un error de concepto propio: la funcionalidad fundamental que faltaba no era "leer una carpeta de Drive desde el CLI", era la subida en lote de varias facturas a la vez desde el propio webapp (ver "Huecos identificados"). Se decide no tocar el CLI hasta que esto esté construido, porque hoy es lo único que cubre esa necesidad.
 - **2026-07-27** — Acordado el flujo de facturas que llegan tarde: atajo opcional "es una de las pendientes" al subir, sin forzarlo como paso obligatorio (2-10 casos/trimestre vs. 200-500 líneas totales).
+- **2026-07-27** — Auditoría de UX completa de las 20 pantallas/componentes, hecha contra el flujo real (no una checklist genérica). El hallazgo principal no era una lista de bugs sueltos: una sola pantalla mezclaba los tres momentos de uso sin distinguirlos.
+- **2026-07-27** — Acordada la reorganización en 3 pestañas dentro del trimestre: Inicio / Trimestre / Colaboradores (ver "Arquitectura de información"). La pestaña de proveedores se llama "Trimestre", no "Proveedores". Estructura acordada primero; el acabado visual de esta reorganización queda para después ("vamos poco a poco").
