@@ -7,6 +7,7 @@ export default function SubirFacturaLote({ loteId, onSubida }) {
   const inputRef = useRef(null);
   const [concepto, setConcepto] = useState('');
   const [importe, setImporte] = useState('');
+  const [fecha, setFecha] = useState('');
   const [archivo, setArchivo] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
   const [mensaje, setMensaje] = useState(null);
@@ -24,7 +25,7 @@ export default function SubirFacturaLote({ loteId, onSubida }) {
       const res = await fetch(`/api/colaborador/lotes/${loteId}/facturas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe }),
+        body: JSON.stringify({ rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -33,6 +34,7 @@ export default function SubirFacturaLote({ loteId, onSubida }) {
         setMensaje(`Subida como factura #${data.factura.numero}.`);
         setConcepto('');
         setImporte('');
+        setFecha('');
         setArchivo(null);
         if (inputRef.current) inputRef.current.value = '';
         onSubida();
@@ -57,6 +59,8 @@ export default function SubirFacturaLote({ loteId, onSubida }) {
       <input type="text" placeholder="Concepto (ej. gasolina, cinta americana...)" value={concepto} onChange={e => setConcepto(e.target.value)} />
       <div style={{ height: 8 }} />
       <input type="number" step="0.01" placeholder="Importe" value={importe} onChange={e => setImporte(e.target.value)} />
+      <div style={{ height: 8 }} />
+      <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
       <div style={{ height: 8 }} />
       <button className="grande" type="submit" disabled={subiendo}>{subiendo ? 'Subiendo...' : 'Subir factura'}</button>
       {mensaje && <p className="muted" style={{ marginTop: 8 }}>{mensaje}</p>}

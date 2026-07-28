@@ -219,7 +219,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   }
 
   async function elegirCandidato(opcion) {
-    const nota = opcion.esCombo ? `${opcion.numero} + ${opcion.otraFacturaNumero}` : String(opcion.numero);
+    const nota = opcion.esCombo ? `${opcion.numero} + ${opcion.otraFacturaNumero}` : (opcion.facturaConcepto || String(opcion.numero));
     const facturaIds = opcion.esCombo ? [opcion.facturaId, opcion.otraFacturaId] : [opcion.facturaId];
     const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
       method: 'POST',
@@ -281,7 +281,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>Varias facturas con este importe:</p>
           {opcionesLote.map((o, i) => (
             <button key={i} className="secundario" style={{ display: 'block', marginTop: 4, fontSize: 11, padding: '4px 8px' }} onClick={() => elegirCandidato(o)}>
-              {o.esCombo ? `Combinar con factura ${o.otraFacturaNumero}` : `Es la factura ${o.numero}`}
+              {o.esCombo ? `Combinar con factura ${o.otraFacturaNumero}` : `Es la factura ${o.numero}${o.facturaConcepto ? ` (${o.facturaConcepto})` : ''}`}
             </button>
           ))}
         </div>

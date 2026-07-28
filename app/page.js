@@ -23,7 +23,7 @@ function clasificarResultado(resultado, ids, ambiguos) {
   } else if (resultado.tipo === 'ambiguo') {
     for (const c of resultado.candidatos) {
       ids.add(c.movimientoId);
-      const opcion = { movimientoId: c.movimientoId, numero: resultado.numero, facturaId: resultado.facturaId };
+      const opcion = { movimientoId: c.movimientoId, numero: resultado.numero, facturaId: resultado.facturaId, facturaConcepto: resultado.facturaConcepto };
       ambiguos[c.movimientoId] = [...(ambiguos[c.movimientoId] || []), opcion];
     }
   } else if (resultado.tipo === 'combo_sugerido') {
@@ -31,6 +31,7 @@ function clasificarResultado(resultado, ids, ambiguos) {
     const opcion = {
       movimientoId: resultado.movimientoId, esCombo: true, numero: resultado.numero,
       otraFacturaNumero: resultado.otraFacturaNumero, facturaId: resultado.facturaId, otraFacturaId: resultado.otraFacturaId,
+      facturaConcepto: resultado.facturaConcepto,
     };
     ambiguos[resultado.movimientoId] = [...(ambiguos[resultado.movimientoId] || []), opcion];
   }

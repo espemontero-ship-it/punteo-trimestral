@@ -176,6 +176,7 @@ export default function LotePage({ params }) {
 function FilaFactura({ factura: f, onGuardar, onRechazar, onBorrar }) {
   const [concepto, setConcepto] = useState(f.concepto || '');
   const [importe, setImporte] = useState(f.importe_declarado ?? '');
+  const [fecha, setFecha] = useState(f.fechas?.[0] ? String(f.fechas[0]).slice(0, 10) : '');
 
   return (
     <div className="tarjeta" style={{ background: 'rgba(255,255,255,0.03)' }}>
@@ -196,6 +197,12 @@ function FilaFactura({ factura: f, onGuardar, onRechazar, onBorrar }) {
         type="number" step="0.01" placeholder="Importe" value={importe}
         onChange={e => setImporte(e.target.value)}
         onBlur={() => Number(importe) !== Number(f.importe_declarado || 0) && onGuardar({ importe: Number(importe) })}
+      />
+      <div style={{ height: 8 }} />
+      <input
+        type="date" value={fecha}
+        onChange={e => setFecha(e.target.value)}
+        onBlur={() => fecha && fecha !== (f.fechas?.[0] ? String(f.fechas[0]).slice(0, 10) : '') && onGuardar({ fecha })}
       />
       {f.motivo_rechazo && <p className="muted" style={{ marginTop: 6 }}>Motivo: {f.motivo_rechazo}</p>}
       <div className="fila" style={{ marginTop: 8, gap: 8 }}>

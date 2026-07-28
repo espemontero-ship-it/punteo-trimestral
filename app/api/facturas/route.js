@@ -9,7 +9,7 @@ const { procesarFacturaSubida } = require('../../../lib/facturaMatcher.cjs');
 export const maxDuration = 60;
 
 export async function POST(request) {
-  const { trimestreId, hoja, clave, rutaBlob, nombreOriginal } = await request.json();
+  const { trimestreId, hoja, clave, rutaBlob, nombreOriginal, concepto, importe, fecha } = await request.json();
   if (!trimestreId || !rutaBlob) {
     return Response.json({ error: 'Faltan datos (trimestreId, rutaBlob).' }, { status: 400 });
   }
@@ -23,8 +23,18 @@ export async function POST(request) {
     const esPdf = /\.pdf($|\?)/i.test(nombreOriginal || rutaBlob) || rutaBlob.toLowerCase().includes('.pdf');
     const analisis = await analizarBuffer(buffer, esPdf);
 
+    // Si quien sube la factura ya sabe el importe/fecha (a mano, cuando no
+    // se puede leer del PDF), esos datos mandan sobre lo que haya extraído
+    // el regex — evita depender de la lectura automática para poder emparejar.
+    const importeManual = importe ? Number(importe) : null;
+    if (importeManual) {
+      analisis.totales = [importeManual];
+      analisis.importes = [importeManual];
+    }
+    if (fecha) analisis.fechas = [new Date(fecha), ...analisis.fechas];
+
     const resultado = await procesarFacturaSubida({
-      trimestreId, hoja, clave, rutaBlob, nombreOriginal, analisis,
+      trimestreId, hoja, clave, rutaBlob, nombreOriginal, concepto, analisis,
     });
 
     return Response.json(resultado);

@@ -11,13 +11,13 @@ export async function POST(request, { params }) {
     return Response.json({ error: 'No encontrado' }, { status: 404 });
   }
 
-  const { rutaBlob, nombreOriginal, concepto, importe } = await request.json();
+  const { rutaBlob, nombreOriginal, concepto, importe, fecha } = await request.json();
   if (!rutaBlob) return Response.json({ error: 'Falta rutaBlob.' }, { status: 400 });
 
   const esImagen = !/\.pdf($|\?)/i.test(nombreOriginal || rutaBlob);
   const factura = await subirFacturaLote({
     loteId: id, trimestreId: lote.trimestre_id, rutaBlob, nombreOriginal,
-    concepto, importe: importe ? Number(importe) : null, esImagen,
+    concepto, importe: importe ? Number(importe) : null, fecha: fecha || null, esImagen,
   });
 
   return Response.json({ ok: true, factura });

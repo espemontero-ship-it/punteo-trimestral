@@ -91,7 +91,10 @@ export default function ColaboradorPage() {
             <div className="fila">
               <div>
                 <div>{f.concepto || '(sin concepto)'}</div>
-                <div className="muted">{Number(f.importe_declarado || 0).toFixed(2)}€ · #{f.numero}</div>
+                <div className="muted">
+                  {Number(f.importe_declarado || 0).toFixed(2)}€ · #{f.numero}
+                  {f.fechas?.[0] ? ` · ${new Date(f.fechas[0]).toLocaleDateString('es-ES')}` : ''}
+                </div>
               </div>
               {f.estado_revision && f.estado_revision !== 'subida' && (
                 <span className={`etiqueta ${f.estado_revision === 'aceptada' ? 'fija' : 'nueva'}`}>{f.estado_revision}</span>
