@@ -15,6 +15,11 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [borrando, setBorrando] = useState(false);
 
+  const seleccionadasEmparejadas = useMemo(
+    () => facturas.filter(f => seleccionadas.has(f.id) && f.estado === 'matcheada').length,
+    [facturas, seleccionadas]
+  );
+
   const nombresDuplicados = useMemo(() => {
     const conteo = {};
     for (const f of facturas) {
@@ -122,7 +127,11 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
       <ConfirmDialog
         abierto={confirmarBorrado}
         titulo={`¿Borrar ${seleccionadas.size} factura(s)?`}
-        mensaje="Si alguna estaba emparejada con una línea del banco, esa línea vuelve a quedar pendiente. No se puede deshacer."
+        mensaje={
+          seleccionadasEmparejadas > 0
+            ? `⚠ ${seleccionadasEmparejadas} de las seleccionadas están emparejadas con una línea del banco — esa línea volverá a quedar pendiente. No se puede deshacer.`
+            : 'No se puede deshacer.'
+        }
         textoConfirmar="Borrar"
         peligroso
         onConfirmar={borrarSeleccionadas}
