@@ -95,6 +95,16 @@ Alternativas descartadas, con motivo real:
 - **Confirmado: el export final a gestoría no depende de lo guardado en la base de datos.** `lib/exportar.cjs` reconstruye el `.xlsx` final descargando el excel original tal cual se subió (con todas sus columnas) y solo escribe la nota encima — así que ninguna columna se pierde nunca en la entrega final, pase lo que pase con la config de import. Lo que sí falta es mostrar en pantalla lo que ya se guarda (`concepto`, `importe`, `nota_final` — ya en la tabla `movimientos`, sin necesidad de guardar nada nuevo): es el mismo hueco #2 de arriba ("falta información en cada línea"), no un problema de almacenamiento.
 - **Limitación de entorno (no es un bug): subir un excel no funciona en `localhost`.** Vercel Blob usa autenticación OIDC que solo está activada para los entornos Production/Preview, no para "development" — cualquier intento de subir un excel en local falla con `Vercel Blob: OIDC is enabled for this project, but not for the "development" environment`. Para verificar cambios que dependan de subir un excel, hay que probarlos en producción o insertar datos de prueba directamente en la base de datos (como se hizo para verificar el punto de arriba).
 
+## Backlog de pruebas y pulido (2026-07-28, pendiente de revisar)
+
+La usuaria va a hacer varias pruebas con datos reales; según lo que salga, hay que volver sobre esto:
+
+- [ ] **Check match** — revisar que el emparejamiento automático de facturas funciona bien con datos reales.
+- [ ] **Afinar proceso de cierre de trimestre.**
+- [ ] **Documentación a gestoría** — revisar qué se entrega y cómo.
+- [ ] **Módulo de colaboradores** — afinar.
+- [ ] **Match entre pago y LarpManager.**
+
 ## Arquitectura de información — 3 pestañas por momento de uso (acordado 2026-07-27)
 
 El problema de fondo detectado en la auditoría completa (más abajo) no era una lista de bugs sueltos: era que **una sola pantalla mezclaba todos los momentos de uso**, sin importar por qué se abría la app. Se decidió dividir la vista de un trimestre en 3 pestañas, cada una pensada para un momento concreto (mockup en Artifact, verificado con la usuaria antes de escribir código):
