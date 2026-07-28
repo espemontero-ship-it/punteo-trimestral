@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { apiFetch, mostrarToast } from '../lib/toast';
 
@@ -39,6 +39,21 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const [edicionFecha, setEdicionFecha] = useState({});
   const [buscando, setBuscando] = useState(new Set());
   const [resultadosFila, setResultadosFila] = useState({}); // { [facturaId]: resultado } — sobreescribe el motivo guardado hasta recargar
+  const [movimientosPendientes, setMovimientosPendientes] = useState([]);
+  const [vinculandoManual, setVinculandoManual] = useState(new Set());
+  const [movimientoElegido, setMovimientoElegido] = useState({});
+  const [vinculando, setVinculando] = useState(new Set());
+
+  // Lista de movimientos pendientes para poder vincular una factura a mano
+  // cuando ya se sabe cuál es, sin depender de que el importe/fecha encajen
+  // solos (ej. facturas con varios importes dentro de un mismo archivo).
+  useEffect(() => {
+    let cancelado = false;
+    apiFetch(`/api/trimestres/${trimestreId}/movimientos-pendientes`, undefined, {
+      mensajeError: 'No se pudo cargar la lista de movimientos.',
+    }).then(r => { if (!cancelado && r) setMovimientosPendientes(r.movimientos || []); });
+    return () => { cancelado = true; };
+  }, [trimestreId]);
 
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
 
@@ -123,6 +138,30 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
     }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
     if (r) {
       setResultadosFila(prev => { const next = { ...prev }; delete next[f.id]; return next; });
+      onCambio();
+    }
+  }
+
+  function alternarVinculoManual(facturaId) {
+    setVinculandoManual(prev => {
+      const next = new Set(prev);
+      if (next.has(facturaId)) next.delete(facturaId); else next.add(facturaId);
+      return next;
+    });
+  }
+
+  async function vincularManual(f) {
+    const movimientoId = movimientoElegido[f.id];
+    if (!movimientoId) return;
+    setVinculando(prev => new Set(prev).add(f.id));
+    const r = await apiFetch(`/api/movimientos/${movimientoId}/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nota: f.concepto || String(f.numero), facturaIds: [f.id] }),
+    }, { mensajeOk: 'Vinculada', mensajeError: 'No se pudo vincular.' });
+    setVinculando(prev => { const next = new Set(prev); next.delete(f.id); return next; });
+    if (r) {
+      setVinculandoManual(prev => { const next = new Set(prev); next.delete(f.id); return next; });
       onCambio();
     }
   }
@@ -296,8 +335,34 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
                       </>
                     ) : f.estado === 'matcheada' ? (
                       'Emparejada'
+                    ) : vinculandoManual.has(f.id) ? (
+                      <div>
+                        <select
+                          value={movimientoElegido[f.id] || ''}
+                          onChange={e => setMovimientoElegido(prev => ({ ...prev, [f.id]: e.target.value }))}
+                          style={{ fontSize: 11.5, padding: '4px 6px', width: '100%' }}
+                        >
+                          <option value="">Elige línea del banco...</option>
+                          {movimientosPendientes.map(m => (
+                            <option key={m.id} value={m.id}>
+                              {m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''} · {Number(m.importe).toFixed(2)}€ · {m.concepto?.slice(0, 40)}
+                            </option>
+                          ))}
+                        </select>
+                        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={!movimientoElegido[f.id] || vinculando.has(f.id)} onClick={() => vincularManual(f)}>
+                            {vinculando.has(f.id) ? '...' : 'Vincular'}
+                          </button>
+                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => alternarVinculoManual(f.id)}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
                     ) : (
-                      ETIQUETAS_TIPO[(resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo] || (resultadoLocal || f).motivo_detalle || 'Sin recalcular todavía'
+                      <>
+                        {ETIQUETAS_TIPO[(resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo] || (resultadoLocal || f).motivo_detalle || 'Sin recalcular todavía'}
+                        <button type="button" className="quitar-grupo" onClick={() => alternarVinculoManual(f.id)}>vincular a mano</button>
+                      </>
                     )}
                   </td>
 
