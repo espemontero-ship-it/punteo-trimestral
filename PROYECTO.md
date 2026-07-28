@@ -12,6 +12,8 @@ Este documento es la fuente de verdad del proyecto: qué es, qué decisiones se 
 
 Ver [[feedback-validate-before-coding]] en memoria — esta regla ya se incumplió más de una vez en la sesión del 2026-07-27 y hay que dejar de repetirlo.
 
+**2026-07-28 — subir cambios sin pedir permiso cada vez.** Una vez un cambio está verificado (build limpio, y probado en local cuando es posible), se hace commit y push directamente, sin esperar a que la usuaria escriba "commit y push" cada vez. Motivo explícito: "cuantos menos oks te dé mejor, porque hay veces que no puedo hacerte caso" — minimizar cuántas veces necesita responder, no solo por comodidad. Esto **no** afecta a la regla de arriba (mostrar antes de implementar cambios de diseño/estructura/navegación) — sigue exactamente igual, esa validación es sobre qué se construye, esta es sobre cuándo se publica algo ya construido y verificado.
+
 ## Qué es y para quién
 
 Aplicación para una asociación sin ánimo de lucro (carpeta de Drive: "NOT ONLY LARP" — administración). Cada trimestre hay que mandar a la gestoría el punteo del banco contra las facturas de gastos, para que preparen IVA, IRPF e IS.
