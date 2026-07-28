@@ -446,7 +446,14 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           {filtroLote.sinEncontrar.map((f, i) => (
             <div key={i} className="fila-sin-encontrar">
               <div className="fila-sin-encontrar-info">
-                <span>{f.nombreArchivo}</span>
+                <span>
+                  {f.nombreArchivo}
+                  {f.facturaId && (
+                    <a className="link-factura" style={{ marginLeft: 8 }} href={`/api/facturas/${f.facturaId}/archivo`} target="_blank" rel="noreferrer">
+                      ver archivo
+                    </a>
+                  )}
+                </span>
                 <span className="muted">{f.detalle}</span>
               </div>
               {f.facturaId && onResolverImporteManual && (
