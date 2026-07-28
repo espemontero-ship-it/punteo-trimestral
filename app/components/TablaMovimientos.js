@@ -519,11 +519,9 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <input type="checkbox" checked={soloPendientes} onChange={e => setSoloPendientes(e.target.checked)} />
           Solo pendientes
         </label>
-        {ordenPor && (
-          <button type="button" className="secundario" onClick={() => setOrdenPor(null)}>
-Agrupar por proveedor
-          </button>
-        )}
+        <button type="button" className="secundario" disabled={!ordenPor} onClick={() => setOrdenPor(null)}>
+          Agrupar por proveedor
+        </button>
         <div style={{ position: 'relative' }}>
           <button className="secundario" onClick={() => setMostrarColumnas(v => !v)}>Columnas</button>
           {mostrarColumnas && (
