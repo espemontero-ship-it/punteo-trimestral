@@ -245,8 +245,12 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .lista-sin-encontrar {
   border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
 }
-.fila-sin-encontrar { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 5px 0; border-top: 1px solid var(--border); }
+.fila-sin-encontrar { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; padding: 8px 0; border-top: 1px solid var(--border); }
 .fila-sin-encontrar:first-of-type { border-top: none; }
+.fila-sin-encontrar-info { display: flex; justify-content: space-between; gap: 10px; }
+.importe-manual { display: flex; gap: 8px; }
+.importe-manual input { width: 140px; font-size: 12.5px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-alt); color: var(--text); }
+.importe-manual button { font-size: 12px; padding: 5px 10px; }
 .opciones-lote { font-size: 12px; }
 
 /* Buscador y filtro de la pestaña Trimestre */

@@ -15,6 +15,27 @@ const PESTANAS = [
   { id: 'colaboradores', etiqueta: 'Colaboradores' },
 ];
 
+// Clasifica un resultado de matching (de la subida en lote o de fijar un
+// importe a mano) en los mismos ids/ambiguos que ya sabe pintar la tabla.
+function clasificarResultado(resultado, ids, ambiguos) {
+  if (resultado.tipo === 'match_directo') {
+    ids.add(resultado.movimientoId);
+  } else if (resultado.tipo === 'ambiguo') {
+    for (const c of resultado.candidatos) {
+      ids.add(c.movimientoId);
+      const opcion = { movimientoId: c.movimientoId, numero: resultado.numero, facturaId: resultado.facturaId };
+      ambiguos[c.movimientoId] = [...(ambiguos[c.movimientoId] || []), opcion];
+    }
+  } else if (resultado.tipo === 'combo_sugerido') {
+    ids.add(resultado.movimientoId);
+    const opcion = {
+      movimientoId: resultado.movimientoId, esCombo: true, numero: resultado.numero,
+      otraFacturaNumero: resultado.otraFacturaNumero, facturaId: resultado.facturaId, otraFacturaId: resultado.otraFacturaId,
+    };
+    ambiguos[resultado.movimientoId] = [...(ambiguos[resultado.movimientoId] || []), opcion];
+  }
+}
+
 export default function Home() {
   const [trimestreId, setTrimestreId] = useState('');
   const [proveedores, setProveedores] = useState(null);
@@ -99,27 +120,41 @@ export default function Home() {
     const sinEncontrar = [];
 
     for (const { nombreArchivo, resultado } of resultados) {
-      if (resultado.tipo === 'match_directo') {
-        ids.add(resultado.movimientoId);
-      } else if (resultado.tipo === 'ambiguo') {
-        for (const c of resultado.candidatos) {
-          ids.add(c.movimientoId);
-          ambiguos[c.movimientoId] = ambiguos[c.movimientoId] || [];
-          ambiguos[c.movimientoId].push({ movimientoId: c.movimientoId, numero: resultado.numero, facturaId: resultado.facturaId });
-        }
-      } else if (resultado.tipo === 'combo_sugerido') {
-        ids.add(resultado.movimientoId);
-        ambiguos[resultado.movimientoId] = ambiguos[resultado.movimientoId] || [];
-        ambiguos[resultado.movimientoId].push({
-          movimientoId: resultado.movimientoId, esCombo: true, numero: resultado.numero,
-          otraFacturaNumero: resultado.otraFacturaNumero, facturaId: resultado.facturaId, otraFacturaId: resultado.otraFacturaId,
-        });
+      if (['match_directo', 'ambiguo', 'combo_sugerido'].includes(resultado.tipo)) {
+        clasificarResultado(resultado, ids, ambiguos);
       } else {
-        sinEncontrar.push({ nombreArchivo, detalle: resultado.detalle });
+        sinEncontrar.push({ nombreArchivo, facturaId: resultado.facturaId, detalle: resultado.detalle });
       }
     }
 
     setLote({ ids, ambiguos, sinEncontrar, total: resultados.length });
+    await cargar(trimestreId);
+  }
+
+  // Cuando el importe no se pudo leer del PDF, se escribe a mano y esto
+  // relanza el mismo matching automático contra los movimientos pendientes.
+  async function resolverImporteManual(facturaId, nombreArchivo, importe) {
+    const resultado = await apiFetch(`/api/facturas/${facturaId}/importe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ importe }),
+    }, { mensajeError: 'No se pudo guardar el importe.' });
+    if (!resultado) return;
+
+    setLote(prev => {
+      if (!prev) return prev;
+      const ids = new Set(prev.ids);
+      const ambiguos = { ...prev.ambiguos };
+      const sinEncontrar = prev.sinEncontrar.filter(f => f.facturaId !== facturaId);
+
+      if (['match_directo', 'ambiguo', 'combo_sugerido'].includes(resultado.tipo)) {
+        clasificarResultado(resultado, ids, ambiguos);
+      } else {
+        sinEncontrar.push({ nombreArchivo, facturaId, detalle: resultado.detalle });
+      }
+
+      return { ...prev, ids, ambiguos, sinEncontrar };
+    });
     await cargar(trimestreId);
   }
 
@@ -240,6 +275,7 @@ export default function Home() {
               onCambio={() => cargar(trimestreId)}
               filtroLote={lote}
               onQuitarFiltro={() => setLote(null)}
+              onResolverImporteManual={resolverImporteManual}
             />
           )}
         </>

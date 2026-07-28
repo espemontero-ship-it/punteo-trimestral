@@ -28,7 +28,7 @@ function nombreGrupoMostrado(g) {
   return conProveedor ? conProveedor.proveedor : nombreGrupo(g.clave);
 }
 
-export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro }) {
+export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual }) {
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [ordenPor, setOrdenPor] = useState(null); // { campo, dir } | null (null = agrupado por proveedor)
@@ -39,6 +39,8 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   const [notasGrupo, setNotasGrupo] = useState({});
   const [proveedoresGrupo, setProveedoresGrupo] = useState({});
   const [anchos, setAnchos] = useState({});
+  const [importesManual, setImportesManual] = useState({});
+  const [guardandoImporte, setGuardandoImporte] = useState(null);
 
   function anchoDe(col) {
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? ANCHO_EXTRA_DEFECTO;
@@ -225,6 +227,15 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       body: JSON.stringify({ nota, facturaIds }),
     }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
     if (r) onCambio();
+  }
+
+  async function guardarImporteManual(f) {
+    const valor = (importesManual[f.facturaId] || '').replace(',', '.').trim();
+    const importe = Number(valor);
+    if (!valor || isNaN(importe) || importe <= 0) return;
+    setGuardandoImporte(f.facturaId);
+    await onResolverImporteManual(f.facturaId, f.nombreArchivo, importe);
+    setGuardandoImporte(null);
   }
 
   async function separarDeGrupo(movimientoId) {
@@ -434,8 +445,26 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <p className="muted" style={{ margin: '0 0 8px' }}>{filtroLote.sinEncontrar.length} archivo(s) sin ninguna línea parecida — revisa a mano:</p>
           {filtroLote.sinEncontrar.map((f, i) => (
             <div key={i} className="fila-sin-encontrar">
-              <span>{f.nombreArchivo}</span>
-              <span className="muted">{f.detalle}</span>
+              <div className="fila-sin-encontrar-info">
+                <span>{f.nombreArchivo}</span>
+                <span className="muted">{f.detalle}</span>
+              </div>
+              {f.facturaId && onResolverImporteManual && (
+                <div className="importe-manual">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Importe (ej. 45,00)"
+                    value={importesManual[f.facturaId] || ''}
+                    onChange={e => setImportesManual(prev => ({ ...prev, [f.facturaId]: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarImporteManual(f); } }}
+                    disabled={guardandoImporte === f.facturaId}
+                  />
+                  <button type="button" className="secundario" onClick={() => guardarImporteManual(f)} disabled={guardandoImporte === f.facturaId}>
+                    {guardandoImporte === f.facturaId ? 'Buscando...' : 'Buscar coincidencia'}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
