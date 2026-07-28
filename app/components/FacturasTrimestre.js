@@ -106,10 +106,29 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
     setSeleccionadas(prev => (prev.size === facturas.length ? new Set() : new Set(facturas.map(f => f.id))));
   }
 
-  const duplicadasSinEmparejar = useMemo(
-    () => facturas.filter(f => nombresDuplicados.has(f.nombre_original) && f.estado !== 'matcheada'),
-    [facturas, nombresDuplicados]
-  );
+  // Por cada nombre repetido: si alguna copia ya está emparejada, todas las
+  // demás sobran (ya hay una buena). Si ninguna está emparejada, se marcan
+  // todas menos la más antigua -- el objetivo es quedarse con una copia, no
+  // borrar el archivo entero si nunca llegó a emparejar ninguna.
+  const duplicadasSinEmparejar = useMemo(() => {
+    const porNombre = {};
+    for (const f of facturas) {
+      if (!nombresDuplicados.has(f.nombre_original)) continue;
+      (porNombre[f.nombre_original] ||= []).push(f);
+    }
+    const resultado = [];
+    for (const grupo of Object.values(porNombre)) {
+      const sinEmparejar = grupo.filter(f => f.estado !== 'matcheada');
+      const hayEmparejada = sinEmparejar.length < grupo.length;
+      if (hayEmparejada) {
+        resultado.push(...sinEmparejar);
+      } else {
+        const ordenado = [...sinEmparejar].sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en));
+        resultado.push(...ordenado.slice(1));
+      }
+    }
+    return resultado;
+  }, [facturas, nombresDuplicados]);
 
   function marcarDuplicadasSinEmparejar() {
     setSeleccionadas(new Set(duplicadasSinEmparejar.map(f => f.id)));
