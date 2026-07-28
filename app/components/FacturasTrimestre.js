@@ -41,6 +41,15 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
     setSeleccionadas(prev => (prev.size === facturas.length ? new Set() : new Set(facturas.map(f => f.id))));
   }
 
+  const duplicadasSinEmparejar = useMemo(
+    () => facturas.filter(f => nombresDuplicados.has(f.nombre_original) && f.estado !== 'matcheada'),
+    [facturas, nombresDuplicados]
+  );
+
+  function marcarDuplicadasSinEmparejar() {
+    setSeleccionadas(new Set(duplicadasSinEmparejar.map(f => f.id)));
+  }
+
   async function borrarSeleccionadas() {
     setConfirmarBorrado(false);
     setBorrando(true);
@@ -63,9 +72,16 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   return (
     <div>
       {nombresDuplicados.size > 0 && (
-        <p className="muted" style={{ color: 'var(--warn)', marginTop: 0 }}>
-          ⚠ {nombresDuplicados.size} nombre(s) de archivo repetido(s) — marcados abajo.
-        </p>
+        <div className="fila" style={{ marginBottom: 8 }}>
+          <p className="muted" style={{ color: 'var(--warn)', margin: 0 }}>
+            ⚠ {nombresDuplicados.size} nombre(s) de archivo repetido(s) — marcados abajo.
+          </p>
+          {duplicadasSinEmparejar.length > 0 && (
+            <button type="button" className="secundario" onClick={marcarDuplicadasSinEmparejar}>
+              Marcar duplicadas sin emparejar ({duplicadasSinEmparejar.length})
+            </button>
+          )}
+        </div>
       )}
       <div className="tabla-movimientos-envoltura">
         <table style={{ tableLayout: 'fixed', width: '100%' }}>
