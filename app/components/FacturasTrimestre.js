@@ -225,11 +225,9 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
           <p className="muted" style={{ color: 'var(--warn)', margin: 0 }}>
             ⚠ {nombresDuplicados.size} nombre(s) de archivo repetido(s) — marcados abajo.
           </p>
-          {duplicadasSinEmparejar.length > 0 && (
-            <button type="button" className="secundario" onClick={marcarDuplicadasSinEmparejar}>
-              Marcar duplicadas sin emparejar ({duplicadasSinEmparejar.length})
-            </button>
-          )}
+          <button type="button" className="secundario" disabled={duplicadasSinEmparejar.length === 0} onClick={marcarDuplicadasSinEmparejar}>
+            Marcar duplicadas sin emparejar ({duplicadasSinEmparejar.length})
+          </button>
         </div>
       )}
 
@@ -239,7 +237,8 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
             <col style={{ width: 30 }} />
             <col />
             <col style={{ width: 45 }} />
-            <col style={{ width: 260 }} />
+            <col style={{ width: 220 }} />
+            <col style={{ width: 220 }} />
             <col style={{ width: 140 }} />
             <col style={{ width: 100 }} />
             <col style={{ width: 90 }} />
@@ -250,6 +249,7 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
               <th>Archivo</th>
               <th>Ver</th>
               <th>Motivo</th>
+              <th>Movimiento emparejado</th>
               <th>Fecha factura</th>
               <th>Importe</th>
               <th></th>
@@ -278,53 +278,57 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
                     <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">ver</a>
                   </td>
 
-                  {f.estado === 'matcheada' ? (
-                    <>
-                      <td colSpan={3} className="muted">
-                        {f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') : ''} · {f.movimiento_concepto?.slice(0, 45)} · {f.movimiento_importe !== undefined && f.movimiento_importe !== null ? `${Number(f.movimiento_importe).toFixed(2)}€` : ''}
-                      </td>
-                      <td></td>
-                    </>
-                  ) : candidatos ? (
-                    <td colSpan={4}>
-                      <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
-                        {resultadoLocal.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:'}
-                      </p>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {candidatos.map((c, i) => (
-                          <button key={i} type="button" className="secundario" style={{ textAlign: 'left', fontSize: 11.5, padding: '5px 9px' }} onClick={() => elegirCandidato(f, c)}>
-                            {c.esCombo
-                              ? `Combinar con factura ${c.otraFacturaNumero}`
-                              : `${c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') + ' · ' : ''}${c.concepto?.slice(0, 45)}`}
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                  ) : (
-                    <>
-                      <td className="muted" style={{ whiteSpace: 'normal' }}>
-                        {ETIQUETAS_TIPO[(resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo] || (resultadoLocal || f).motivo_detalle || 'Sin revisar todavía'}
-                      </td>
-                      <td>
-                        <input
-                          type="date"
-                          value={edicionFecha[f.id] ?? fechaInicial(f)}
-                          onChange={e => setEdicionFecha(prev => ({ ...prev, [f.id]: e.target.value }))}
-                          style={{ fontSize: 12, padding: '5px 6px' }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0,00"
-                          value={edicionImporte[f.id] ?? importeInicial(f)}
-                          onChange={e => setEdicionImporte(prev => ({ ...prev, [f.id]: e.target.value }))}
-                          style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
-                        />
-                      </td>
-                    </>
-                  )}
+                  <td className="muted" style={{ whiteSpace: 'normal' }}>
+                    {candidatos ? (
+                      <>
+                        <p style={{ margin: '0 0 4px', fontSize: 11 }}>
+                          {resultadoLocal.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:'}
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {candidatos.map((c, i) => (
+                            <button key={i} type="button" className="secundario" style={{ textAlign: 'left', fontSize: 11.5, padding: '5px 9px' }} onClick={() => elegirCandidato(f, c)}>
+                              {c.esCombo
+                                ? `Combinar con factura ${c.otraFacturaNumero}`
+                                : `${c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') + ' · ' : ''}${c.concepto?.slice(0, 45)}`}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : f.estado === 'matcheada' ? (
+                      'Emparejada'
+                    ) : (
+                      ETIQUETAS_TIPO[(resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo] || (resultadoLocal || f).motivo_detalle || 'Sin recalcular todavía'
+                    )}
+                  </td>
+
+                  <td className="muted" style={{ whiteSpace: 'normal' }}>
+                    {f.estado === 'matcheada'
+                      ? `${f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') + ' · ' : ''}${f.movimiento_concepto?.slice(0, 40) || ''} · ${f.movimiento_importe !== undefined && f.movimiento_importe !== null ? `${Number(f.movimiento_importe).toFixed(2)}€` : ''}`
+                      : '—'}
+                  </td>
+
+                  <td>
+                    {f.estado !== 'matcheada' && !candidatos ? (
+                      <input
+                        type="date"
+                        value={edicionFecha[f.id] ?? fechaInicial(f)}
+                        onChange={e => setEdicionFecha(prev => ({ ...prev, [f.id]: e.target.value }))}
+                        style={{ fontSize: 12, padding: '5px 6px' }}
+                      />
+                    ) : <span className="muted">—</span>}
+                  </td>
+                  <td>
+                    {f.estado !== 'matcheada' && !candidatos ? (
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={edicionImporte[f.id] ?? importeInicial(f)}
+                        onChange={e => setEdicionImporte(prev => ({ ...prev, [f.id]: e.target.value }))}
+                        style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
+                      />
+                    ) : <span className="muted">—</span>}
+                  </td>
 
                   <td>
                     {f.estado !== 'matcheada' && !candidatos && (
