@@ -64,6 +64,22 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
     onCambio();
   }
 
+  function descargarInformeCsv() {
+    if (!resumenRecalculo) return;
+    const escapar = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const filas = [
+      ['Archivo', 'Motivo', 'Detalle'].map(escapar).join(','),
+      ...resumenRecalculo.detalle.map(d => [d.nombre, ETIQUETAS_TIPO[d.tipo] || d.tipo, d.detalle].map(escapar).join(',')),
+    ];
+    const blob = new Blob(['﻿' + filas.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `facturas-sin-resolver-${trimestreId}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const seleccionadasEmparejadas = useMemo(
     () => facturas.filter(f => seleccionadas.has(f.id) && f.estado === 'matcheada').length,
     [facturas, seleccionadas]
@@ -136,9 +152,16 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
         )}
         {resumenRecalculo && (
           <div className="lista-sin-encontrar" style={{ marginTop: 10 }}>
-            <p className="muted" style={{ margin: '0 0 8px' }}>
-              {Object.entries(resumenRecalculo.conteos).map(([tipo, n]) => `${n} ${ETIQUETAS_TIPO[tipo] || tipo}`).join(' · ')}
-            </p>
+            <div className="fila" style={{ marginBottom: 8 }}>
+              <p className="muted" style={{ margin: 0 }}>
+                {Object.entries(resumenRecalculo.conteos).map(([tipo, n]) => `${n} ${ETIQUETAS_TIPO[tipo] || tipo}`).join(' · ')}
+              </p>
+              {resumenRecalculo.detalle.length > 0 && (
+                <button type="button" className="secundario" onClick={descargarInformeCsv}>
+                  Descargar informe (CSV) — {resumenRecalculo.detalle.length}
+                </button>
+              )}
+            </div>
             {resumenRecalculo.detalle.slice(0, 30).map((d, i) => (
               <div key={i} className="fila-sin-encontrar">
                 <div className="fila-sin-encontrar-info">
