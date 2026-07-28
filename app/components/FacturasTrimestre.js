@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { ConfirmDialog } from './ConfirmDialog';
-import { apiFetch } from '../lib/toast';
+import { apiFetch, mostrarToast } from '../lib/toast';
 
 function montoCaracteristico(f) {
   if (f.totales && f.totales.length) return Math.max(...f.totales.map(Number));
@@ -14,6 +14,21 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const [seleccionadas, setSeleccionadas] = useState(new Set());
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [borrando, setBorrando] = useState(false);
+  const [recalculando, setRecalculando] = useState(false);
+
+  const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
+
+  async function recalcular() {
+    setRecalculando(true);
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/recalcular-facturas`, { method: 'POST' }, {
+      mensajeError: 'No se pudo recalcular.',
+    });
+    setRecalculando(false);
+    if (r) {
+      mostrarToast(`${r.resueltas} de ${r.revisadas} factura(s) emparejadas`, 'ok');
+      onCambio();
+    }
+  }
 
   const seleccionadasEmparejadas = useMemo(
     () => facturas.filter(f => seleccionadas.has(f.id) && f.estado === 'matcheada').length,
@@ -71,6 +86,14 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
 
   return (
     <div>
+      <div className="fila" style={{ marginBottom: 12 }}>
+        <p className="muted" style={{ margin: 0 }}>
+          {sinResolver} factura(s) sin resolver todavía.
+        </p>
+        <button type="button" className="secundario" disabled={sinResolver === 0 || recalculando} onClick={recalcular}>
+          {recalculando ? 'Recalculando...' : 'Recalcular facturas sin resolver'}
+        </button>
+      </div>
       {nombresDuplicados.size > 0 && (
         <div className="fila" style={{ marginBottom: 8 }}>
           <p className="muted" style={{ color: 'var(--warn)', margin: 0 }}>
