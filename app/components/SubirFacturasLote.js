@@ -41,7 +41,7 @@ export default function SubirFacturasLote({ trimestreId, onCompletado }) {
   }
 
   return (
-    <div className="zona-subida-lote">
+    <>
       <input
         ref={inputRef}
         type="file"
@@ -51,7 +51,7 @@ export default function SubirFacturasLote({ trimestreId, onCompletado }) {
         style={{ display: 'none' }}
       />
       {progreso ? (
-        <div>
+        <div className="zona-subida-lote-progreso">
           <div className="fila-progreso-lote">
             <span className="num-progreso-lote">Subiendo {progreso.actual} de {progreso.total}</span>
             <span className="muted">{progreso.nombre}</span>
@@ -59,13 +59,8 @@ export default function SubirFacturasLote({ trimestreId, onCompletado }) {
           <div className="progreso"><div style={{ width: `${(progreso.actual / progreso.total) * 100}%` }} /></div>
         </div>
       ) : (
-        <>
-          <p className="muted" style={{ margin: '0 0 12px' }}>
-            Selecciona varios PDFs o fotos a la vez — se emparejan solas contra los movimientos pendientes.
-          </p>
-          <button className="grande" onClick={() => inputRef.current?.click()}>📎 Subir facturas</button>
-        </>
+        <button type="button" className="secundario" onClick={() => inputRef.current?.click()}>📎 Subir facturas</button>
       )}
-    </div>
+    </>
   );
 }

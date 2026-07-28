@@ -264,6 +264,42 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   }
 
   const columnasVisiblesExtra = columnasExtra.filter(c => columnasExtraVisibles.has(c));
+  const columnasTodas = [...COLUMNAS_BASE, ...columnasVisiblesExtra];
+  // Única fuente de verdad para el ancho de columnas: la misma plantilla se
+  // aplica a la cabecera y a cada fila via grid-template-columns, así que es
+  // estructuralmente imposible que una fila quede desalineada de otra (antes,
+  // con <table>, el ancho se repartía entre colgroup + estilo del <th> + una
+  // variable CSS aparte para las columnas fijas, y esos tres sitios podían
+  // desincronizarse).
+  const plantillaColumnas = columnasTodas.map(c => `${anchoDe(c)}px`).join(' ');
+
+  // Fecha y Concepto se quedan fijas al hacer scroll horizontal. El left de
+  // Concepto es el ancho actual de Fecha — se calcula aquí, no en CSS, para
+  // que sea la misma fuente de verdad que la plantilla de arriba.
+  function estiloCelda(col, cabecera) {
+    if (col === 'Fecha') return { position: 'sticky', left: 0, zIndex: cabecera ? 4 : 3 };
+    if (col === 'Concepto') return { position: 'sticky', left: anchoDe('Fecha'), zIndex: cabecera ? 4 : 3 };
+    return undefined;
+  }
+
+  function claseCelda(col) {
+    if (col === 'Fecha') return 'col-fecha';
+    if (col === 'Concepto') return 'col-concepto';
+    if (col === 'Importe') return 'col-importe';
+    return '';
+  }
+
+  function Celda({ col, className = '', cabecera, children }) {
+    return (
+      <div
+        role={cabecera ? 'columnheader' : 'cell'}
+        className={`celda ${claseCelda(col)} ${className}`.trim()}
+        style={estiloCelda(col, cabecera)}
+      >
+        {children}
+      </div>
+    );
+  }
 
   function valorEstadoSelect(m) {
     if (m.estado === 'resuelta') return 'resuelta';
@@ -338,10 +374,10 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
   function filaMovimiento(m, g, esInicioGrupo) {
     return (
-      <tr key={m.id} className={esInicioGrupo ? 'inicio-grupo' : undefined}>
-        <td className="fija col-fecha muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</td>
-        <td className="fija col-concepto concepto">{m.concepto?.slice(0, 80)}</td>
-        <td className="proveedor">
+      <div role="row" key={m.id} className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
+        <Celda col="Fecha" className="muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
+        <Celda col="Concepto" className="concepto">{m.concepto?.slice(0, 80)}</Celda>
+        <Celda col="Proveedor" className="proveedor">
           <input
             className={`campo-proveedor${!proveedoresManual[m.id] && !m.proveedor && m.proveedor_sugerido ? ' prellenado' : ''}`}
             type="text"
@@ -355,15 +391,15 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
               sacar del grupo
             </button>
           )}
-        </td>
-        <td className="importe col-importe num">{Number(m.importe).toFixed(2)}€</td>
-        <td>{celdaEstado(m)}</td>
-        <td>{celdaNota(m, g)}</td>
-        <td>{celdaProyecto(m)}</td>
+        </Celda>
+        <Celda col="Importe" className="importe num">{Number(m.importe).toFixed(2)}€</Celda>
+        <Celda col="Estado">{celdaEstado(m)}</Celda>
+        <Celda col="Nota">{celdaNota(m, g)}</Celda>
+        <Celda col="Proyecto">{celdaProyecto(m)}</Celda>
         {columnasVisiblesExtra.map(c => (
-          <td key={c} className="muted">{m.datos_originales?.[c] ?? <span className="vacio">—</span>}</td>
+          <Celda key={c} col={c} className="muted">{m.datos_originales?.[c] ?? <span className="vacio">—</span>}</Celda>
         ))}
-      </tr>
+      </div>
     );
   }
 
@@ -375,13 +411,13 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     const permiteAccionesGrupo = pendientesGrupo > 0;
     const sugerenciaProveedorGrupo = g.movimientos.find(m => m.proveedor_sugerido)?.proveedor_sugerido || null;
     return (
-      <tr className="fila-grupo" key={`g-${g.id}`}>
-        <td className="fija col-fecha" />
-        <td className="fija col-concepto">
+      <div role="row" className="fila-tabla fila-grupo" key={`g-${g.id}`} style={{ gridTemplateColumns: plantillaColumnas }}>
+        <Celda col="Fecha" />
+        <Celda col="Concepto">
           <div className="grupo-nombre">{nombreGrupoMostrado(g)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
           <div className="meta">{g.resueltas} de {g.total} resueltas</div>
-        </td>
-        <td>
+        </Celda>
+        <Celda col="Proveedor">
           <input
             className={`campo-proveedor${!proveedoresGrupo[g.id] && sugerenciaProveedorGrupo ? ' prellenado' : ''}`}
             type="text"
@@ -390,9 +426,9 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
             onChange={e => setProveedoresGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedorGrupo(g, e.target.value); } }}
           />
-        </td>
-        <td className="col-importe num">{g.importeTotal.toFixed(2)}€</td>
-        <td>
+        </Celda>
+        <Celda col="Importe">{g.importeTotal.toFixed(2)}€</Celda>
+        <Celda col="Estado">
           {permiteAccionesGrupo && (
             <select className="select-estado" defaultValue="" onChange={e => { if (e.target.value) cambiarEstadoGrupo(g, e.target.value); e.target.value = ''; }}>
               <option value="" disabled>estado...</option>
@@ -400,8 +436,8 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
               <option value="resuelta">resuelta</option>
             </select>
           )}
-        </td>
-        <td>
+        </Celda>
+        <Celda col="Nota">
           {permiteAccionesGrupo && (
             <>
               {g.sugerenciaNota && (
@@ -419,16 +455,16 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
               />
             </>
           )}
-        </td>
-        <td>
+        </Celda>
+        <Celda col="Proyecto">
           <select className="select-proyecto" defaultValue="" onChange={e => { asignarProyectoGrupo(g, e.target.value === '__quitar__' ? '' : e.target.value); e.target.value = ''; }}>
             <option value="" disabled>proyecto...</option>
             <option value="__quitar__">— (quitar)</option>
             {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
-        </td>
-        {columnasVisiblesExtra.map(c => <td key={c} />)}
-      </tr>
+        </Celda>
+        {columnasVisiblesExtra.map(c => <Celda key={c} col={c} />)}
+      </div>
     );
   }
 
@@ -483,6 +519,11 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <input type="checkbox" checked={soloPendientes} onChange={e => setSoloPendientes(e.target.checked)} />
           Solo pendientes
         </label>
+        {ordenPor && (
+          <button type="button" className="secundario" onClick={() => setOrdenPor(null)}>
+Agrupar por proveedor
+          </button>
+        )}
         <div style={{ position: 'relative' }}>
           <button className="secundario" onClick={() => setMostrarColumnas(v => !v)}>Columnas</button>
           {mostrarColumnas && (
@@ -501,51 +542,29 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
       {grupos.length === 0 && <p className="muted">Nada que coincida con este filtro.</p>}
 
-      <div className="tabla-movimientos-envoltura" style={{ '--ancho-fecha': `${anchoDe('Fecha')}px` }}>
-        <table style={{ tableLayout: 'fixed' }}>
-          <colgroup>
-            {COLUMNAS_BASE.map(c => <col key={c} style={{ width: anchoDe(c) }} />)}
-            {columnasVisiblesExtra.map(c => <col key={c} style={{ width: anchoDe(c) }} />)}
-          </colgroup>
-          <thead>
-            <tr>
-              {COLUMNAS_BASE.map(c => (
-                <th
-                  key={c}
-                  className={[
-                    c === 'Importe' ? 'col-importe' : '',
-                    c === 'Fecha' ? 'fija col-fecha' : '',
-                    c === 'Concepto' ? 'fija col-concepto th-concepto' : '',
-                  ].join(' ').trim()}
-                  style={{ width: anchoDe(c) }}
-                >
-                  <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
-                    {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
-                  </span>
-                  <span className="resize-handle" onPointerDown={e => iniciarArrastre(e, c)} />
-                </th>
+      <div className="tabla-movimientos-envoltura" role="table">
+        <div role="rowgroup">
+          <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: plantillaColumnas }}>
+            {columnasTodas.map(c => (
+              <Celda key={c} col={c} cabecera>
+                <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
+                  {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
+                </span>
+                <span className="resize-handle" onPointerDown={e => iniciarArrastre(e, c)} />
+              </Celda>
+            ))}
+          </div>
+        </div>
+        <div role="rowgroup">
+          {ordenPor
+            ? filasOrdenadas.map(({ m, g }) => filaMovimiento(m, g))
+            : grupos.map(g => (
+                <Fragment key={g.id}>
+                  {filaGrupo(g)}
+                  {g.movimientos.map((m, i) => filaMovimiento(m, g, g.total <= 1 && i === 0))}
+                </Fragment>
               ))}
-              {columnasVisiblesExtra.map(c => (
-                <th key={c} style={{ width: anchoDe(c) }}>
-                  <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
-                    {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
-                  </span>
-                  <span className="resize-handle" onPointerDown={e => iniciarArrastre(e, c)} />
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {ordenPor
-              ? filasOrdenadas.map(({ m, g }) => filaMovimiento(m, g))
-              : grupos.map(g => (
-                  <Fragment key={g.id}>
-                    {filaGrupo(g)}
-                    {g.movimientos.map((m, i) => filaMovimiento(m, g, g.total <= 1 && i === 0))}
-                  </Fragment>
-                ))}
-          </tbody>
-        </table>
+        </div>
       </div>
     </div>
   );

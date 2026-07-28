@@ -231,10 +231,7 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .resumen-mini a { color: var(--accent); font-size: 12.5px; font-weight: 600; text-decoration: none; }
 
 /* Subida en lote de facturas */
-.zona-subida-lote {
-  border: 1.5px dashed var(--border); border-radius: 12px; padding: 20px; text-align: center;
-  background: var(--surface-alt); margin-bottom: 14px;
-}
+.zona-subida-lote-progreso { flex: 1; min-width: 220px; }
 .fila-progreso-lote { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; text-align: left; }
 .num-progreso-lote { font-size: 13.5px; font-weight: 600; }
 .barra-filtro-lote {
@@ -279,24 +276,29 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
 .fila-checkbox input { accent-color: var(--accent); }
 
 /* Tabla plana de movimientos (pestaña Trimestre) */
-.tabla-movimientos-envoltura { overflow-x: auto; margin-top: 4px; border: 1px solid var(--border); border-radius: 8px; }
-.tabla-movimientos-envoltura table { border-collapse: separate; border-spacing: 0; font-size: 13px; table-layout: fixed; }
-.tabla-movimientos-envoltura thead th {
+/* Tabla montada con CSS Grid en vez de <table>: la misma cadena de anchos
+   (plantillaColumnas, calculada en JS a partir de un único estado "anchos")
+   se aplica via grid-template-columns a la cabecera y a cada fila. Un solo
+   sitio decide el ancho de cada columna — antes, con <table>, colgroup + el
+   style del <th> + una variable CSS aparte para las columnas fijas tenían
+   que coincidir los tres, y se desincronizaban. */
+.tabla-movimientos-envoltura { overflow-x: auto; margin-top: 4px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+.fila-tabla-cabecera, .fila-tabla { display: grid; }
+.celda {
+  padding: 9px 12px; display: flex; align-items: center; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; border-bottom: 1px solid var(--border); background: var(--bg);
+}
+.fila-tabla-cabecera .celda {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
-  color: var(--muted); font-weight: 700; padding: 9px 12px; border-bottom: 2px solid var(--border);
-  white-space: nowrap; background: var(--surface-alt); position: sticky; top: 0; z-index: 2;
-  overflow: hidden; text-overflow: ellipsis;
+  color: var(--muted); font-weight: 700; border-bottom: 2px solid var(--border);
+  background: var(--surface-alt); position: sticky; top: 0; z-index: 2;
 }
 .etiqueta-orden {
-  cursor: pointer; user-select: none; display: inline-block; max-width: calc(100% - 14px);
-  overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
+  cursor: pointer; user-select: none; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; max-width: calc(100% - 14px);
 }
 .etiqueta-orden:hover { color: var(--text); }
-.tabla-movimientos-envoltura tbody td {
-  padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap;
-  background: var(--bg); overflow: hidden; text-overflow: ellipsis;
-}
-td.concepto, th.th-concepto { white-space: normal; }
+.celda.concepto { white-space: normal; }
 input.campo-proveedor {
   font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
   width: 100%; background: var(--surface-alt); color: var(--text);
@@ -306,8 +308,8 @@ input.campo-proveedor {
   background: none; border: none; padding: 0; margin-top: 3px; cursor: pointer; display: block;
 }
 .quitar-grupo:hover { color: var(--text); }
-td.importe { font-weight: 600; }
-th.col-importe, td.col-importe { text-align: right; }
+.celda.importe { font-weight: 600; }
+.celda.col-importe { justify-content: flex-end; text-align: right; }
 .vacio { color: var(--border); }
 
 /* Arrastrar el borde derecho de una cabecera para hacer la columna mas
@@ -321,31 +323,26 @@ th.col-importe, td.col-importe { text-align: right; }
 }
 .resize-handle:hover::after, .resize-handle:active::after { background: var(--accent); }
 
-/* Fecha y Concepto se quedan fijas al hacer scroll horizontal. La anchura de
-   Fecha es variable (se puede redimensionar), asi que el left de Concepto
-   sigue esa misma anchura via --ancho-fecha en vez de un valor fijo. */
-th.fija, td.fija { position: sticky; z-index: 3; }
-th.fija { z-index: 4; }
-.col-fecha { left: 0; width: var(--ancho-fecha, 90px); }
-.col-concepto { left: var(--ancho-fecha, 90px); }
-td.col-concepto, th.col-concepto { box-shadow: 3px 0 6px -3px rgba(0,0,0,.12); }
+/* Fecha y Concepto se quedan fijas al hacer scroll horizontal (position y left
+   se calculan en JS, en linea, junto a la plantilla de anchos de arriba). */
+.celda.col-concepto { box-shadow: 3px 0 6px -3px rgba(0,0,0,.12); }
 
 /* Fila de cabecera de grupo (proveedor) — solo para grupos de mas de 1 linea.
    Usa las mismas columnas que las filas normales (Estado, Nota...), en vez de
    una sola celda combinada, para que quede claro que cada control actua
    sobre todo el grupo por estar alineado bajo esa columna. */
-tr.fila-grupo td {
+.fila-grupo .celda {
   background: var(--surface-alt); border-bottom: 1px solid var(--border);
-  white-space: normal; vertical-align: top;
+  white-space: normal; align-items: flex-start;
 }
 /* Un grupo de 1 sola línea no tiene cabecera propia — para que no se
    confunda con el grupo real de arriba, su única fila lleva el mismo gris
    que la cabecera de un grupo real, en vez de una simple línea separadora. */
-tr.inicio-grupo td { background: var(--surface-alt); }
-tr.fila-grupo .grupo-nombre { font-weight: 700; }
-tr.fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
-tr.fila-grupo select.select-estado, tr.fila-grupo input.campo-nota { width: 100%; }
-tr.fila-grupo .chip-sugerencia { display: block; margin-bottom: 4px; }
+.inicio-grupo .celda { background: var(--surface-alt); }
+.fila-grupo .grupo-nombre { font-weight: 700; }
+.fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.fila-grupo select.select-estado, .fila-grupo input.campo-nota { width: 100%; }
+.fila-grupo .chip-sugerencia { display: block; margin-bottom: 4px; }
 
 /* Nota: campo único, guarda con Enter, se prellena en azul si hay sugerencia */
 input.campo-nota {

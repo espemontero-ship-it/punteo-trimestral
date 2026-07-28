@@ -231,8 +231,6 @@ export default function Home() {
 
       {pestana === 'trimestre' && (
         <>
-          <SubirFacturasLote trimestreId={trimestreId} onCompletado={completarLote} />
-
           <div className="resumen-mini">
             <div>
               <span>{resueltas} de {total} líneas resueltas</span>
@@ -240,7 +238,8 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="fila" style={{ gap: 8, marginBottom: 14, justifyContent: 'flex-start' }}>
+          <div className="fila" style={{ gap: 8, marginBottom: 14, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+            <SubirFacturasLote trimestreId={trimestreId} onCompletado={completarLote} />
             <button type="button" className="secundario" onClick={() => setModalAbierto('facturas')}>Ver / borrar facturas</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('excel')}>Añadir excel</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('cierre')}>Cerrar trimestre</button>
