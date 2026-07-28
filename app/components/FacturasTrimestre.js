@@ -4,6 +4,17 @@ import { useMemo, useState } from 'react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { apiFetch, mostrarToast } from '../lib/toast';
 
+const ETIQUETAS_TIPO = {
+  match_directo: 'Emparejada',
+  ambiguo: 'Varias líneas con el mismo importe',
+  combo_sugerido: 'Combinación de 2 facturas sugerida',
+  sin_importe: 'No se reconoció ningún importe',
+  sin_match: 'Importe no coincide con ninguna línea',
+  sin_movimientos: 'Aún no hay movimientos con los que comparar',
+  imagen_sin_texto: 'Es una imagen, no se puede leer',
+  error: 'Error al procesar el archivo',
+};
+
 function montoCaracteristico(f) {
   if (f.totales && f.totales.length) return Math.max(...f.totales.map(Number));
   if (f.importes && f.importes.length) return Math.max(...f.importes.map(Number));
@@ -15,32 +26,41 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const [progresoRecalculo, setProgresoRecalculo] = useState(null); // { actual, total } | null
+  const [resumenRecalculo, setResumenRecalculo] = useState(null); // { conteos, detalle } | null
 
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
+  const nombrePorId = useMemo(() => Object.fromEntries(facturas.map(f => [f.id, f.nombre_original])), [facturas]);
 
   // Un archivo a la vez (no un único POST largo) para poder mostrar progreso
   // real y para no arriesgarse a que el servidor corte una petición muy larga
   // a mitad si hay muchas facturas pendientes.
   async function recalcular() {
+    setResumenRecalculo(null);
     const r = await apiFetch(`/api/trimestres/${trimestreId}/recalcular-facturas`, undefined, {
       mensajeError: 'No se pudo obtener la lista de facturas pendientes.',
     });
     if (!r || r.ids.length === 0) return;
 
-    let resueltas = 0;
+    const conteos = {};
+    const detalle = [];
     for (let i = 0; i < r.ids.length; i++) {
       setProgresoRecalculo({ actual: i + 1, total: r.ids.length });
+      let resultado;
       try {
         const res = await fetch(`/api/facturas/${r.ids[i]}/reprocesar`, { method: 'POST' });
-        const resultado = await res.json();
-        if (resultado.tipo === 'match_directo') resueltas++;
-      } catch {
-        // un archivo suelto que falle no debe frenar el resto de la lista
+        resultado = await res.json();
+      } catch (err) {
+        resultado = { tipo: 'error', detalle: err.message };
+      }
+      conteos[resultado.tipo] = (conteos[resultado.tipo] || 0) + 1;
+      if (resultado.tipo !== 'match_directo') {
+        detalle.push({ nombre: nombrePorId[r.ids[i]] || `#${r.ids[i]}`, tipo: resultado.tipo, detalle: resultado.detalle });
       }
     }
 
     setProgresoRecalculo(null);
-    mostrarToast(`${resueltas} de ${r.ids.length} factura(s) emparejadas`, 'ok');
+    setResumenRecalculo({ total: r.ids.length, conteos, detalle });
+    mostrarToast(`${conteos.match_directo || 0} de ${r.ids.length} factura(s) emparejadas`, 'ok');
     onCambio();
   }
 
@@ -112,6 +132,24 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
         {progresoRecalculo && (
           <div className="progreso" style={{ margin: '8px 0 0' }}>
             <div style={{ width: `${(progresoRecalculo.actual / progresoRecalculo.total) * 100}%` }} />
+          </div>
+        )}
+        {resumenRecalculo && (
+          <div className="lista-sin-encontrar" style={{ marginTop: 10 }}>
+            <p className="muted" style={{ margin: '0 0 8px' }}>
+              {Object.entries(resumenRecalculo.conteos).map(([tipo, n]) => `${n} ${ETIQUETAS_TIPO[tipo] || tipo}`).join(' · ')}
+            </p>
+            {resumenRecalculo.detalle.slice(0, 30).map((d, i) => (
+              <div key={i} className="fila-sin-encontrar">
+                <div className="fila-sin-encontrar-info">
+                  <span>{d.nombre}</span>
+                  <span className="muted">{ETIQUETAS_TIPO[d.tipo] || d.tipo}{d.detalle ? ` — ${d.detalle}` : ''}</span>
+                </div>
+              </div>
+            ))}
+            {resumenRecalculo.detalle.length > 30 && (
+              <p className="muted" style={{ margin: '8px 0 0' }}>...y {resumenRecalculo.detalle.length - 30} más.</p>
+            )}
           </div>
         )}
       </div>
