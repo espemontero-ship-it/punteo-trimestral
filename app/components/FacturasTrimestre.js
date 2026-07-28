@@ -15,6 +15,14 @@ const ETIQUETAS_TIPO = {
   error: 'Error al procesar el archivo',
 };
 
+// Mismo motor de columnas que TablaMovimientos.js (CSS Grid, no <table>): una
+// única plantilla de anchos se aplica a la cabecera y a cada fila, así que es
+// estructuralmente imposible que se desalineen, y cada columna tiene su
+// propio sitio fijo — nada se mete a compartir celda con otra cosa.
+const COLUMNAS = ['Archivo', 'Ver', 'Motivo', 'Vincular', 'Movimiento', 'Fecha', 'Importe', 'Buscar'];
+const ANCHO_DEFECTO = { Archivo: 220, Ver: 40, Motivo: 220, Vincular: 210, Movimiento: 240, Fecha: 130, Importe: 90, Buscar: 90 };
+const ANCHO_CHECKBOX = 30;
+
 function montoCaracteristico(f) {
   if (f.totales && f.totales.length) return Math.max(...f.totales.map(Number));
   if (f.importes && f.importes.length) return Math.max(...f.importes.map(Number));
@@ -43,6 +51,40 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const [vinculandoManual, setVinculandoManual] = useState(new Set());
   const [movimientoElegido, setMovimientoElegido] = useState({});
   const [vinculando, setVinculando] = useState(new Set());
+  const [soloPendientes, setSoloPendientes] = useState(true);
+  const [anchos, setAnchos] = useState({});
+  const [mostrarColumnas, setMostrarColumnas] = useState(false);
+  const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
+
+  function anchoDe(col) {
+    return anchos[col] ?? ANCHO_DEFECTO[col] ?? 140;
+  }
+
+  // Ver iniciarArrastre en TablaMovimientos.js para la explicación de por qué
+  // se escucha en window y por qué el try/catch alrededor de setPointerCapture.
+  function iniciarArrastre(e, col) {
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    const startX = e.clientX;
+    const startWidth = anchoDe(col);
+    function mover(ev) {
+      const nuevo = Math.max(50, startWidth + (ev.clientX - startX));
+      setAnchos(prev => ({ ...prev, [col]: nuevo }));
+    }
+    function soltar() {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', soltar);
+    }
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', soltar);
+  }
+
+  function alternarColumna(col) {
+    setColumnasVisibles(prev => {
+      const next = new Set(prev);
+      if (next.has(col)) next.delete(col); else next.add(col);
+      return next;
+    });
+  }
 
   // Lista de movimientos pendientes para poder vincular una factura a mano
   // cuando ya se sabe cuál es, sin depender de que el importe/fecha encajen
@@ -188,8 +230,10 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
     });
   }
 
-  function alternarTodas() {
-    setSeleccionadas(prev => (prev.size === facturas.length ? new Set() : new Set(facturas.map(f => f.id))));
+  // Solo actúa sobre las filas visibles (si "solo pendientes" oculta las
+  // emparejadas, "seleccionar todas" no debe intentar marcar filas que no se ven).
+  function alternarTodas(facturasVisibles) {
+    setSeleccionadas(prev => (prev.size === facturasVisibles.length ? new Set() : new Set(facturasVisibles.map(f => f.id))));
   }
 
   // Por cada nombre repetido: si alguna copia ya está emparejada, todas las
@@ -239,13 +283,159 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
     return <p className="muted">Todavía no se ha subido ninguna factura suelta a este trimestre.</p>;
   }
 
+  const columnasMostradas = COLUMNAS.filter(c => columnasVisibles.has(c));
+  const plantillaColumnas = [`${ANCHO_CHECKBOX}px`, ...columnasMostradas.map(c => `${anchoDe(c)}px`)].join(' ');
+  const facturasVisibles = soloPendientes ? facturas.filter(f => f.estado !== 'matcheada') : facturas;
+
+  function Celda({ className = '', cabecera, children, style }) {
+    return (
+      <div role={cabecera ? 'columnheader' : 'cell'} className={`celda ${className}`.trim()} style={style}>
+        {children}
+      </div>
+    );
+  }
+
+  function contenidoCelda(col, f) {
+    const duplicada = nombresDuplicados.has(f.nombre_original);
+    const resultadoLocal = resultadosFila[f.id];
+    const candidatos = resultadoLocal?.tipo === 'ambiguo' ? resultadoLocal.candidatos.map(c => ({
+      movimientoId: c.movimientoId, numero: resultadoLocal.numero, facturaId: f.id, facturaConcepto: resultadoLocal.facturaConcepto,
+      concepto: c.concepto, importe: c.importe, fecha: c.fecha,
+    })) : resultadoLocal?.tipo === 'combo_sugerido' ? [{
+      movimientoId: resultadoLocal.movimientoId, esCombo: true, numero: resultadoLocal.numero,
+      otraFacturaNumero: resultadoLocal.otraFacturaNumero, facturaId: f.id, otraFacturaId: resultadoLocal.otraFacturaId,
+      facturaConcepto: resultadoLocal.facturaConcepto,
+    }] : null;
+    const bloqueada = f.estado === 'matcheada' || !!candidatos;
+
+    switch (col) {
+      case 'Archivo':
+        return <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{f.nombre_original}{duplicada ? ' ⚠' : ''}</span>;
+
+      case 'Ver':
+        return <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">ver</a>;
+
+      case 'Motivo':
+        if (candidatos) {
+          return (
+            <div>
+              <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
+                {resultadoLocal.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:'}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {candidatos.map((c, i) => (
+                  <button key={i} type="button" className="secundario" style={{ textAlign: 'left', fontSize: 11.5, padding: '5px 9px' }} onClick={() => elegirCandidato(f, c)}>
+                    {c.esCombo
+                      ? `Combinar con factura ${c.otraFacturaNumero}`
+                      : `${c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') + ' · ' : ''}${c.concepto?.slice(0, 45)}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        }
+        return <span className="muted">{f.estado === 'matcheada' ? 'Emparejada' : (ETIQUETAS_TIPO[(resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo] || (resultadoLocal || f).motivo_detalle || 'Sin recalcular todavía')}</span>;
+
+      case 'Vincular':
+        if (bloqueada) return <span className="muted">—</span>;
+        if (!vinculandoManual.has(f.id)) {
+          return <button type="button" className="quitar-grupo" onClick={() => alternarVinculoManual(f.id)}>vincular a mano</button>;
+        }
+        return (
+          <div>
+            <select
+              value={movimientoElegido[f.id] || ''}
+              onChange={e => setMovimientoElegido(prev => ({ ...prev, [f.id]: e.target.value }))}
+              style={{ fontSize: 11.5, padding: '4px 6px', width: '100%' }}
+            >
+              <option value="">Elige línea del banco...</option>
+              {movimientosPendientes.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''} · {Number(m.importe).toFixed(2)}€ · {m.concepto?.slice(0, 40)}
+                </option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+              <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={!movimientoElegido[f.id] || vinculando.has(f.id)} onClick={() => vincularManual(f)}>
+                {vinculando.has(f.id) ? '...' : 'Vincular'}
+              </button>
+              <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => alternarVinculoManual(f.id)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'Movimiento':
+        return (
+          <span className="muted">
+            {f.estado === 'matcheada'
+              ? `${f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') + ' · ' : ''}${f.movimiento_concepto?.slice(0, 40) || ''} · ${f.movimiento_importe !== undefined && f.movimiento_importe !== null ? `${Number(f.movimiento_importe).toFixed(2)}€` : ''}`
+              : '—'}
+          </span>
+        );
+
+      case 'Fecha':
+        if (bloqueada) return <span className="muted">—</span>;
+        return (
+          <input
+            type="date"
+            value={edicionFecha[f.id] ?? fechaInicial(f)}
+            onChange={e => setEdicionFecha(prev => ({ ...prev, [f.id]: e.target.value }))}
+            style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
+          />
+        );
+
+      case 'Importe':
+        if (bloqueada) return <span className="muted">—</span>;
+        return (
+          <input
+            type="text"
+            inputMode="decimal"
+            placeholder="0,00"
+            value={edicionImporte[f.id] ?? importeInicial(f)}
+            onChange={e => setEdicionImporte(prev => ({ ...prev, [f.id]: e.target.value }))}
+            style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
+          />
+        );
+
+      case 'Buscar':
+        if (bloqueada) return null;
+        return (
+          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={buscando.has(f.id)} onClick={() => buscarFila(f)}>
+            {buscando.has(f.id) ? '...' : 'Buscar'}
+          </button>
+        );
+
+      default:
+        return null;
+    }
+  }
+
   return (
     <div>
       <div className="fila" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
         <p className="muted" style={{ margin: 0 }}>
           {sinResolver} factura(s) sin resolver todavía.
         </p>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <label className="toggle-pendientes">
+            <input type="checkbox" checked={soloPendientes} onChange={e => setSoloPendientes(e.target.checked)} />
+            Solo pendientes
+          </label>
+          <div style={{ position: 'relative' }}>
+            <button type="button" className="secundario" onClick={() => setMostrarColumnas(v => !v)}>Columnas</button>
+            {mostrarColumnas && (
+              <div className="panel-columnas">
+                {COLUMNAS.map(c => (
+                  <label key={c} className="fila-checkbox">
+                    <input type="checkbox" checked={columnasVisibles.has(c)} onChange={() => alternarColumna(c)} />
+                    {c}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
           <button type="button" className="secundario" onClick={descargarInformeCsv} disabled={sinResolver === 0}>
             Descargar CSV
           </button>
@@ -270,143 +460,33 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
         </div>
       )}
 
-      <div className="tabla-movimientos-envoltura">
-        <table style={{ tableLayout: 'fixed', width: '100%' }}>
-          <colgroup>
-            <col style={{ width: 30 }} />
-            <col />
-            <col style={{ width: 45 }} />
-            <col style={{ width: 220 }} />
-            <col style={{ width: 220 }} />
-            <col style={{ width: 140 }} />
-            <col style={{ width: 100 }} />
-            <col style={{ width: 90 }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th><input type="checkbox" checked={seleccionadas.size === facturas.length} onChange={alternarTodas} /></th>
-              <th>Archivo</th>
-              <th>Ver</th>
-              <th>Motivo</th>
-              <th>Movimiento emparejado</th>
-              <th>Fecha factura</th>
-              <th>Importe</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {facturas.map(f => {
-              const duplicada = nombresDuplicados.has(f.nombre_original);
-              const resultadoLocal = resultadosFila[f.id];
-              const candidatos = resultadoLocal?.tipo === 'ambiguo' ? resultadoLocal.candidatos.map(c => ({
-                movimientoId: c.movimientoId, numero: resultadoLocal.numero, facturaId: f.id, facturaConcepto: resultadoLocal.facturaConcepto,
-                concepto: c.concepto, importe: c.importe, fecha: c.fecha,
-              })) : resultadoLocal?.tipo === 'combo_sugerido' ? [{
-                movimientoId: resultadoLocal.movimientoId, esCombo: true, numero: resultadoLocal.numero,
-                otraFacturaNumero: resultadoLocal.otraFacturaNumero, facturaId: f.id, otraFacturaId: resultadoLocal.otraFacturaId,
-                facturaConcepto: resultadoLocal.facturaConcepto,
-              }] : null;
-
-              return (
-                <tr key={f.id} style={duplicada ? { background: 'rgba(166, 124, 46, 0.08)' } : undefined}>
-                  <td><input type="checkbox" checked={seleccionadas.has(f.id)} onChange={() => alternar(f.id)} /></td>
-                  <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {f.nombre_original}{duplicada ? ' ⚠' : ''}
-                  </td>
-                  <td>
-                    <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">ver</a>
-                  </td>
-
-                  <td className="muted" style={{ whiteSpace: 'normal' }}>
-                    {candidatos ? (
-                      <>
-                        <p style={{ margin: '0 0 4px', fontSize: 11 }}>
-                          {resultadoLocal.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:'}
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          {candidatos.map((c, i) => (
-                            <button key={i} type="button" className="secundario" style={{ textAlign: 'left', fontSize: 11.5, padding: '5px 9px' }} onClick={() => elegirCandidato(f, c)}>
-                              {c.esCombo
-                                ? `Combinar con factura ${c.otraFacturaNumero}`
-                                : `${c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') + ' · ' : ''}${c.concepto?.slice(0, 45)}`}
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    ) : f.estado === 'matcheada' ? (
-                      'Emparejada'
-                    ) : vinculandoManual.has(f.id) ? (
-                      <div>
-                        <select
-                          value={movimientoElegido[f.id] || ''}
-                          onChange={e => setMovimientoElegido(prev => ({ ...prev, [f.id]: e.target.value }))}
-                          style={{ fontSize: 11.5, padding: '4px 6px', width: '100%' }}
-                        >
-                          <option value="">Elige línea del banco...</option>
-                          {movimientosPendientes.map(m => (
-                            <option key={m.id} value={m.id}>
-                              {m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''} · {Number(m.importe).toFixed(2)}€ · {m.concepto?.slice(0, 40)}
-                            </option>
-                          ))}
-                        </select>
-                        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={!movimientoElegido[f.id] || vinculando.has(f.id)} onClick={() => vincularManual(f)}>
-                            {vinculando.has(f.id) ? '...' : 'Vincular'}
-                          </button>
-                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => alternarVinculoManual(f.id)}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {ETIQUETAS_TIPO[(resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo] || (resultadoLocal || f).motivo_detalle || 'Sin recalcular todavía'}
-                        <button type="button" className="quitar-grupo" onClick={() => alternarVinculoManual(f.id)}>vincular a mano</button>
-                      </>
-                    )}
-                  </td>
-
-                  <td className="muted" style={{ whiteSpace: 'normal' }}>
-                    {f.estado === 'matcheada'
-                      ? `${f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') + ' · ' : ''}${f.movimiento_concepto?.slice(0, 40) || ''} · ${f.movimiento_importe !== undefined && f.movimiento_importe !== null ? `${Number(f.movimiento_importe).toFixed(2)}€` : ''}`
-                      : '—'}
-                  </td>
-
-                  <td>
-                    {f.estado !== 'matcheada' && !candidatos ? (
-                      <input
-                        type="date"
-                        value={edicionFecha[f.id] ?? fechaInicial(f)}
-                        onChange={e => setEdicionFecha(prev => ({ ...prev, [f.id]: e.target.value }))}
-                        style={{ fontSize: 12, padding: '5px 6px' }}
-                      />
-                    ) : <span className="muted">—</span>}
-                  </td>
-                  <td>
-                    {f.estado !== 'matcheada' && !candidatos ? (
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0,00"
-                        value={edicionImporte[f.id] ?? importeInicial(f)}
-                        onChange={e => setEdicionImporte(prev => ({ ...prev, [f.id]: e.target.value }))}
-                        style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
-                      />
-                    ) : <span className="muted">—</span>}
-                  </td>
-
-                  <td>
-                    {f.estado !== 'matcheada' && !candidatos && (
-                      <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={buscando.has(f.id)} onClick={() => buscarFila(f)}>
-                        {buscando.has(f.id) ? '...' : 'Buscar'}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="tabla-movimientos-envoltura" role="table">
+        <div role="rowgroup">
+          <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: plantillaColumnas }}>
+            <Celda cabecera>
+              <input type="checkbox" checked={facturasVisibles.length > 0 && seleccionadas.size === facturasVisibles.length} onChange={() => alternarTodas(facturasVisibles)} />
+            </Celda>
+            {columnasMostradas.map(c => (
+              <Celda key={c} cabecera>
+                <span className="etiqueta-orden">{c}</span>
+                <span className="resize-handle" onPointerDown={e => iniciarArrastre(e, c)} />
+              </Celda>
+            ))}
+          </div>
+        </div>
+        <div role="rowgroup">
+          {facturasVisibles.map(f => {
+            const duplicada = nombresDuplicados.has(f.nombre_original);
+            return (
+              <div role="row" key={f.id} className="fila-tabla" style={{ gridTemplateColumns: plantillaColumnas, background: duplicada ? 'rgba(166, 124, 46, 0.08)' : undefined }}>
+                <Celda><input type="checkbox" checked={seleccionadas.has(f.id)} onChange={() => alternar(f.id)} /></Celda>
+                {columnasMostradas.map(c => (
+                  <Celda key={c}>{contenidoCelda(c, f)}</Celda>
+                ))}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="fila" style={{ marginTop: 12 }}>
