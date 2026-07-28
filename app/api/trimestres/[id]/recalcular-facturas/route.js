@@ -1,9 +1,7 @@
-const { reprocesarFacturas } = require('../../../../../lib/facturaMatcher.cjs');
+const { listarFacturasSinResolver } = require('../../../../../lib/facturaMatcher.cjs');
 
-export const maxDuration = 60;
-
-export async function POST(request, { params }) {
+export async function GET(request, { params }) {
   const { id } = await params;
-  const resultado = await reprocesarFacturas(id);
-  return Response.json(resultado);
+  const ids = await listarFacturasSinResolver(id);
+  return Response.json({ ids });
 }

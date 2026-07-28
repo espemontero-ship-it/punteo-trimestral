@@ -14,20 +14,34 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const [seleccionadas, setSeleccionadas] = useState(new Set());
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [borrando, setBorrando] = useState(false);
-  const [recalculando, setRecalculando] = useState(false);
+  const [progresoRecalculo, setProgresoRecalculo] = useState(null); // { actual, total } | null
 
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
 
+  // Un archivo a la vez (no un único POST largo) para poder mostrar progreso
+  // real y para no arriesgarse a que el servidor corte una petición muy larga
+  // a mitad si hay muchas facturas pendientes.
   async function recalcular() {
-    setRecalculando(true);
-    const r = await apiFetch(`/api/trimestres/${trimestreId}/recalcular-facturas`, { method: 'POST' }, {
-      mensajeError: 'No se pudo recalcular.',
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/recalcular-facturas`, undefined, {
+      mensajeError: 'No se pudo obtener la lista de facturas pendientes.',
     });
-    setRecalculando(false);
-    if (r) {
-      mostrarToast(`${r.resueltas} de ${r.revisadas} factura(s) emparejadas`, 'ok');
-      onCambio();
+    if (!r || r.ids.length === 0) return;
+
+    let resueltas = 0;
+    for (let i = 0; i < r.ids.length; i++) {
+      setProgresoRecalculo({ actual: i + 1, total: r.ids.length });
+      try {
+        const res = await fetch(`/api/facturas/${r.ids[i]}/reprocesar`, { method: 'POST' });
+        const resultado = await res.json();
+        if (resultado.tipo === 'match_directo') resueltas++;
+      } catch {
+        // un archivo suelto que falle no debe frenar el resto de la lista
+      }
     }
+
+    setProgresoRecalculo(null);
+    mostrarToast(`${resueltas} de ${r.ids.length} factura(s) emparejadas`, 'ok');
+    onCambio();
   }
 
   const seleccionadasEmparejadas = useMemo(
@@ -86,13 +100,20 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
 
   return (
     <div>
-      <div className="fila" style={{ marginBottom: 12 }}>
-        <p className="muted" style={{ margin: 0 }}>
-          {sinResolver} factura(s) sin resolver todavía.
-        </p>
-        <button type="button" className="secundario" disabled={sinResolver === 0 || recalculando} onClick={recalcular}>
-          {recalculando ? 'Recalculando...' : 'Recalcular facturas sin resolver'}
-        </button>
+      <div style={{ marginBottom: 12 }}>
+        <div className="fila">
+          <p className="muted" style={{ margin: 0 }}>
+            {sinResolver} factura(s) sin resolver todavía.
+          </p>
+          <button type="button" className="secundario" disabled={sinResolver === 0 || !!progresoRecalculo} onClick={recalcular}>
+            {progresoRecalculo ? `Recalculando ${progresoRecalculo.actual} de ${progresoRecalculo.total}...` : 'Recalcular facturas sin resolver'}
+          </button>
+        </div>
+        {progresoRecalculo && (
+          <div className="progreso" style={{ margin: '8px 0 0' }}>
+            <div style={{ width: `${(progresoRecalculo.actual / progresoRecalculo.total) * 100}%` }} />
+          </div>
+        )}
       </div>
       {nombresDuplicados.size > 0 && (
         <div className="fila" style={{ marginBottom: 8 }}>
