@@ -10,7 +10,7 @@ import SeccionLotes from './components/SeccionLotes';
 import NuevoColaborador from './components/NuevoColaborador';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Modal } from './components/Modal';
-import { apiFetch } from './lib/toast';
+import { apiFetch, mostrarToast } from './lib/toast';
 
 const PESTANAS = [
   { id: 'inicio', etiqueta: 'Inicio' },
@@ -55,6 +55,7 @@ export default function Home() {
   const [confirmarCierre, setConfirmarCierre] = useState(false);
   const [lote, setLote] = useState(null);
   const [modalAbierto, setModalAbierto] = useState(null); // 'facturas' | 'excel' | 'cierre' | null
+  const [recalculando, setRecalculando] = useState(false);
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -98,6 +99,18 @@ export default function Home() {
   async function cerrarSesion() {
     await fetch('/api/logout', { method: 'POST' });
     window.location.href = '/login';
+  }
+
+  async function recalcularClaves() {
+    setRecalculando(true);
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/recalcular-claves`, { method: 'POST' }, {
+      mensajeError: 'No se pudo recalcular.',
+    });
+    setRecalculando(false);
+    if (r) {
+      mostrarToast(`${r.cambiadas} de ${r.revisadas} línea(s) recalculadas`, 'ok');
+      await cargar(trimestreId);
+    }
   }
 
   function irAPendientes() {
@@ -285,6 +298,14 @@ export default function Home() {
             <strong>Trimestre</strong>
             <p className="muted">Estás en {trimestreId}.</p>
             <button type="button" className="secundario" onClick={cambiarTrimestre}>Cambiar trimestre</button>
+          </div>
+
+          <div className="tarjeta">
+            <strong>Agrupación</strong>
+            <p className="muted">Vuelve a calcular por qué proveedor se agrupa cada línea del banco, usando las reglas actuales — para cuando se añade una regla nueva (ej. un proveedor conocido) y hay movimientos ya importados que aún no la usan. No hace falta volver a subir el excel.</p>
+            <button type="button" className="secundario" disabled={recalculando} onClick={recalcularClaves}>
+              {recalculando ? 'Recalculando...' : 'Recalcular agrupación'}
+            </button>
           </div>
 
           <div className="tarjeta">

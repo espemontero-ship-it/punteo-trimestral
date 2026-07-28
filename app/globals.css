@@ -299,6 +299,7 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
 }
 .etiqueta-orden:hover { color: var(--text); }
 .celda.concepto { white-space: normal; }
+.celda.banco { text-transform: capitalize; }
 input.campo-proveedor {
   font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
   width: 100%; background: var(--surface-alt); color: var(--text);

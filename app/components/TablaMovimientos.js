@@ -9,8 +9,8 @@ const ETIQUETAS = {
   nueva: 'nueva',
 };
 
-const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Proveedor', 'Importe', 'Estado', 'Nota', 'Proyecto'];
-const ANCHO_DEFECTO = { Fecha: 90, Concepto: 280, Proveedor: 190, Importe: 90, Estado: 150, Nota: 190, Proyecto: 130 };
+const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Nota', 'Proyecto'];
+const ANCHO_DEFECTO = { Fecha: 90, Concepto: 280, Banco: 100, Proveedor: 190, Importe: 90, Estado: 150, Nota: 190, Proyecto: 130 };
 const ANCHO_EXTRA_DEFECTO = 140;
 
 // Un movimiento separado de su grupo lleva su id como sufijo en la clave
@@ -89,7 +89,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           if (filtroLote) return filtroLote.ids.has(m.id);
           if (soloPendientes && m.estado === 'resuelta') return false;
           if (!texto) return true;
-          const campos = [m.concepto, g.clave, m.nota_final, m.importe, m.fecha, ...(m.datos_originales ? Object.values(m.datos_originales) : [])];
+          const campos = [m.concepto, g.clave, g.hoja, m.nota_final, m.importe, m.fecha, ...(m.datos_originales ? Object.values(m.datos_originales) : [])];
           return campos.some(v => v !== null && v !== undefined && String(v).toLowerCase().includes(texto));
         }),
       }))
@@ -113,6 +113,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     switch (campo) {
       case 'Fecha': return m.fecha || '';
       case 'Concepto': return m.concepto || '';
+      case 'Banco': return g.hoja || '';
       case 'Proveedor': return g.clave || '';
       case 'Importe': return Number(m.importe);
       case 'Estado': return m.estado || '';
@@ -377,6 +378,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       <div role="row" key={m.id} className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
         <Celda col="Fecha" className="muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
         <Celda col="Concepto" className="concepto">{m.concepto?.slice(0, 80)}</Celda>
+        <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
         <Celda col="Proveedor" className="proveedor">
           <input
             className={`campo-proveedor${!proveedoresManual[m.id] && !m.proveedor && m.proveedor_sugerido ? ' prellenado' : ''}`}
@@ -417,6 +419,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <div className="grupo-nombre">{nombreGrupoMostrado(g)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
           <div className="meta">{g.resueltas} de {g.total} resueltas</div>
         </Celda>
+        <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
         <Celda col="Proveedor">
           <input
             className={`campo-proveedor${!proveedoresGrupo[g.id] && sugerenciaProveedorGrupo ? ' prellenado' : ''}`}
