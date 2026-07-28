@@ -7,13 +7,16 @@ import SubirFacturasLote from './components/SubirFacturasLote';
 import FacturasTrimestre from './components/FacturasTrimestre';
 import SelectorTrimestre from './components/SelectorTrimestre';
 import SeccionLotes from './components/SeccionLotes';
+import NuevoColaborador from './components/NuevoColaborador';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { Modal } from './components/Modal';
 import { apiFetch } from './lib/toast';
 
 const PESTANAS = [
   { id: 'inicio', etiqueta: 'Inicio' },
   { id: 'trimestre', etiqueta: 'Trimestre' },
   { id: 'colaboradores', etiqueta: 'Colaboradores' },
+  { id: 'admin', etiqueta: 'Admin' },
 ];
 
 // Clasifica un resultado de matching (de la subida en lote o de fijar un
@@ -51,6 +54,7 @@ export default function Home() {
   const [pestana, setPestana] = useState('inicio');
   const [confirmarCierre, setConfirmarCierre] = useState(false);
   const [lote, setLote] = useState(null);
+  const [modalAbierto, setModalAbierto] = useState(null); // 'facturas' | 'excel' | 'cierre' | null
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -83,6 +87,17 @@ export default function Home() {
   function entrarTrimestre(id) {
     localStorage.setItem('trimestreId', id);
     setTrimestreId(id);
+  }
+
+  function cambiarTrimestre() {
+    localStorage.removeItem('trimestreId');
+    setTrimestreId('');
+    setProveedores(null);
+  }
+
+  async function cerrarSesion() {
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/login';
   }
 
   function irAPendientes() {
@@ -170,17 +185,7 @@ export default function Home() {
 
   return (
     <div className={pestana === 'trimestre' ? 'contenedor contenedor-ancho' : 'contenedor'}>
-      <div className="fila" style={{ marginTop: 16 }}>
-        <h1 style={{ margin: 0 }}>{trimestreId}</h1>
-        <div>
-          <button className="secundario" onClick={() => { localStorage.removeItem('trimestreId'); setTrimestreId(''); setProveedores(null); }} style={{ marginRight: 8 }}>
-            Cambiar trimestre
-          </button>
-          <button className="secundario" onClick={async () => { await fetch('/api/logout', { method: 'POST' }); window.location.href = '/login'; }}>
-            Salir
-          </button>
-        </div>
-      </div>
+      <h1 style={{ margin: '16px 0 0' }}>{trimestreId}</h1>
 
       <div className="tabbar">
         {PESTANAS.map(p => (
@@ -235,40 +240,11 @@ export default function Home() {
             </div>
           </div>
 
-          <details className="excel-toggle">
-            <summary>+ Ver / borrar facturas subidas</summary>
-            <div className="tarjeta">
-              <FacturasTrimestre trimestreId={trimestreId} facturas={facturas || []} onCambio={() => cargar(trimestreId)} />
-            </div>
-          </details>
-
-          <details className="excel-toggle">
-            <summary>+ Cerrar trimestre</summary>
-            <div className="tarjeta">
-              <p className="muted">Descarga el .zip con las facturas numeradas y el excel final con las notas — hazlo cuando ya esté todo punteado.</p>
-              <button className="grande" onClick={() => setConfirmarCierre(true)}>Cerrar trimestre (descargar .zip)</button>
-            </div>
-          </details>
-
-          <details className="excel-toggle">
-            <summary>+ Añadir excel del banco / paypal</summary>
-            <div className="tarjeta">
-              <p className="muted">Si es el excel combinado (bbva/openbank/paypal en pestañas), déjalo en "Detectar automáticamente". Si es un export suelto de un solo banco, indícalo.</p>
-              <form onSubmit={subirExcel}>
-                <input type="file" name="file" accept=".xlsx" />
-                <div style={{ height: 12 }} />
-                <select name="hoja" defaultValue="">
-                  <option value="">Detectar automáticamente (excel combinado)</option>
-                  <option value="bbva">Es un export suelto de bbva</option>
-                  <option value="openbank">Es un export suelto de openbank</option>
-                  <option value="paypal">Es un export suelto de paypal</option>
-                </select>
-                <div style={{ height: 12 }} />
-                <button type="submit" disabled={subiendoExcel}>{subiendoExcel ? 'Subiendo...' : 'Subir'}</button>
-              </form>
-              {mensajeExcel && <p className="muted" style={{ marginTop: 8 }}>{mensajeExcel}</p>}
-            </div>
-          </details>
+          <div className="fila" style={{ gap: 8, marginBottom: 14, justifyContent: 'flex-start' }}>
+            <button type="button" className="secundario" onClick={() => setModalAbierto('facturas')}>Ver / borrar facturas</button>
+            <button type="button" className="secundario" onClick={() => setModalAbierto('excel')}>Añadir excel</button>
+            <button type="button" className="secundario" onClick={() => setModalAbierto('cierre')}>Cerrar trimestre</button>
+          </div>
 
           {cargando && <p className="muted">Cargando...</p>}
 
@@ -293,6 +269,56 @@ export default function Home() {
       {pestana === 'colaboradores' && (
         <SeccionLotes trimestreId={trimestreId} />
       )}
+
+      {pestana === 'admin' && (
+        <>
+          <div className="tarjeta">
+            <strong>Proyectos</strong>
+            <p className="muted">Lista de proyectos/eventos, compartida entre trimestres.</p>
+            <a href="/proyectos"><button type="button" className="secundario">Ver proyectos</button></a>
+          </div>
+
+          <div className="tarjeta">
+            <NuevoColaborador />
+          </div>
+
+          <div className="tarjeta">
+            <strong>Trimestre</strong>
+            <p className="muted">Estás en {trimestreId}.</p>
+            <button type="button" className="secundario" onClick={cambiarTrimestre}>Cambiar trimestre</button>
+          </div>
+
+          <div className="tarjeta">
+            <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
+          </div>
+        </>
+      )}
+
+      <Modal abierto={modalAbierto === 'facturas'} titulo="Ver / borrar facturas" onCerrar={() => setModalAbierto(null)} ancho={720}>
+        <FacturasTrimestre trimestreId={trimestreId} facturas={facturas || []} onCambio={() => cargar(trimestreId)} />
+      </Modal>
+
+      <Modal abierto={modalAbierto === 'excel'} titulo="Añadir excel del banco / paypal" onCerrar={() => setModalAbierto(null)}>
+        <p className="muted">Si es el excel combinado (bbva/openbank/paypal en pestañas), déjalo en "Detectar automáticamente". Si es un export suelto de un solo banco, indícalo.</p>
+        <form onSubmit={subirExcel}>
+          <input type="file" name="file" accept=".xlsx" />
+          <div style={{ height: 12 }} />
+          <select name="hoja" defaultValue="">
+            <option value="">Detectar automáticamente (excel combinado)</option>
+            <option value="bbva">Es un export suelto de bbva</option>
+            <option value="openbank">Es un export suelto de openbank</option>
+            <option value="paypal">Es un export suelto de paypal</option>
+          </select>
+          <div style={{ height: 12 }} />
+          <button type="submit" disabled={subiendoExcel}>{subiendoExcel ? 'Subiendo...' : 'Subir'}</button>
+        </form>
+        {mensajeExcel && <p className="muted" style={{ marginTop: 8 }}>{mensajeExcel}</p>}
+      </Modal>
+
+      <Modal abierto={modalAbierto === 'cierre'} titulo="Cerrar trimestre" onCerrar={() => setModalAbierto(null)}>
+        <p className="muted">Descarga el .zip con las facturas numeradas y el excel final con las notas — hazlo cuando ya esté todo punteado.</p>
+        <button className="grande" onClick={() => { setModalAbierto(null); setConfirmarCierre(true); }}>Cerrar trimestre (descargar .zip)</button>
+      </Modal>
 
       <ConfirmDialog
         abierto={confirmarCierre}

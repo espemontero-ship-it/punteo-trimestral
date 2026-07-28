@@ -5,8 +5,6 @@ import { useEffect, useState, useCallback } from 'react';
 export default function SeccionLotes({ trimestreId }) {
   const [colaboradores, setColaboradores] = useState([]);
   const [lotes, setLotes] = useState([]);
-  const [nuevoColaborador, setNuevoColaborador] = useState({ nombre: '', usuario: '' });
-  const [passwordGenerada, setPasswordGenerada] = useState(null);
   const [nuevoLote, setNuevoLote] = useState({ colaboradorId: '', evento: '' });
 
   const cargar = useCallback(async () => {
@@ -19,21 +17,6 @@ export default function SeccionLotes({ trimestreId }) {
   }, [trimestreId]);
 
   useEffect(() => { cargar(); }, [cargar]);
-
-  async function crearColaborador(e) {
-    e.preventDefault();
-    const res = await fetch('/api/colaboradores', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(nuevoColaborador),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setPasswordGenerada({ usuario: data.colaborador.usuario, password: data.colaborador.password });
-      setNuevoColaborador({ nombre: '', usuario: '' });
-      cargar();
-    }
-  }
 
   async function crearLote(e) {
     e.preventDefault();
@@ -85,33 +68,6 @@ export default function SeccionLotes({ trimestreId }) {
           <div style={{ height: 8 }} />
           <button type="submit">Crear lote</button>
         </form>
-      </details>
-
-      <details style={{ marginTop: 12 }}>
-        <summary style={{ cursor: 'pointer' }}>+ Nuevo colaborador</summary>
-        <form onSubmit={crearColaborador} style={{ marginTop: 8 }}>
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={nuevoColaborador.nombre}
-            onChange={e => setNuevoColaborador({ ...nuevoColaborador, nombre: e.target.value })}
-          />
-          <div style={{ height: 8 }} />
-          <input
-            type="text"
-            placeholder="Usuario (para iniciar sesión)"
-            value={nuevoColaborador.usuario}
-            onChange={e => setNuevoColaborador({ ...nuevoColaborador, usuario: e.target.value })}
-          />
-          <div style={{ height: 8 }} />
-          <button type="submit">Crear colaborador</button>
-        </form>
-        {passwordGenerada && (
-          <p className="muted" style={{ marginTop: 8 }}>
-            Usuario: <strong>{passwordGenerada.usuario}</strong> · Contraseña: <strong>{passwordGenerada.password}</strong>
-            <br />Apúntala ahora — no se puede volver a ver.
-          </p>
-        )}
       </details>
     </div>
   );
