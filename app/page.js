@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import TablaMovimientos from './components/TablaMovimientos';
 import SubirFactura from './components/SubirFactura';
 import SubirFacturasLote from './components/SubirFacturasLote';
+import FacturasTrimestre from './components/FacturasTrimestre';
 import SelectorTrimestre from './components/SelectorTrimestre';
 import SeccionLotes from './components/SeccionLotes';
 import { ConfirmDialog } from './components/ConfirmDialog';
@@ -233,6 +234,13 @@ export default function Home() {
               <div className="progreso" style={{ width: 200, margin: '6px 0 0' }}><div style={{ width: `${porcentaje}%` }} /></div>
             </div>
           </div>
+
+          <details className="excel-toggle">
+            <summary>+ Ver / borrar facturas subidas</summary>
+            <div className="tarjeta">
+              <FacturasTrimestre trimestreId={trimestreId} facturas={facturas || []} onCambio={() => cargar(trimestreId)} />
+            </div>
+          </details>
 
           <details className="excel-toggle">
             <summary>+ Cerrar trimestre</summary>
