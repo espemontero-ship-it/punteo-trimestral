@@ -1,11 +1,19 @@
 const { query } = require('../../../../../lib/db.cjs');
 const { eliminarBlob } = require('../../../../../lib/blob.cjs');
+const { asegurarColumnasMotivo } = require('../../../../../lib/facturaMatcher.cjs');
 
 export async function GET(request, { params }) {
   const { id } = await params;
+  await asegurarColumnasMotivo();
   const { rows } = await query(
-    `SELECT id, numero, nombre_original, proveedor_clave, estado, es_imagen, importes, totales, concepto, creado_en
-     FROM facturas WHERE trimestre_id = $1 AND lote_id IS NULL ORDER BY numero`,
+    `SELECT f.id, f.numero, f.nombre_original, f.proveedor_clave, f.estado, f.es_imagen,
+            f.importes, f.totales, f.fechas, f.concepto, f.creado_en, f.motivo_tipo, f.motivo_detalle,
+            m.id AS movimiento_id, m.fecha AS movimiento_fecha, m.concepto AS movimiento_concepto, m.importe AS movimiento_importe
+     FROM facturas f
+     LEFT JOIN movimiento_facturas mf ON mf.factura_id = f.id
+     LEFT JOIN movimientos m ON m.id = mf.movimiento_id
+     WHERE f.trimestre_id = $1 AND f.lote_id IS NULL
+     ORDER BY f.numero`,
     [id]
   );
   return Response.json({ facturas: rows });

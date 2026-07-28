@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS facturas (
   fechas DATE[] NOT NULL DEFAULT '{}',
   es_imagen BOOLEAN NOT NULL DEFAULT false,
   estado TEXT NOT NULL DEFAULT 'sin_match', -- sin_match | matcheada | revisar (solo facturas de proveedor)
+  motivo_tipo TEXT,                   -- tipo del ultimo intento de match (sin_importe, ambiguo...)
+  motivo_detalle TEXT,                -- detalle legible del ultimo intento de match
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
   -- Campos de facturas subidas por un colaborador a un lote:
   lote_id BIGINT REFERENCES lotes(id) ON DELETE CASCADE,

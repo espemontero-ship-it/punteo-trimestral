@@ -54,7 +54,8 @@ export default function Home() {
   const [pestana, setPestana] = useState('inicio');
   const [confirmarCierre, setConfirmarCierre] = useState(false);
   const [lote, setLote] = useState(null);
-  const [modalAbierto, setModalAbierto] = useState(null); // 'facturas' | 'excel' | 'cierre' | null
+  const [modalAbierto, setModalAbierto] = useState(null); // 'excel' | 'cierre' | null
+  const [vistaFacturas, setVistaFacturas] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
 
   useEffect(() => {
@@ -196,6 +197,18 @@ export default function Home() {
   const resueltas = resumen?.resueltas ?? 0;
   const porcentaje = total ? Math.round((resueltas / total) * 100) : 0;
 
+  if (vistaFacturas) {
+    return (
+      <div className="contenedor contenedor-ancho">
+        <div className="fila" style={{ margin: '16px 0 4px' }}>
+          <h1 style={{ margin: 0 }}>Facturas — {trimestreId}</h1>
+          <button type="button" className="secundario" onClick={() => setVistaFacturas(false)}>← Volver a Trimestre</button>
+        </div>
+        <FacturasTrimestre trimestreId={trimestreId} facturas={facturas || []} onCambio={() => cargar(trimestreId)} />
+      </div>
+    );
+  }
+
   return (
     <div className={pestana === 'trimestre' ? 'contenedor contenedor-ancho' : 'contenedor'}>
       <h1 style={{ margin: '16px 0 0' }}>{trimestreId}</h1>
@@ -253,7 +266,7 @@ export default function Home() {
 
           <div className="fila" style={{ gap: 8, marginBottom: 14, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
             <SubirFacturasLote trimestreId={trimestreId} onCompletado={completarLote} />
-            <button type="button" className="secundario" onClick={() => setModalAbierto('facturas')}>Ver / borrar facturas</button>
+            <button type="button" className="secundario" onClick={() => setVistaFacturas(true)}>Ver / borrar facturas</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('excel')}>Añadir excel</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('cierre')}>Cerrar trimestre</button>
           </div>
@@ -313,10 +326,6 @@ export default function Home() {
           </div>
         </>
       )}
-
-      <Modal abierto={modalAbierto === 'facturas'} titulo="Ver / borrar facturas" onCerrar={() => setModalAbierto(null)} ancho={720}>
-        <FacturasTrimestre trimestreId={trimestreId} facturas={facturas || []} onCambio={() => cargar(trimestreId)} />
-      </Modal>
 
       <Modal abierto={modalAbierto === 'excel'} titulo="Añadir excel del banco / paypal" onCerrar={() => setModalAbierto(null)}>
         <p className="muted">Si es el excel combinado (bbva/openbank/paypal en pestañas), déjalo en "Detectar automáticamente". Si es un export suelto de un solo banco, indícalo.</p>

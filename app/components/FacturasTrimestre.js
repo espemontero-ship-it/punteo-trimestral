@@ -21,55 +21,60 @@ function montoCaracteristico(f) {
   return null;
 }
 
+function importeInicial(f) {
+  const monto = montoCaracteristico(f);
+  return monto !== null ? String(monto).replace('.', ',') : '';
+}
+
+function fechaInicial(f) {
+  return f.fechas && f.fechas[0] ? String(f.fechas[0]).slice(0, 10) : '';
+}
+
 export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const [seleccionadas, setSeleccionadas] = useState(new Set());
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const [progresoRecalculo, setProgresoRecalculo] = useState(null); // { actual, total } | null
-  const [resumenRecalculo, setResumenRecalculo] = useState(null); // { conteos, detalle } | null
+  const [edicionImporte, setEdicionImporte] = useState({});
+  const [edicionFecha, setEdicionFecha] = useState({});
+  const [buscando, setBuscando] = useState(new Set());
+  const [resultadosFila, setResultadosFila] = useState({}); // { [facturaId]: resultado } — sobreescribe el motivo guardado hasta recargar
 
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
-  const nombrePorId = useMemo(() => Object.fromEntries(facturas.map(f => [f.id, f.nombre_original])), [facturas]);
 
   // Un archivo a la vez (no un único POST largo) para poder mostrar progreso
   // real y para no arriesgarse a que el servidor corte una petición muy larga
   // a mitad si hay muchas facturas pendientes.
   async function recalcular() {
-    setResumenRecalculo(null);
     const r = await apiFetch(`/api/trimestres/${trimestreId}/recalcular-facturas`, undefined, {
       mensajeError: 'No se pudo obtener la lista de facturas pendientes.',
     });
     if (!r || r.ids.length === 0) return;
 
-    const conteos = {};
-    const detalle = [];
+    let resueltas = 0;
     for (let i = 0; i < r.ids.length; i++) {
       setProgresoRecalculo({ actual: i + 1, total: r.ids.length });
-      let resultado;
       try {
         const res = await fetch(`/api/facturas/${r.ids[i]}/reprocesar`, { method: 'POST' });
-        resultado = await res.json();
-      } catch (err) {
-        resultado = { tipo: 'error', detalle: err.message };
-      }
-      conteos[resultado.tipo] = (conteos[resultado.tipo] || 0) + 1;
-      if (resultado.tipo !== 'match_directo') {
-        detalle.push({ nombre: nombrePorId[r.ids[i]] || `#${r.ids[i]}`, tipo: resultado.tipo, detalle: resultado.detalle });
+        const resultado = await res.json();
+        if (resultado.tipo === 'match_directo') resueltas++;
+      } catch {
+        // un archivo suelto que falle no debe frenar el resto de la lista
       }
     }
 
     setProgresoRecalculo(null);
-    setResumenRecalculo({ total: r.ids.length, conteos, detalle });
-    mostrarToast(`${conteos.match_directo || 0} de ${r.ids.length} factura(s) emparejadas`, 'ok');
+    mostrarToast(`${resueltas} de ${r.ids.length} factura(s) emparejadas`, 'ok');
     onCambio();
   }
 
   function descargarInformeCsv() {
-    if (!resumenRecalculo) return;
+    const pendientes = facturas.filter(f => f.estado !== 'matcheada');
+    if (pendientes.length === 0) return;
     const escapar = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const filas = [
       ['Archivo', 'Motivo', 'Detalle'].map(escapar).join(','),
-      ...resumenRecalculo.detalle.map(d => [d.nombre, ETIQUETAS_TIPO[d.tipo] || d.tipo, d.detalle].map(escapar).join(',')),
+      ...pendientes.map(f => [f.nombre_original, ETIQUETAS_TIPO[f.motivo_tipo] || f.motivo_tipo || '', f.motivo_detalle].map(escapar).join(',')),
     ];
     const blob = new Blob(['﻿' + filas.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -78,6 +83,48 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
     a.download = `facturas-sin-resolver-${trimestreId}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // Guarda importe/fecha (si se han tocado) y relanza el matching -- si hay
+  // varias líneas con el mismo importe o se sugiere una combinación, la fila
+  // se expande para elegir a mano en vez de quedarse sin más.
+  async function buscarFila(f) {
+    const importeTexto = (edicionImporte[f.id] ?? importeInicial(f)).replace(',', '.').trim();
+    const importe = importeTexto ? Number(importeTexto) : null;
+    const fecha = edicionFecha[f.id] ?? fechaInicial(f) ?? null;
+
+    setBuscando(prev => new Set(prev).add(f.id));
+    let resultado;
+    try {
+      const res = await fetch(`/api/facturas/${f.id}/datos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ importe, fecha: fecha || null }),
+      });
+      resultado = await res.json();
+    } catch (err) {
+      resultado = { tipo: 'error', detalle: err.message };
+    }
+    setBuscando(prev => { const next = new Set(prev); next.delete(f.id); return next; });
+    setResultadosFila(prev => ({ ...prev, [f.id]: resultado }));
+    if (resultado.tipo === 'match_directo') {
+      mostrarToast('Emparejada', 'ok');
+      onCambio();
+    }
+  }
+
+  async function elegirCandidato(f, opcion) {
+    const nota = opcion.esCombo ? `${opcion.numero} + ${opcion.otraFacturaNumero}` : (opcion.facturaConcepto || String(opcion.numero));
+    const facturaIds = opcion.esCombo ? [opcion.facturaId, opcion.otraFacturaId] : [opcion.facturaId];
+    const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nota, facturaIds }),
+    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    if (r) {
+      setResultadosFila(prev => { const next = { ...prev }; delete next[f.id]; return next; });
+      onCambio();
+    }
   }
 
   const seleccionadasEmparejadas = useMemo(
@@ -155,46 +202,24 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
 
   return (
     <div>
-      <div style={{ marginBottom: 12 }}>
-        <div className="fila">
-          <p className="muted" style={{ margin: 0 }}>
-            {sinResolver} factura(s) sin resolver todavía.
-          </p>
+      <div className="fila" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <p className="muted" style={{ margin: 0 }}>
+          {sinResolver} factura(s) sin resolver todavía.
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="secundario" onClick={descargarInformeCsv} disabled={sinResolver === 0}>
+            Descargar CSV
+          </button>
           <button type="button" className="secundario" disabled={sinResolver === 0 || !!progresoRecalculo} onClick={recalcular}>
             {progresoRecalculo ? `Recalculando ${progresoRecalculo.actual} de ${progresoRecalculo.total}...` : 'Recalcular facturas sin resolver'}
           </button>
         </div>
-        {progresoRecalculo && (
-          <div className="progreso" style={{ margin: '8px 0 0' }}>
-            <div style={{ width: `${(progresoRecalculo.actual / progresoRecalculo.total) * 100}%` }} />
-          </div>
-        )}
-        {resumenRecalculo && (
-          <div className="lista-sin-encontrar" style={{ marginTop: 10 }}>
-            <div className="fila" style={{ marginBottom: 8 }}>
-              <p className="muted" style={{ margin: 0 }}>
-                {Object.entries(resumenRecalculo.conteos).map(([tipo, n]) => `${n} ${ETIQUETAS_TIPO[tipo] || tipo}`).join(' · ')}
-              </p>
-              {resumenRecalculo.detalle.length > 0 && (
-                <button type="button" className="secundario" onClick={descargarInformeCsv}>
-                  Descargar informe (CSV) — {resumenRecalculo.detalle.length}
-                </button>
-              )}
-            </div>
-            {resumenRecalculo.detalle.slice(0, 30).map((d, i) => (
-              <div key={i} className="fila-sin-encontrar">
-                <div className="fila-sin-encontrar-info">
-                  <span>{d.nombre}</span>
-                  <span className="muted">{ETIQUETAS_TIPO[d.tipo] || d.tipo}{d.detalle ? ` — ${d.detalle}` : ''}</span>
-                </div>
-              </div>
-            ))}
-            {resumenRecalculo.detalle.length > 30 && (
-              <p className="muted" style={{ margin: '8px 0 0' }}>...y {resumenRecalculo.detalle.length - 30} más.</p>
-            )}
-          </div>
-        )}
       </div>
+      {progresoRecalculo && (
+        <div className="progreso" style={{ margin: '0 0 12px' }}>
+          <div style={{ width: `${(progresoRecalculo.actual / progresoRecalculo.total) * 100}%` }} />
+        </div>
+      )}
       {nombresDuplicados.size > 0 && (
         <div className="fila" style={{ marginBottom: 8 }}>
           <p className="muted" style={{ color: 'var(--warn)', margin: 0 }}>
@@ -207,44 +232,106 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
           )}
         </div>
       )}
+
       <div className="tabla-movimientos-envoltura">
         <table style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: 30 }} />
-            <col style={{ width: 60 }} />
             <col />
-            <col style={{ width: 150 }} />
+            <col style={{ width: 45 }} />
+            <col style={{ width: 260 }} />
+            <col style={{ width: 140 }} />
+            <col style={{ width: 100 }} />
             <col style={{ width: 90 }} />
-            <col style={{ width: 110 }} />
-            <col style={{ width: 70 }} />
           </colgroup>
           <thead>
             <tr>
               <th><input type="checkbox" checked={seleccionadas.size === facturas.length} onChange={alternarTodas} /></th>
-              <th>Nº</th>
               <th>Archivo</th>
-              <th>Subida</th>
+              <th>Ver</th>
+              <th>Motivo</th>
+              <th>Fecha factura</th>
               <th>Importe</th>
-              <th>Estado</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {facturas.map(f => {
-              const monto = montoCaracteristico(f);
               const duplicada = nombresDuplicados.has(f.nombre_original);
+              const resultadoLocal = resultadosFila[f.id];
+              const candidatos = resultadoLocal?.tipo === 'ambiguo' ? resultadoLocal.candidatos.map(c => ({
+                movimientoId: c.movimientoId, numero: resultadoLocal.numero, facturaId: f.id, facturaConcepto: resultadoLocal.facturaConcepto,
+                concepto: c.concepto, importe: c.importe, fecha: c.fecha,
+              })) : resultadoLocal?.tipo === 'combo_sugerido' ? [{
+                movimientoId: resultadoLocal.movimientoId, esCombo: true, numero: resultadoLocal.numero,
+                otraFacturaNumero: resultadoLocal.otraFacturaNumero, facturaId: f.id, otraFacturaId: resultadoLocal.otraFacturaId,
+                facturaConcepto: resultadoLocal.facturaConcepto,
+              }] : null;
+
               return (
                 <tr key={f.id} style={duplicada ? { background: 'rgba(166, 124, 46, 0.08)' } : undefined}>
                   <td><input type="checkbox" checked={seleccionadas.has(f.id)} onChange={() => alternar(f.id)} /></td>
-                  <td>{f.numero}</td>
                   <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {f.nombre_original}{duplicada ? ' ⚠' : ''}
                   </td>
-                  <td className="muted">{f.creado_en ? new Date(f.creado_en).toLocaleString('es-ES') : ''}</td>
-                  <td>{monto !== null ? `${monto.toFixed(2)}€` : '—'}</td>
-                  <td className="muted">{f.estado}</td>
                   <td>
                     <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">ver</a>
+                  </td>
+
+                  {f.estado === 'matcheada' ? (
+                    <>
+                      <td colSpan={3} className="muted">
+                        {f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') : ''} · {f.movimiento_concepto?.slice(0, 45)} · {f.movimiento_importe !== undefined && f.movimiento_importe !== null ? `${Number(f.movimiento_importe).toFixed(2)}€` : ''}
+                      </td>
+                      <td></td>
+                    </>
+                  ) : candidatos ? (
+                    <td colSpan={4}>
+                      <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
+                        {resultadoLocal.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:'}
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {candidatos.map((c, i) => (
+                          <button key={i} type="button" className="secundario" style={{ textAlign: 'left', fontSize: 11.5, padding: '5px 9px' }} onClick={() => elegirCandidato(f, c)}>
+                            {c.esCombo
+                              ? `Combinar con factura ${c.otraFacturaNumero}`
+                              : `${c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') + ' · ' : ''}${c.concepto?.slice(0, 45)}`}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                  ) : (
+                    <>
+                      <td className="muted" style={{ whiteSpace: 'normal' }}>
+                        {ETIQUETAS_TIPO[(resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo] || (resultadoLocal || f).motivo_detalle || 'Sin revisar todavía'}
+                      </td>
+                      <td>
+                        <input
+                          type="date"
+                          value={edicionFecha[f.id] ?? fechaInicial(f)}
+                          onChange={e => setEdicionFecha(prev => ({ ...prev, [f.id]: e.target.value }))}
+                          style={{ fontSize: 12, padding: '5px 6px' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={edicionImporte[f.id] ?? importeInicial(f)}
+                          onChange={e => setEdicionImporte(prev => ({ ...prev, [f.id]: e.target.value }))}
+                          style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
+                        />
+                      </td>
+                    </>
+                  )}
+
+                  <td>
+                    {f.estado !== 'matcheada' && !candidatos && (
+                      <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={buscando.has(f.id)} onClick={() => buscarFila(f)}>
+                        {buscando.has(f.id) ? '...' : 'Buscar'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
