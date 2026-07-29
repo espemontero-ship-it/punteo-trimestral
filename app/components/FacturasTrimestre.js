@@ -307,7 +307,7 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
     })) : resultadoLocal?.tipo === 'combo_sugerido' ? [{
       movimientoId: resultadoLocal.movimientoId, esCombo: true, numero: resultadoLocal.numero,
       otraFacturaNumero: resultadoLocal.otraFacturaNumero, facturaId: f.id, otraFacturaId: resultadoLocal.otraFacturaId,
-      facturaConcepto: resultadoLocal.facturaConcepto,
+      facturaConcepto: resultadoLocal.facturaConcepto, detalle: resultadoLocal.detalle,
     }] : null;
     const bloqueada = f.estado === 'matcheada' || !!candidatos;
 
@@ -327,18 +327,25 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {candidatos.map((c, i) => (
-                  <button key={i} type="button" className="secundario" style={{ textAlign: 'left', padding: '6px 10px', display: 'block' }} onClick={() => elegirCandidato(f, c)}>
-                    {c.esCombo ? (
-                      <span style={{ fontSize: 12 }}>Combinar con factura {c.otraFacturaNumero}</span>
-                    ) : (
-                      <>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>
-                          {c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : 'sin fecha'} · {Number(c.importe).toFixed(2)}€
-                        </div>
-                        <div className="muted" style={{ fontSize: 11, marginTop: 2, whiteSpace: 'normal' }}>{c.concepto}</div>
-                      </>
+                  <div key={i}>
+                    <button type="button" className="secundario" style={{ textAlign: 'left', padding: '6px 10px', display: 'block', width: '100%' }} onClick={() => elegirCandidato(f, c)}>
+                      {c.esCombo ? (
+                        <div className="muted" style={{ fontSize: 11, whiteSpace: 'normal' }}>{c.detalle}</div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>
+                            {c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : 'sin fecha'} · {Number(c.importe).toFixed(2)}€
+                          </div>
+                          <div className="muted" style={{ fontSize: 11, marginTop: 2, whiteSpace: 'normal' }}>{c.concepto}</div>
+                        </>
+                      )}
+                    </button>
+                    {c.esCombo && (
+                      <a className="link-factura" style={{ fontSize: 11 }} href={`/api/facturas/${c.otraFacturaId}/archivo`} target="_blank" rel="noreferrer">
+                        ver factura {c.otraFacturaNumero}
+                      </a>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>

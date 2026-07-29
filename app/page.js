@@ -195,7 +195,7 @@ export default function Home() {
 
   const total = resumen?.total ?? 0;
   const resueltas = resumen?.resueltas ?? 0;
-  const porcentaje = total ? Math.round((resueltas / total) * 100) : 0;
+  const pendientesMov = total - resueltas;
 
   if (vistaFacturas) {
     return (
@@ -211,7 +211,12 @@ export default function Home() {
 
   return (
     <div className={pestana === 'trimestre' ? 'contenedor contenedor-ancho' : 'contenedor'}>
-      <h1 style={{ margin: '16px 0 0' }}>{trimestreId}</h1>
+      <div className="fila" style={{ margin: '16px 0 8px' }}>
+        <h1 style={{ margin: 0 }}>{trimestreId}</h1>
+        <a href="#" className="muted" style={{ fontSize: 13 }} onClick={e => { e.preventDefault(); irAPendientes(); }}>
+          {pendientesMov} pendiente{pendientesMov === 1 ? '' : 's'}
+        </a>
+      </div>
 
       <div className="tabbar">
         {PESTANAS.map(p => (
@@ -234,14 +239,6 @@ export default function Home() {
           </div>
           {mensajeFacturaSuelta && <p className="muted" style={{ marginTop: -6, marginBottom: 12 }}>{mensajeFacturaSuelta}</p>}
 
-          <div className="resumen-mini">
-            <div>
-              <span>{resueltas} de {total} líneas resueltas</span>
-              <div className="progreso" style={{ width: 120, margin: '6px 0 0' }}><div style={{ width: `${porcentaje}%` }} /></div>
-            </div>
-            <a href="#" onClick={e => { e.preventDefault(); irAPendientes(); }}>Ver pendientes →</a>
-          </div>
-
           {facturas && facturas.length > 0 && (() => {
             const sueltas = facturas.filter(f => !f.proveedor_clave);
             const pendientes = facturas.filter(f => f.estado !== 'matcheada');
@@ -257,13 +254,6 @@ export default function Home() {
 
       {pestana === 'trimestre' && (
         <>
-          <div className="resumen-mini">
-            <div>
-              <span>{resueltas} de {total} líneas resueltas</span>
-              <div className="progreso" style={{ width: 200, margin: '6px 0 0' }}><div style={{ width: `${porcentaje}%` }} /></div>
-            </div>
-          </div>
-
           <div className="fila" style={{ gap: 8, marginBottom: 14, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
             <SubirFacturasLote trimestreId={trimestreId} onCompletado={completarLote} />
             <button type="button" className="secundario" onClick={() => setVistaFacturas(true)}>Ver / borrar facturas</button>
