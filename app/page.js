@@ -57,6 +57,7 @@ export default function Home() {
   const [modalAbierto, setModalAbierto] = useState(null); // 'excel' | 'cierre' | null
   const [vistaFacturas, setVistaFacturas] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
+  const [cerrando, setCerrando] = useState(false);
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -116,6 +117,32 @@ export default function Home() {
 
   function irAPendientes() {
     setPestana('trimestre');
+  }
+
+  async function cerrarTrimestre() {
+    setCerrando(true);
+    try {
+      const res = await fetch(`/api/trimestres/${trimestreId}/cerrar`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        mostrarToast((data && data.error) || 'No se pudo cerrar el trimestre.', 'error');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `punteo-${trimestreId}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      mostrarToast('Descarga lista.', 'ok');
+    } catch {
+      mostrarToast('No se pudo cerrar el trimestre.', 'error');
+    } finally {
+      setCerrando(false);
+    }
   }
 
   async function subirExcel(e) {
@@ -259,6 +286,9 @@ export default function Home() {
             <button type="button" className="secundario" onClick={() => setVistaFacturas(true)}>Ver / borrar facturas</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('excel')}>Añadir excel</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('cierre')}>Cerrar trimestre</button>
+            <button type="button" className="secundario" disabled={recalculando} onClick={recalcularClaves}>
+              {recalculando ? 'Recalculando...' : 'Recalcular agrupación'}
+            </button>
           </div>
 
           {cargando && <p className="muted">Cargando...</p>}
@@ -304,14 +334,6 @@ export default function Home() {
           </div>
 
           <div className="tarjeta">
-            <strong>Agrupación</strong>
-            <p className="muted">Vuelve a calcular por qué proveedor se agrupa cada línea del banco, usando las reglas actuales — para cuando se añade una regla nueva (ej. un proveedor conocido) y hay movimientos ya importados que aún no la usan. No hace falta volver a subir el excel.</p>
-            <button type="button" className="secundario" disabled={recalculando} onClick={recalcularClaves}>
-              {recalculando ? 'Recalculando...' : 'Recalcular agrupación'}
-            </button>
-          </div>
-
-          <div className="tarjeta">
             <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
           </div>
         </>
@@ -344,7 +366,7 @@ export default function Home() {
         titulo="¿Cerrar el trimestre?"
         mensaje="Se descarga el .zip con las facturas numeradas y el excel final con las notas."
         textoConfirmar="Descargar"
-        onConfirmar={() => { setConfirmarCierre(false); window.location.href = `/api/trimestres/${trimestreId}/cerrar`; }}
+        onConfirmar={() => { setConfirmarCierre(false); cerrarTrimestre(); }}
         onCancelar={() => setConfirmarCierre(false)}
       />
     </div>

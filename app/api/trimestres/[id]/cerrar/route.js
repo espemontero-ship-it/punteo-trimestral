@@ -2,7 +2,12 @@ const { generarPaqueteTrimestre } = require('../../../../../lib/exportar.cjs');
 
 export async function GET(request, { params }) {
   const { id } = await params;
-  const zipBuffer = await generarPaqueteTrimestre(id);
+  let zipBuffer;
+  try {
+    zipBuffer = await generarPaqueteTrimestre(id);
+  } catch (err) {
+    return Response.json({ error: err.message || 'No se pudo generar el paquete del trimestre.' }, { status: 500 });
+  }
 
   return new Response(zipBuffer, {
     headers: {
