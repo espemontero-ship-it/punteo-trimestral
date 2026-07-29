@@ -13,6 +13,36 @@ const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Es
 const ANCHO_DEFECTO = { Fecha: 90, Concepto: 280, Banco: 100, Proveedor: 190, Importe: 90, Estado: 150, Nota: 190, Proyecto: 130 };
 const ANCHO_EXTRA_DEFECTO = 140;
 
+// Celda vive fuera del componente a propósito: si se define dentro (como
+// estaba antes), React la trata como un tipo de componente nuevo en cada
+// render y desmonta/remonta todo lo de dentro -- incluidos los <input>, que
+// pierden el foco en cada tecla. anchoFecha se pasa como prop en vez de leerlo
+// de un cierre porque Celda ya no tiene acceso al estado del componente.
+function claseCeldaTabla(col) {
+  if (col === 'Fecha') return 'col-fecha';
+  if (col === 'Concepto') return 'col-concepto';
+  if (col === 'Importe') return 'col-importe';
+  return '';
+}
+
+function estiloCeldaTabla(col, cabecera, anchoFecha) {
+  if (col === 'Fecha') return { position: 'sticky', left: 0, zIndex: cabecera ? 4 : 3 };
+  if (col === 'Concepto') return { position: 'sticky', left: anchoFecha, zIndex: cabecera ? 4 : 3 };
+  return undefined;
+}
+
+function Celda({ col, className = '', cabecera, children, anchoFecha }) {
+  return (
+    <div
+      role={cabecera ? 'columnheader' : 'cell'}
+      className={`celda ${claseCeldaTabla(col)} ${className}`.trim()}
+      style={estiloCeldaTabla(col, cabecera, anchoFecha)}
+    >
+      {children}
+    </div>
+  );
+}
+
 // Un movimiento separado de su grupo lleva su id como sufijo en la clave
 // (ver lib/agrupador.cjs#separarDeGrupo) para que quede aparte pero el
 // nombre en pantalla siga siendo el original.
@@ -273,34 +303,11 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   // variable CSS aparte para las columnas fijas, y esos tres sitios podían
   // desincronizarse).
   const plantillaColumnas = columnasTodas.map(c => `${anchoDe(c)}px`).join(' ');
-
   // Fecha y Concepto se quedan fijas al hacer scroll horizontal. El left de
-  // Concepto es el ancho actual de Fecha — se calcula aquí, no en CSS, para
-  // que sea la misma fuente de verdad que la plantilla de arriba.
-  function estiloCelda(col, cabecera) {
-    if (col === 'Fecha') return { position: 'sticky', left: 0, zIndex: cabecera ? 4 : 3 };
-    if (col === 'Concepto') return { position: 'sticky', left: anchoDe('Fecha'), zIndex: cabecera ? 4 : 3 };
-    return undefined;
-  }
-
-  function claseCelda(col) {
-    if (col === 'Fecha') return 'col-fecha';
-    if (col === 'Concepto') return 'col-concepto';
-    if (col === 'Importe') return 'col-importe';
-    return '';
-  }
-
-  function Celda({ col, className = '', cabecera, children }) {
-    return (
-      <div
-        role={cabecera ? 'columnheader' : 'cell'}
-        className={`celda ${claseCelda(col)} ${className}`.trim()}
-        style={estiloCelda(col, cabecera)}
-      >
-        {children}
-      </div>
-    );
-  }
+  // Concepto es el ancho actual de Fecha — se pasa como prop a Celda (ver
+  // definición fuera del componente) para que sea la misma fuente de verdad
+  // que la plantilla de arriba.
+  const anchoFecha = anchoDe('Fecha');
 
   function valorEstadoSelect(m) {
     if (m.estado === 'resuelta') return 'resuelta';
@@ -377,7 +384,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     return (
       <div role="row" key={m.id} className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
         <Celda col="Fecha" className="muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
-        <Celda col="Concepto" className="concepto">{m.concepto?.slice(0, 80)}</Celda>
+        <Celda col="Concepto" className="concepto" anchoFecha={anchoFecha}>{m.concepto?.slice(0, 80)}</Celda>
         <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
         <Celda col="Proveedor" className="proveedor">
           <input
@@ -415,7 +422,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     return (
       <div role="row" className="fila-tabla fila-grupo" key={`g-${g.id}`} style={{ gridTemplateColumns: plantillaColumnas }}>
         <Celda col="Fecha" />
-        <Celda col="Concepto">
+        <Celda col="Concepto" anchoFecha={anchoFecha}>
           <div className="grupo-nombre">{nombreGrupoMostrado(g)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
           <div className="meta">{g.resueltas} de {g.total} resueltas</div>
         </Celda>
@@ -547,7 +554,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         <div role="rowgroup">
           <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: plantillaColumnas }}>
             {columnasTodas.map(c => (
-              <Celda key={c} col={c} cabecera>
+              <Celda key={c} col={c} cabecera anchoFecha={anchoFecha}>
                 <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
                   {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
                 </span>

@@ -38,6 +38,17 @@ function fechaInicial(f) {
   return f.fechas && f.fechas[0] ? String(f.fechas[0]).slice(0, 10) : '';
 }
 
+// Fuera del componente a propósito: si se define dentro, React la trata como
+// un tipo de componente nuevo en cada render y desmonta/remonta todo lo de
+// dentro -- incluidos los <input>, que pierden el foco en cada tecla.
+function Celda({ className = '', cabecera, children, style }) {
+  return (
+    <div role={cabecera ? 'columnheader' : 'cell'} className={`celda ${className}`.trim()} style={style}>
+      {children}
+    </div>
+  );
+}
+
 export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const [seleccionadas, setSeleccionadas] = useState(new Set());
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
@@ -287,14 +298,6 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const plantillaColumnas = [`${ANCHO_CHECKBOX}px`, ...columnasMostradas.map(c => `${anchoDe(c)}px`)].join(' ');
   const facturasVisibles = soloPendientes ? facturas.filter(f => f.estado !== 'matcheada') : facturas;
 
-  function Celda({ className = '', cabecera, children, style }) {
-    return (
-      <div role={cabecera ? 'columnheader' : 'cell'} className={`celda ${className}`.trim()} style={style}>
-        {children}
-      </div>
-    );
-  }
-
   function contenidoCelda(col, f) {
     const duplicada = nombresDuplicados.has(f.nombre_original);
     const resultadoLocal = resultadosFila[f.id];
@@ -322,12 +325,19 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
               <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
                 {resultadoLocal.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:'}
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {candidatos.map((c, i) => (
-                  <button key={i} type="button" className="secundario" style={{ textAlign: 'left', fontSize: 11.5, padding: '5px 9px' }} onClick={() => elegirCandidato(f, c)}>
-                    {c.esCombo
-                      ? `Combinar con factura ${c.otraFacturaNumero}`
-                      : `${c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') + ' · ' : ''}${c.concepto?.slice(0, 45)}`}
+                  <button key={i} type="button" className="secundario" style={{ textAlign: 'left', padding: '6px 10px', display: 'block' }} onClick={() => elegirCandidato(f, c)}>
+                    {c.esCombo ? (
+                      <span style={{ fontSize: 12 }}>Combinar con factura {c.otraFacturaNumero}</span>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>
+                          {c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : 'sin fecha'} · {Number(c.importe).toFixed(2)}€
+                        </div>
+                        <div className="muted" style={{ fontSize: 11, marginTop: 2, whiteSpace: 'normal' }}>{c.concepto}</div>
+                      </>
+                    )}
                   </button>
                 ))}
               </div>
