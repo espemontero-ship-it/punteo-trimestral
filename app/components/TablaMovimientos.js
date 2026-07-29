@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, Fragment } from 'react';
-import { apiFetch } from '../lib/toast';
+import { apiFetch, mostrarToast } from '../lib/toast';
+import SubirFactura from './SubirFactura';
 
 const ETIQUETAS = {
   fija: 'fija',
@@ -63,7 +64,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [ordenPor, setOrdenPor] = useState(null); // { campo, dir } | null (null = agrupado por proveedor)
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
-  const [columnasExtraVisibles, setColumnasExtraVisibles] = useState(() => new Set());
+  const [columnasExtraVisibles, setColumnasExtraVisibles] = useState(() => new Set(['Subir factura']));
   const [notasManual, setNotasManual] = useState({});
   const [proveedoresManual, setProveedoresManual] = useState({});
   const [notasGrupo, setNotasGrupo] = useState({});
@@ -99,6 +100,8 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     window.addEventListener('pointerup', soltar);
   }
 
+  // "Subir factura" es una columna opcional más (mismo mostrar/ocultar que
+  // las de datos_originales), no un dato del excel -- se antepone a mano.
   const columnasExtra = useMemo(() => {
     const nombres = new Set();
     for (const g of proveedores) {
@@ -106,8 +109,13 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         if (m.datos_originales) Object.keys(m.datos_originales).forEach(k => nombres.add(k));
       }
     }
-    return [...nombres].sort();
+    return ['Subir factura', ...[...nombres].sort()];
   }, [proveedores]);
+
+  async function subirFacturaDesdeFila(g, resultado) {
+    mostrarToast(resultado.detalle, resultado.tipo === 'match_directo' ? 'ok' : 'error');
+    onCambio();
+  }
 
   const grupos = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -406,7 +414,19 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         <Celda col="Nota">{celdaNota(m, g)}</Celda>
         <Celda col="Proyecto">{celdaProyecto(m)}</Celda>
         {columnasVisiblesExtra.map(c => (
-          <Celda key={c} col={c} className="muted">{m.datos_originales?.[c] ?? <span className="vacio">—</span>}</Celda>
+          <Celda key={c} col={c} className={c === 'Subir factura' ? '' : 'muted'}>
+            {c === 'Subir factura' ? (
+              <SubirFactura
+                trimestreId={trimestreId}
+                hoja={g.hoja}
+                clave={g.clave}
+                etiqueta="Subir"
+                onResultado={r => subirFacturaDesdeFila(g, r)}
+              />
+            ) : (
+              m.datos_originales?.[c] ?? <span className="vacio">—</span>
+            )}
+          </Celda>
         ))}
       </div>
     );
@@ -473,7 +493,19 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
             {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </Celda>
-        {columnasVisiblesExtra.map(c => <Celda key={c} col={c} />)}
+        {columnasVisiblesExtra.map(c => (
+          <Celda key={c} col={c}>
+            {c === 'Subir factura' && (
+              <SubirFactura
+                trimestreId={trimestreId}
+                hoja={g.hoja}
+                clave={g.clave}
+                etiqueta="Subir"
+                onResultado={r => subirFacturaDesdeFila(g, r)}
+              />
+            )}
+          </Celda>
+        ))}
       </div>
     );
   }
