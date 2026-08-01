@@ -17,9 +17,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
     "@vercel/blob": "^2.6.1",
-    "archiver": "^8.0.0",
     "bcryptjs": "^3.0.3",
     "exceljs": "^4.4.0",
+    "jszip": "^3.10.1",
     "next": "^16.2.12",
     "pdf-parse": "^1.1.4",
     "pg": "^8.22.0",
