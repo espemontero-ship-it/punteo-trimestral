@@ -64,7 +64,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [ordenPor, setOrdenPor] = useState(null); // { campo, dir } | null (null = agrupado por proveedor)
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
-  const [columnasExtraVisibles, setColumnasExtraVisibles] = useState(() => new Set(['Subir factura']));
+  const [columnasExtraVisibles, setColumnasExtraVisibles] = useState(() => new Set(['Subir factura', 'larpmanager']));
   const [notasManual, setNotasManual] = useState({});
   const [proveedoresManual, setProveedoresManual] = useState({});
   const [notasGrupo, setNotasGrupo] = useState({});
@@ -268,13 +268,24 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (r) onCambio();
   }
 
-  async function elegirCandidatoLarpManager(movimientoId, candidato) {
-    const nota = `LarpManager: ${candidato.nombreReal} — ${candidato.evento}`;
-    const r = await apiFetch(`/api/movimientos/${movimientoId}/confirmar`, {
+  // A propósito NO escribe nada en la Nota -- son dos conceptos distintos:
+  // la Nota es la referencia que se manda a gestoría, la columna larpmanager
+  // es solo la comprobación de que el pago llegó. Si LarpManager ya sabe de
+  // qué evento es (ej. "Wield #2"), se aprovecha para sugerir proyecto igual
+  // que ya hace el resto de la app por texto de concepto.
+  async function resolverConLarpManager(m, candidato) {
+    if (candidato.proyectoSugerido && !m.proyecto_id) {
+      await apiFetch(`/api/movimientos/${m.id}/proyecto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proyectoId: candidato.proyectoSugerido.id }),
+      }, { mensajeError: 'No se pudo asignar el proyecto.' });
+    }
+    const r = await apiFetch(`/api/movimientos/${m.id}/confirmar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nota }),
-    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+      body: JSON.stringify({ nota: null }),
+    }, { mensajeOk: 'Marcado', mensajeError: 'No se pudo marcar.' });
     if (r) onCambio();
   }
 
@@ -349,20 +360,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         </div>
       );
     }
-    const resultadoLarp = resultadosLarpManager?.[m.id];
-    if (resultadoLarp?.tipo === 'ambiguo' && resultadoLarp.candidatos?.length) {
-      return (
-        <div className="opciones-lote">
-          <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>Varios pagos de LarpManager coinciden:</p>
-          {resultadoLarp.candidatos.map((c, i) => (
-            <button key={i} className="secundario" style={{ display: 'block', marginTop: 4, fontSize: 11, padding: '4px 8px' }} onClick={() => elegirCandidatoLarpManager(m.id, c)}>
-              {c.nombreReal} — {c.evento} ({Number(c.importe).toFixed(2)}€)
-            </button>
-          ))}
-        </div>
-      );
-    }
-    const sugerencia = resultadoLarp?.sugerenciaNota || g.sugerenciaNota;
+    const sugerencia = g.sugerenciaNota;
     const valorActual = notasManual[m.id] ?? (sugerencia || '');
     const prellenado = !notasManual[m.id] && !!sugerencia;
     return (
@@ -411,6 +409,39 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     );
   }
 
+  // La interacción de LarpManager vive aquí, no en la Nota -- son dos
+  // conceptos distintos (ver resolverConLarpManager). Fuera de una subida
+  // recién hecha (resultadosLarpManager), esta celda solo muestra el dato ya
+  // guardado en datos_originales.larpmanager, igual que cualquier otra
+  // columna extra.
+  function celdaLarpManager(m) {
+    const guardado = m.datos_originales?.larpmanager;
+    if (m.estado === 'resuelta') return guardado ?? <span className="vacio">—</span>;
+
+    const resultado = resultadosLarpManager?.[m.id];
+    if (resultado?.tipo === 'match' && resultado.candidatos?.length) {
+      const c = resultado.candidatos[0];
+      return (
+        <button type="button" className="chip-sugerencia" onClick={() => resolverConLarpManager(m, c)}>
+          ¿{c.nombreReal} — {c.evento}?
+        </button>
+      );
+    }
+    if (resultado?.tipo === 'ambiguo' && resultado.candidatos?.length) {
+      return (
+        <div className="opciones-lote">
+          <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>Varios pagos de LarpManager coinciden:</p>
+          {resultado.candidatos.map((c, i) => (
+            <button key={i} className="secundario" style={{ display: 'block', marginTop: 4, fontSize: 11, padding: '4px 8px' }} onClick={() => resolverConLarpManager(m, c)}>
+              {c.nombreReal} — {c.evento} ({Number(c.importe).toFixed(2)}€)
+            </button>
+          ))}
+        </div>
+      );
+    }
+    return guardado ?? <span className="vacio">—</span>;
+  }
+
   function filaMovimiento(m, g, esInicioGrupo) {
     return (
       <div role="row" key={m.id} className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
@@ -437,7 +468,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         <Celda col="Nota">{celdaNota(m, g)}</Celda>
         <Celda col="Proyecto">{celdaProyecto(m)}</Celda>
         {columnasVisiblesExtra.map(c => (
-          <Celda key={c} col={c} className={c === 'Subir factura' ? '' : 'muted'}>
+          <Celda key={c} col={c} className={c === 'Subir factura' || c === 'larpmanager' ? '' : 'muted'}>
             {c === 'Subir factura' ? (
               <SubirFactura
                 trimestreId={trimestreId}
@@ -446,6 +477,8 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
                 etiqueta="Subir"
                 onResultado={r => subirFacturaDesdeFila(g, r)}
               />
+            ) : c === 'larpmanager' ? (
+              celdaLarpManager(m)
             ) : (
               m.datos_originales?.[c] ?? <span className="vacio">—</span>
             )}
