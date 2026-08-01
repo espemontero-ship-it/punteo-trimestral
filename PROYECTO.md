@@ -31,7 +31,8 @@ Proceso manual que sustituye: bajar el excel del banco, subirlo a Drive, buscar 
 
 ## Ideas futuras (a pensar más adelante, no construir todavía)
 
-- **Punteo de ingresos.** Tarea mensual aparte que ya hace la usuaria a mano: conciliar las líneas de ingreso del banco contra los tickets vendidos (ver si coinciden) y asignar cada uno a un proyecto/evento concreto. También entran aquí las **facturas rectificativas** — dinero que les devuelven, que igualmente hay que mandar a la gestoría. Es un trabajo específico distinto del punteo de gastos — de momento las líneas de ingreso solo se resuelven con una nota manual de referencia (ver "Alcance"), sin ninguna ayuda automática. Cuando se retome, pensar el diseño desde cero en vez de forzarlo dentro del flujo de proveedores actual.
+- **Punteo de ingresos — hecho en parte (2026-08-01).** El cruce contra LarpManager (botón "Subir LarpManager", emparejamiento por nombre contra el CSV de pagos Wire) ya está construido — ver "Funcionalidades construidas". Quedan fuera de esta primera versión: facturas rectificativas (devoluciones), enlace/escritura de vuelta a LarpManager, y buscar contra inscripciones pendientes sin confirmar en LarpManager.
+- **Ver todo el año, no solo un trimestre — pendiente de hablar (2026-08-01).** La usuaria comentó de pasada que subir el excel del banco es acumulativo, y que le gustaría poder ver toda la información del año e ir cerrando trimestres cuando ella decida, no necesariamente en bloques rígidos de trimestre natural. Toca bastante de cómo funciona la app hoy (cada trimestre como unidad separada con su propia base de datos/`trimestreId`, qué significa "cerrar"). Explícitamente aparcado para hablarlo aparte, con calma, antes de tocar nada — no es una petición de cambio todavía, solo una idea a validar primero.
 
 ## Cómo funciona
 
@@ -105,7 +106,7 @@ La usuaria va a hacer varias pruebas con datos reales; según lo que salga, hay 
 - [ ] **Afinar proceso de cierre de trimestre.**
 - [ ] **Documentación a gestoría** — revisar qué se entrega y cómo.
 - [ ] **Módulo de colaboradores** — afinar.
-- [ ] **Match entre pago y LarpManager.**
+- [x] **Match entre pago y LarpManager.** Construido 2026-08-01 — pendiente de probar con un trimestre real (el caso "varios candidatos con el mismo importe" solo se ha verificado por código, no con una colisión real).
 
 ## Arquitectura de información — 3 pestañas por momento de uso (acordado 2026-07-27)
 
