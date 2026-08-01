@@ -3,19 +3,23 @@
   "sheets": [
     {
       "nombre": "bbva",
-      "dataStartRow": 2,
-      "textCols": ["E", "F"],
-      "importeCol": "G",
-      "fechaCol": "B",
-      "notaCol": "M"
+      "modo": "nombres",
+      "cabeceraContiene": ["CONCEPTO", "IMPORTE"],
+      "columnas": {
+        "fecha": ["F. CONTABLE", "FECHA CONTABLE"],
+        "texto": ["CONCEPTO", "BENEFICIARIO", "OBSERVACIONES"],
+        "importe": ["IMPORTE"]
+      }
     },
     {
       "nombre": "openbank",
-      "dataStartRow": 2,
-      "textCols": ["F"],
-      "importeCol": "H",
-      "fechaCol": "B",
-      "notaCol": "K"
+      "modo": "nombres",
+      "cabeceraContiene": ["CONCEPTO", "IMPORTE"],
+      "columnas": {
+        "fecha": ["FECHA VALOR", "FECHA OPERACION", "FECHA OPERACIÓN"],
+        "texto": ["CONCEPTO"],
+        "importe": ["IMPORTE"]
+      }
     },
     {
       "nombre": "paypal",
