@@ -59,7 +59,7 @@ function nombreGrupoMostrado(g) {
   return conProveedor ? conProveedor.proveedor : nombreGrupo(g.clave);
 }
 
-export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual, resultadosLarpManager }) {
+export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual }) {
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [ordenPor, setOrdenPor] = useState(null); // { campo, dir } | null (null = agrupado por proveedor)
@@ -410,15 +410,16 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   }
 
   // La interacción de LarpManager vive aquí, no en la Nota -- son dos
-  // conceptos distintos (ver resolverConLarpManager). Fuera de una subida
-  // recién hecha (resultadosLarpManager), esta celda solo muestra el dato ya
-  // guardado en datos_originales.larpmanager, igual que cualquier otra
-  // columna extra.
+  // conceptos distintos (ver resolverConLarpManager). Se lee siempre de
+  // m.larpmanager_candidatos (guardado en BD al subir el CSV), NUNCA de un
+  // estado que solo viva en el navegador -- si dependiera de eso, el botón
+  // desaparecería al recargar la página o volver más tarde, aunque el cruce
+  // ya estuviera hecho, y habría que subir el mismo CSV otra vez para nada.
   function celdaLarpManager(m) {
     const guardado = m.datos_originales?.larpmanager;
     if (m.estado === 'resuelta') return guardado ?? <span className="vacio">—</span>;
 
-    const resultado = resultadosLarpManager?.[m.id];
+    const resultado = m.larpmanager_candidatos;
     if (resultado?.tipo === 'match' && resultado.candidatos?.length) {
       const c = resultado.candidatos[0];
       return (

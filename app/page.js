@@ -60,7 +60,6 @@ export default function Home() {
   const [cerrando, setCerrando] = useState(false);
   const [subiendoLarpManager, setSubiendoLarpManager] = useState(false);
   const [mensajeLarpManager, setMensajeLarpManager] = useState(null);
-  const [resultadosLarpManager, setResultadosLarpManager] = useState({}); // { [movimientoId]: resultado }
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -174,8 +173,10 @@ export default function Home() {
 
   // Sube el CSV de pagos de LarpManager y cruza sus filas Wire contra los
   // ingresos sin resolver del trimestre por nombre (ver lib/larpmanager.cjs).
-  // El resultado por movimiento (match/ambiguo/no_encontrado) se guarda aquí
-  // para que TablaMovimientos pinte la sugerencia o las opciones a elegir.
+  // El resultado queda guardado en cada movimiento (larpmanager_candidatos),
+  // no en un estado de este componente -- así el botón de confirmar sigue
+  // ahí aunque se recargue la página o se vuelva más tarde, sin tener que
+  // subir el mismo CSV otra vez.
   async function subirLarpManager(e) {
     e.preventDefault();
     const file = e.target.elements.file.files[0];
@@ -189,9 +190,6 @@ export default function Home() {
         mensajeError: 'No se pudo procesar el CSV de LarpManager.',
       });
       if (data) {
-        const porMovimiento = {};
-        for (const r of data.resultados) porMovimiento[r.movimientoId] = r;
-        setResultadosLarpManager(porMovimiento);
         setMensajeLarpManager(`${data.emparejadas} de ${data.resultados.length} ingreso(s) emparejados con LarpManager.`);
         await cargar(trimestreId);
       }
@@ -339,7 +337,6 @@ export default function Home() {
               filtroLote={lote}
               onQuitarFiltro={() => setLote(null)}
               onResolverImporteManual={resolverImporteManual}
-              resultadosLarpManager={resultadosLarpManager}
             />
           )}
         </>
