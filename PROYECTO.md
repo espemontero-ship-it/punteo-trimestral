@@ -84,7 +84,7 @@ Alternativas descartadas, con motivo real:
 
 ## Huecos identificados (2026-07-27, pendientes de construir)
 
-- **Subida en lote de facturas.** Hoy [SubirFactura.js](app/components/SubirFactura.js) coge `e.target.files[0]` y el input no tiene `multiple` — solo se puede subir una factura por acción, aunque el flujo real necesita seleccionar varias a la vez (ej. todas las de Amazon) y que el sistema las procese y empareje todas. Es el hueco fundamental del flujo de cierre, no un "nice to have".
+- ✅ **Hecho — Subida en lote de facturas.** [SubirFacturasLote.js](app/components/SubirFacturasLote.js) (input `multiple`, procesa y empareja varias a la vez), ya en uso en la pestaña Trimestre. Esta nota se quedó desactualizada — comprobado 2026-08-01 que ya está construido, no es un hueco.
 - **Atajo "es una de las pendientes"** al subir una factura que llegó tarde (ver flujo arriba) — diseño acordado, sin construir todavía.
 - ✅ **Hecho (2026-07-27) — Información por línea en el checklist, como tabla real de columnas.** Cabecera del grupo: importe total del grupo, a la derecha. Al expandir: **tabla** de verdad (`<table>`, no tarjetas apiladas) con columnas Fecha / Concepto / Proveedor / Importe / Nota — una fila por movimiento (resuelto o no; antes los resueltos desaparecían del todo). Si ya tiene nota, se ve ahí mismo; si hay factura emparejada, enlace directo "Ver factura →". Backend: `lib/agrupador.cjs` también devuelve `factura_ids` por movimiento (join con `movimiento_facturas`). Verificado insertando datos de prueba en la base de datos local y comprobando en el navegador.
 - ✅ **Hecho (2026-07-27) — Columna Proyecto.** Lista fija de proyectos (ej. "Wield 2"), creada una vez y reutilizada entre trimestres — **no está ligada a un trimestre ni a un año**, vive en su propio apartado `/proyectos`, enlazado desde el menú general (pantalla de selector de trimestre), no dentro de ningún trimestre. Al puntear una línea, si el concepto contiene el nombre de un proyecto ya creado se sugiere solo (botón "¿Wield 2?"), sin asignarlo hasta que se confirma — nunca decide sola. Estados de proyecto (activo/cerrado) quedan aparcados para cuando haga falta, no se construyen todavía. Tabla nueva `proyectos` + columna `movimientos.proyecto_id`, migración aplicada contra la base de datos real (`db/migration_proyectos.sql`). Verificado end-to-end en el navegador: crear proyecto, ver la sugerencia por texto, confirmarla, comprobar que queda guardada.
@@ -107,6 +107,7 @@ La usuaria va a hacer varias pruebas con datos reales; según lo que salga, hay 
 - [ ] **Documentación a gestoría** — revisar qué se entrega y cómo.
 - [ ] **Módulo de colaboradores** — afinar.
 - [x] **Match entre pago y LarpManager.** Construido 2026-08-01 — pendiente de probar con un trimestre real (el caso "varios candidatos con el mismo importe" solo se ha verificado por código, no con una colisión real).
+- [ ] **Solucionar PayPal** (2026-08-01) — BBVA y Openbank ya se arreglaron con un excel/export real (ver commit `273b3c5`); PayPal se dejó tal cual porque no había queja ni archivo real con el que comprobarlo. Falta el mismo chequeo: subir un export real de PayPal y ver si la config actual (`dataStartRow`/columnas por letra fija) sigue encajando o tiene el mismo tipo de problema.
 
 ## Arquitectura de información — 3 pestañas por momento de uso (acordado 2026-07-27)
 
