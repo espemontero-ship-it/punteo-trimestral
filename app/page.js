@@ -58,6 +58,9 @@ export default function Home() {
   const [vistaFacturas, setVistaFacturas] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
   const [cerrando, setCerrando] = useState(false);
+  const [subiendoLarpManager, setSubiendoLarpManager] = useState(false);
+  const [mensajeLarpManager, setMensajeLarpManager] = useState(null);
+  const [resultadosLarpManager, setResultadosLarpManager] = useState({}); // { [movimientoId]: resultado }
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -165,6 +168,35 @@ export default function Home() {
       }
     } finally {
       setSubiendoExcel(false);
+      e.target.reset();
+    }
+  }
+
+  // Sube el CSV de pagos de LarpManager y cruza sus filas Wire contra los
+  // ingresos sin resolver del trimestre por nombre (ver lib/larpmanager.cjs).
+  // El resultado por movimiento (match/ambiguo/no_encontrado) se guarda aquí
+  // para que TablaMovimientos pinte la sugerencia o las opciones a elegir.
+  async function subirLarpManager(e) {
+    e.preventDefault();
+    const file = e.target.elements.file.files[0];
+    if (!file) return;
+    setSubiendoLarpManager(true);
+    setMensajeLarpManager(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const data = await apiFetch(`/api/trimestres/${trimestreId}/larpmanager`, { method: 'POST', body: formData }, {
+        mensajeError: 'No se pudo procesar el CSV de LarpManager.',
+      });
+      if (data) {
+        const porMovimiento = {};
+        for (const r of data.resultados) porMovimiento[r.movimientoId] = r;
+        setResultadosLarpManager(porMovimiento);
+        setMensajeLarpManager(`${data.emparejadas} de ${data.resultados.length} ingreso(s) emparejados con LarpManager.`);
+        await cargar(trimestreId);
+      }
+    } finally {
+      setSubiendoLarpManager(false);
       e.target.reset();
     }
   }
@@ -285,6 +317,7 @@ export default function Home() {
             <SubirFacturasLote trimestreId={trimestreId} onCompletado={completarLote} />
             <button type="button" className="secundario" onClick={() => setVistaFacturas(true)}>Ver / borrar facturas</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('excel')}>Añadir excel</button>
+            <button type="button" className="secundario" onClick={() => setModalAbierto('larpmanager')}>Subir LarpManager</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('cierre')}>Cerrar trimestre</button>
             <button type="button" className="secundario" disabled={recalculando} onClick={recalcularClaves}>
               {recalculando ? 'Recalculando...' : 'Recalcular agrupación'}
@@ -306,6 +339,7 @@ export default function Home() {
               filtroLote={lote}
               onQuitarFiltro={() => setLote(null)}
               onResolverImporteManual={resolverImporteManual}
+              resultadosLarpManager={resultadosLarpManager}
             />
           )}
         </>
@@ -354,6 +388,16 @@ export default function Home() {
           <button type="submit" disabled={subiendoExcel}>{subiendoExcel ? 'Subiendo...' : 'Subir'}</button>
         </form>
         {mensajeExcel && <p className="muted" style={{ marginTop: 8 }}>{mensajeExcel}</p>}
+      </Modal>
+
+      <Modal abierto={modalAbierto === 'larpmanager'} titulo="Subir pagos de LarpManager" onCerrar={() => setModalAbierto(null)}>
+        <p className="muted">Sube el CSV de pagos que exportas de LarpManager — solo se usan las filas por transferencia (Wire); el resto se ignora. Cruza por nombre contra los ingresos sin resolver de este trimestre.</p>
+        <form onSubmit={subirLarpManager}>
+          <input type="file" name="file" accept=".csv" />
+          <div style={{ height: 12 }} />
+          <button type="submit" disabled={subiendoLarpManager}>{subiendoLarpManager ? 'Procesando...' : 'Subir'}</button>
+        </form>
+        {mensajeLarpManager && <p className="muted" style={{ marginTop: 8 }}>{mensajeLarpManager}</p>}
       </Modal>
 
       <Modal abierto={modalAbierto === 'cierre'} titulo="Cerrar trimestre" onCerrar={() => setModalAbierto(null)}>

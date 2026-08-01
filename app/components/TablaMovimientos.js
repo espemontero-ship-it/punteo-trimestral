@@ -59,7 +59,7 @@ function nombreGrupoMostrado(g) {
   return conProveedor ? conProveedor.proveedor : nombreGrupo(g.clave);
 }
 
-export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual }) {
+export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual, resultadosLarpManager }) {
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [ordenPor, setOrdenPor] = useState(null); // { campo, dir } | null (null = agrupado por proveedor)
@@ -268,6 +268,16 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (r) onCambio();
   }
 
+  async function elegirCandidatoLarpManager(movimientoId, candidato) {
+    const nota = `LarpManager: ${candidato.nombreReal} — ${candidato.evento}`;
+    const r = await apiFetch(`/api/movimientos/${movimientoId}/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nota }),
+    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    if (r) onCambio();
+  }
+
   async function guardarImporteManual(f) {
     const valor = (importesManual[f.facturaId] || '').replace(',', '.').trim();
     const importe = Number(valor);
@@ -339,7 +349,20 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         </div>
       );
     }
-    const sugerencia = g.sugerenciaNota;
+    const resultadoLarp = resultadosLarpManager?.[m.id];
+    if (resultadoLarp?.tipo === 'ambiguo' && resultadoLarp.candidatos?.length) {
+      return (
+        <div className="opciones-lote">
+          <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>Varios pagos de LarpManager coinciden:</p>
+          {resultadoLarp.candidatos.map((c, i) => (
+            <button key={i} className="secundario" style={{ display: 'block', marginTop: 4, fontSize: 11, padding: '4px 8px' }} onClick={() => elegirCandidatoLarpManager(m.id, c)}>
+              {c.nombreReal} — {c.evento} ({Number(c.importe).toFixed(2)}€)
+            </button>
+          ))}
+        </div>
+      );
+    }
+    const sugerencia = resultadoLarp?.sugerenciaNota || g.sugerenciaNota;
     const valorActual = notasManual[m.id] ?? (sugerencia || '');
     const prellenado = !notasManual[m.id] && !!sugerencia;
     return (
