@@ -6,6 +6,7 @@ export async function GET(request, { params }) {
   try {
     zipBuffer = await generarPaqueteTrimestre(id);
   } catch (err) {
+    console.error('Error cerrando trimestre', id, err);
     return Response.json({ error: err.message || 'No se pudo generar el paquete del trimestre.' }, { status: 500 });
   }
 
