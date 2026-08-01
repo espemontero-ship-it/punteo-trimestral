@@ -54,6 +54,7 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const [progresoRecalculo, setProgresoRecalculo] = useState(null); // { actual, total } | null
+  const [progresoIA, setProgresoIA] = useState(null); // { actual, total } | null
   const [edicionImporte, setEdicionImporte] = useState({});
   const [edicionFecha, setEdicionFecha] = useState({});
   const [buscando, setBuscando] = useState(new Set());
@@ -109,6 +110,10 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   }, [trimestreId]);
 
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
+  const sinImporte = useMemo(
+    () => facturas.filter(f => f.estado !== 'matcheada' && !(f.totales?.length || f.importes?.length)).length,
+    [facturas]
+  );
 
   // Un archivo a la vez (no un único POST largo) para poder mostrar progreso
   // real y para no arriesgarse a que el servidor corte una petición muy larga
@@ -133,6 +138,34 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
 
     setProgresoRecalculo(null);
     mostrarToast(`${resueltas} de ${r.ids.length} factura(s) emparejadas`, 'ok');
+    onCambio();
+  }
+
+  // Aparte de recalcular() (regex, gratis): esto le pasa a una IA las
+  // facturas que se quedaron sin ningún importe reconocido (imágenes, PDFs
+  // ilegibles) — tiene un coste pequeño por factura, así que es un botón
+  // aparte que se activa a mano después de haber probado ya el recálculo
+  // normal, no algo automático.
+  async function leerConIA() {
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/facturas-sin-importe`, undefined, {
+      mensajeError: 'No se pudo obtener la lista de facturas sin importe.',
+    });
+    if (!r || r.ids.length === 0) return;
+
+    let resueltas = 0;
+    for (let i = 0; i < r.ids.length; i++) {
+      setProgresoIA({ actual: i + 1, total: r.ids.length });
+      try {
+        const res = await fetch(`/api/facturas/${r.ids[i]}/leer-ia`, { method: 'POST' });
+        const resultado = await res.json();
+        if (resultado.tipo === 'match_directo') resueltas++;
+      } catch {
+        // una factura suelta que falle no debe frenar el resto de la lista
+      }
+    }
+
+    setProgresoIA(null);
+    mostrarToast(`${resueltas} de ${r.ids.length} factura(s) emparejadas con IA`, 'ok');
     onCambio();
   }
 
@@ -459,11 +492,19 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
           <button type="button" className="secundario" disabled={sinResolver === 0 || !!progresoRecalculo} onClick={recalcular}>
             {progresoRecalculo ? `Recalculando ${progresoRecalculo.actual} de ${progresoRecalculo.total}...` : 'Recalcular facturas sin resolver'}
           </button>
+          <button type="button" className="secundario" disabled={sinImporte === 0 || !!progresoIA} onClick={leerConIA} title="Usa IA para leer imágenes/PDFs ilegibles — tiene un coste pequeño por factura">
+            {progresoIA ? `Leyendo ${progresoIA.actual} de ${progresoIA.total}...` : `Leer con IA (${sinImporte})`}
+          </button>
         </div>
       </div>
       {progresoRecalculo && (
         <div className="progreso" style={{ margin: '0 0 12px' }}>
           <div style={{ width: `${(progresoRecalculo.actual / progresoRecalculo.total) * 100}%` }} />
+        </div>
+      )}
+      {progresoIA && (
+        <div className="progreso" style={{ margin: '0 0 12px' }}>
+          <div style={{ width: `${(progresoIA.actual / progresoIA.total) * 100}%` }} />
         </div>
       )}
       {nombresDuplicados.size > 0 && (
