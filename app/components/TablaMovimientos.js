@@ -190,6 +190,16 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   }
 
   async function cambiarEstado(m, nuevoEstado) {
+    // "devolución" no es un estado que se guarde tal cual (ver
+    // lib/devoluciones.cjs) -- elegirlo en el desplegable solo abre el campo
+    // de jugador en la celda de Proveedor; el guardado real (que deja la
+    // línea en "resuelta") pasa por confirmarDevolucion. Al no tocar m.estado
+    // aquí, el desplegable (controlado por valorEstadoSelect) vuelve solo a
+    // mostrar el valor real en cuanto se re-renderiza.
+    if (nuevoEstado === 'devolucion') {
+      alternarModoDevolucion(m);
+      return;
+    }
     if (nuevoEstado === 'resuelta') {
       // La nota es opcional: se guarda si hay algo escrito, pero no bloquea marcar como resuelta.
       const nota = (notasManual[m.id] ?? m.nota_final ?? '').trim();
@@ -406,13 +416,21 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   }
 
   function celdaEstado(m) {
+    // Resaltado (mismo estilo que un campo prellenado) cuando el concepto
+    // sugiere que es una devolución -- pero elegirla sigue siendo una
+    // acción manual siempre, esto solo hace más fácil notar el candidato.
     return (
       <div className="celda-estado">
-        <select className="select-estado" value={valorEstadoSelect(m)} onChange={e => cambiarEstado(m, e.target.value)}>
+        <select
+          className={`select-estado${m.probable_devolucion ? ' prellenado' : ''}`}
+          value={valorEstadoSelect(m)}
+          onChange={e => cambiarEstado(m, e.target.value)}
+        >
           <option value="pendiente">pendiente</option>
           <option value="pedida">pedida</option>
           <option value="factura_futura">factura futura</option>
           <option value="ignorar">ignorar</option>
+          <option value="devolucion">devolución</option>
           <option value="resuelta">resuelta</option>
         </select>
       </div>
@@ -432,11 +450,12 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   // Alternativa a Proveedor -- mutuamente excluyente (marcarDevolucion en
   // lib/devoluciones.cjs quita el proveedor al confirmar). Es una devolución
   // ya guardada: texto fijo. En edición: input de jugador, prellenado con la
-  // sugerencia sacada del propio texto del banco (ver sugerirJugador). El
-  // enlace "¿Es una devolución?" SOLO aparece cuando el concepto lo sugiere
-  // (probable_devolucion) -- si se mostrara siempre en todas las filas sería
-  // ruido constante en una tabla de cientos de líneas casi todas gastos
-  // normales. Aun así no se marca sola, solo abre la edición para confirmar.
+  // sugerencia sacada del propio texto del banco (ver sugerirJugador). Se
+  // entra en edición eligiendo "devolución" en el desplegable de Estado (ver
+  // celdaEstado) -- no hay un botón aparte aquí: así siempre está disponible
+  // en cualquier línea, no solo cuando el concepto la sugiere (antes era al
+  // revés y no había forma de marcarla a mano si el texto no traía la
+  // palabra clave).
   function celdaProveedor(m, g) {
     if (m.es_devolucion) {
       return (
@@ -481,11 +500,6 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         {g.total > 1 && (
           <button type="button" className="quitar-grupo" onClick={() => separarDeGrupo(m.id)} title="Sacar esta línea del grupo, que quede aparte">
             sacar del grupo
-          </button>
-        )}
-        {m.probable_devolucion && (
-          <button type="button" className="chip-sugerencia" style={{ display: 'block', marginTop: 4 }} onClick={() => alternarModoDevolucion(m)}>
-            ¿Es una devolución?
           </button>
         )}
       </>
