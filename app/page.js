@@ -62,6 +62,10 @@ export default function Home() {
   const [mensajeLarpManager, setMensajeLarpManager] = useState(null);
   const [pagosSinEmparejar, setPagosSinEmparejar] = useState(null);
   const [cargandoPagosSinEmparejar, setCargandoPagosSinEmparejar] = useState(false);
+  const [hojasSubidas, setHojasSubidas] = useState(null);
+  const [cargandoHojas, setCargandoHojas] = useState(false);
+  const [confirmarBorrarHoja, setConfirmarBorrarHoja] = useState(null); // { hoja, total, resueltas } | null
+  const [borrandoHoja, setBorrandoHoja] = useState(false);
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -214,6 +218,34 @@ export default function Home() {
     });
     setPagosSinEmparejar((data && data.pagos) || []);
     setCargandoPagosSinEmparejar(false);
+  }
+
+  // Para cuando se sube el excel equivocado por error (ej. el de otra
+  // cuenta) y hace falta quitarlo entero para volver a subir el correcto,
+  // sin que se mezclen los movimientos malos con los buenos.
+  async function verHojas() {
+    setModalAbierto('hojas');
+    setCargandoHojas(true);
+    const data = await apiFetch(`/api/trimestres/${trimestreId}/hojas`, undefined, {
+      mensajeError: 'No se pudo obtener la lista de excels subidos.',
+    });
+    setHojasSubidas((data && data.hojas) || []);
+    setCargandoHojas(false);
+  }
+
+  async function borrarHojaConfirmada() {
+    const hoja = confirmarBorrarHoja.hoja;
+    setConfirmarBorrarHoja(null);
+    setBorrandoHoja(true);
+    const r = await apiFetch(`/api/trimestres/${trimestreId}/hojas/${hoja}`, { method: 'DELETE' }, {
+      mensajeError: 'No se pudo borrar.',
+    });
+    setBorrandoHoja(false);
+    if (r) {
+      mostrarToast(`Excel de ${hoja} borrado.`, 'ok');
+      await verHojas();
+      await cargar(trimestreId);
+    }
   }
 
   // Junta los resultados de una subida en lote: qué líneas quedaron
@@ -383,6 +415,12 @@ export default function Home() {
           </div>
 
           <div className="tarjeta">
+            <strong>Excels subidos</strong>
+            <p className="muted">Para cuando subes el archivo equivocado por error — borra todos los movimientos de ese banco en este trimestre para volver a subir el correcto sin que se mezclen.</p>
+            <button type="button" className="secundario" onClick={verHojas}>Ver / borrar excels subidos</button>
+          </div>
+
+          <div className="tarjeta">
             <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
           </div>
         </>
@@ -444,6 +482,53 @@ export default function Home() {
           </table>
         )}
       </Modal>
+
+      <Modal abierto={modalAbierto === 'hojas'} titulo="Excels subidos en este trimestre" onCerrar={() => setModalAbierto(null)}>
+        {cargandoHojas && <p className="muted">Cargando...</p>}
+        {!cargandoHojas && hojasSubidas && hojasSubidas.length === 0 && (
+          <p className="muted">Todavía no se ha subido ningún excel de banco en este trimestre.</p>
+        )}
+        {!cargandoHojas && hojasSubidas && hojasSubidas.length > 0 && (
+          <table style={{ width: '100%', fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: 'left' }}>
+                <th>Banco</th>
+                <th>Movimientos</th>
+                <th>Resueltos</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {hojasSubidas.map(h => (
+                <tr key={h.hoja}>
+                  <td>{h.hoja}</td>
+                  <td>{h.total}</td>
+                  <td>{h.resueltas}</td>
+                  <td>
+                    <button type="button" className="secundario" disabled={borrandoHoja} onClick={() => setConfirmarBorrarHoja(h)}>
+                      Borrar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        abierto={!!confirmarBorrarHoja}
+        titulo={`¿Borrar el excel de ${confirmarBorrarHoja?.hoja}?`}
+        mensaje={
+          confirmarBorrarHoja?.resueltas > 0
+            ? `Se borrarán los ${confirmarBorrarHoja.total} movimientos de ${confirmarBorrarHoja.hoja} de este trimestre — ${confirmarBorrarHoja.resueltas} de ellos ya están resueltos y se perderán sus notas/facturas emparejadas. No se puede deshacer.`
+            : `Se borrarán los ${confirmarBorrarHoja?.total} movimientos de ${confirmarBorrarHoja?.hoja} de este trimestre. No se puede deshacer.`
+        }
+        textoConfirmar="Borrar"
+        peligroso
+        onConfirmar={borrarHojaConfirmada}
+        onCancelar={() => setConfirmarBorrarHoja(null)}
+      />
 
       <Modal abierto={modalAbierto === 'cierre'} titulo="Cerrar trimestre" onCerrar={() => setModalAbierto(null)}>
         <p className="muted">Descarga el .zip con las facturas numeradas y el excel final con las notas — hazlo cuando ya esté todo punteado.</p>
