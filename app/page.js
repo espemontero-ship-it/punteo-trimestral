@@ -315,7 +315,10 @@ export default function Home() {
 
   const total = resumen?.total ?? 0;
   const resueltas = resumen?.resueltas ?? 0;
-  const pendientesMov = total - resueltas;
+  const facturaFutura = resumen?.facturaFutura ?? 0;
+  // No cuenta como "pendiente" urgente: no tiene sentido reclamarla hasta
+  // que se cierre el proyecto (ver /proyectos, "Ver devoluciones").
+  const pendientesMov = total - resueltas - facturaFutura;
 
   if (vistaFacturas) {
     return (

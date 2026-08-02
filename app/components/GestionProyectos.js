@@ -9,17 +9,21 @@ export default function GestionProyectos({ proyectos, onCambio }) {
   const [creando, setCreando] = useState(false);
   const [proyectoDevoluciones, setProyectoDevoluciones] = useState(null); // proyecto | null
   const [devoluciones, setDevoluciones] = useState(null);
+  const [facturasFuturas, setFacturasFuturas] = useState(null);
   const [cargandoDevoluciones, setCargandoDevoluciones] = useState(false);
 
   // Un proyecto puede abarcar varios trimestres -- al cerrarlo hace falta ver
-  // todas sus devoluciones aunque estén repartidas entre varios, no solo el actual.
+  // todo lo que quede suelto (devoluciones sin hacer, facturas todavía sin
+  // recuperar) de cualquier trimestre, no solo del actual.
   async function verDevoluciones(proyecto) {
     setProyectoDevoluciones(proyecto);
     setCargandoDevoluciones(true);
-    const r = await apiFetch(`/api/proyectos/${proyecto.id}/devoluciones`, undefined, {
-      mensajeError: 'No se pudo obtener la lista de devoluciones.',
-    });
+    const [r, rf] = await Promise.all([
+      apiFetch(`/api/proyectos/${proyecto.id}/devoluciones`, undefined, { mensajeError: 'No se pudo obtener la lista de devoluciones.' }),
+      apiFetch(`/api/proyectos/${proyecto.id}/facturas-futuras`, undefined, { mensajeError: 'No se pudo obtener la lista de facturas futuras.' }),
+    ]);
     setDevoluciones((r && r.devoluciones) || []);
+    setFacturasFuturas((rf && rf.facturas) || []);
     setCargandoDevoluciones(false);
   }
 
@@ -72,7 +76,7 @@ export default function GestionProyectos({ proyectos, onCambio }) {
       {proyectos.map(p => (
         <div key={p.id} className="fila" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
           <span>{p.nombre}</span>
-          <button type="button" className="secundario" onClick={() => verDevoluciones(p)}>Ver devoluciones</button>
+          <button type="button" className="secundario" onClick={() => verDevoluciones(p)}>Ver devoluciones / facturas futuras</button>
         </div>
       ))}
       <form onSubmit={crear} style={{ marginTop: 12 }}>
@@ -87,37 +91,69 @@ export default function GestionProyectos({ proyectos, onCambio }) {
         </div>
       </form>
 
-      <Modal abierto={!!proyectoDevoluciones} titulo={`Devoluciones — ${proyectoDevoluciones?.nombre || ''}`} onCerrar={() => setProyectoDevoluciones(null)}>
-        <p className="muted">Todas las devoluciones de este proyecto, en cualquier trimestre — para el cierre de proyecto.</p>
+      <Modal abierto={!!proyectoDevoluciones} titulo={`${proyectoDevoluciones?.nombre || ''} — pendientes de cierre`} onCerrar={() => setProyectoDevoluciones(null)}>
         {cargandoDevoluciones && <p className="muted">Cargando...</p>}
-        {!cargandoDevoluciones && devoluciones && devoluciones.length === 0 && (
-          <p className="muted">Ninguna devolución de este proyecto todavía.</p>
-        )}
-        {!cargandoDevoluciones && devoluciones && devoluciones.length > 0 && (
+
+        {!cargandoDevoluciones && (
           <>
-            <button type="button" className="secundario" style={{ marginBottom: 8 }} onClick={descargarCsv}>Descargar CSV</button>
-            <table style={{ width: '100%', fontSize: 13 }}>
-              <thead>
-                <tr style={{ textAlign: 'left' }}>
-                  <th>Trimestre</th>
-                  <th>Fecha</th>
-                  <th>Importe</th>
-                  <th>Jugador (LarpManager)</th>
-                  <th>Nota</th>
-                </tr>
-              </thead>
-              <tbody>
-                {devoluciones.map(d => (
-                  <tr key={d.id}>
-                    <td>{d.trimestre_id}</td>
-                    <td>{d.fecha ? new Date(d.fecha).toLocaleDateString('es-ES') : '—'}</td>
-                    <td>{Number(d.importe).toFixed(2)}€</td>
-                    <td>{d.jugador_larpmanager || '—'}</td>
-                    <td>{d.nota_final || '—'}</td>
+            <p style={{ fontWeight: 600, marginBottom: 4 }}>Devoluciones</p>
+            <p className="muted" style={{ marginTop: 0 }}>De cualquier trimestre — para el cierre de proyecto.</p>
+            {devoluciones && devoluciones.length === 0 && <p className="muted">Ninguna devolución de este proyecto todavía.</p>}
+            {devoluciones && devoluciones.length > 0 && (
+              <>
+                <button type="button" className="secundario" style={{ marginBottom: 8 }} onClick={descargarCsv}>Descargar CSV</button>
+                <table style={{ width: '100%', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left' }}>
+                      <th>Trimestre</th>
+                      <th>Fecha</th>
+                      <th>Importe</th>
+                      <th>Jugador (LarpManager)</th>
+                      <th>Nota</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {devoluciones.map(d => (
+                      <tr key={d.id}>
+                        <td>{d.trimestre_id}</td>
+                        <td>{d.fecha ? new Date(d.fecha).toLocaleDateString('es-ES') : '—'}</td>
+                        <td>{Number(d.importe).toFixed(2)}€</td>
+                        <td>{d.jugador_larpmanager || '—'}</td>
+                        <td>{d.nota_final || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            <p style={{ fontWeight: 600, marginTop: 20, marginBottom: 4 }}>Facturas futuras sin recuperar</p>
+            <p className="muted" style={{ marginTop: 0 }}>Proveedores que no emiten factura hasta que ha pasado el servicio (ej. DoYouSpain, Iberia) — mientras el proyecto siga abierto, siguen pendientes de pedir.</p>
+            {facturasFuturas && facturasFuturas.length === 0 && <p className="muted">Ninguna factura futura pendiente de este proyecto.</p>}
+            {facturasFuturas && facturasFuturas.length > 0 && (
+              <table style={{ width: '100%', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ textAlign: 'left' }}>
+                    <th>Trimestre</th>
+                    <th>Fecha</th>
+                    <th>Importe</th>
+                    <th>Proveedor</th>
+                    <th>Concepto</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {facturasFuturas.map(f => (
+                    <tr key={f.id}>
+                      <td>{f.trimestre_id}</td>
+                      <td>{f.fecha ? new Date(f.fecha).toLocaleDateString('es-ES') : '—'}</td>
+                      <td>{Number(f.importe).toFixed(2)}€</td>
+                      <td>{f.proveedor || '—'}</td>
+                      <td className="muted">{f.concepto?.slice(0, 60) || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </>
         )}
       </Modal>

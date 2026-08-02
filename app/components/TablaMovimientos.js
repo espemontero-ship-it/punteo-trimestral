@@ -369,6 +369,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   function valorEstadoSelect(m) {
     if (m.estado === 'resuelta') return 'resuelta';
     if (m.estado === 'pedida_pendiente') return 'pedida';
+    if (m.estado === 'factura_futura') return 'factura_futura';
     return 'pendiente';
   }
 
@@ -409,6 +410,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         <select className="select-estado" value={valorEstadoSelect(m)} onChange={e => cambiarEstado(m, e.target.value)}>
           <option value="pendiente">pendiente</option>
           <option value="pedida">pedida</option>
+          <option value="factura_futura">factura futura</option>
           <option value="resuelta">resuelta</option>
         </select>
       </div>
