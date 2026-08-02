@@ -106,7 +106,7 @@ La usuaria va a hacer varias pruebas con datos reales; según lo que salga, hay 
 - [ ] **Afinar proceso de cierre de trimestre.**
 - [ ] **Documentación a gestoría** — revisar qué se entrega y cómo.
 - [ ] **Módulo de colaboradores** — afinar.
-- [x] **Match entre pago y LarpManager.** Construido 2026-08-01 — pendiente de probar con un trimestre real (el caso "varios candidatos con el mismo importe" solo se ha verificado por código, no con una colisión real).
+- [x] **Match entre pago y LarpManager.** Construido y probado con datos reales 2026-08-01/02 — varias rondas de fallos reales encontrados y arreglados: persistencia del botón de confirmar (antes se perdía al recargar), diéresis alemanas, apellido en vez de nombre completo, pagos "manual" sin Wire, y confirmado que un export de LarpManager con rango de fechas corto simplemente no trae ciertos pagos (no es un bug). El caso "varios candidatos con el mismo importe" se sigue sin verificar con una colisión real todavía.
 - [ ] **Solucionar PayPal** (2026-08-01) — BBVA y Openbank ya se arreglaron con un excel/export real (ver commit `273b3c5`); PayPal se dejó tal cual porque no había queja ni archivo real con el que comprobarlo. Falta el mismo chequeo: subir un export real de PayPal y ver si la config actual (`dataStartRow`/columnas por letra fija) sigue encajando o tiene el mismo tipo de problema.
 
 ## Arquitectura de información — 3 pestañas por momento de uso (acordado 2026-07-27)
