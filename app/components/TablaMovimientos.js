@@ -428,9 +428,11 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   // Alternativa a Proveedor -- mutuamente excluyente (marcarDevolucion en
   // lib/devoluciones.cjs quita el proveedor al confirmar). Es una devolución
   // ya guardada: texto fijo. En edición: input de jugador, prellenado con la
-  // sugerencia sacada del propio texto del banco (ver sugerirJugador). Ni
-  // siquiera con la sugerencia automática (probable_devolucion) se marca
-  // sola -- solo resalta el enlace para que sea más fácil de ver.
+  // sugerencia sacada del propio texto del banco (ver sugerirJugador). El
+  // enlace "¿Es una devolución?" SOLO aparece cuando el concepto lo sugiere
+  // (probable_devolucion) -- si se mostrara siempre en todas las filas sería
+  // ruido constante en una tabla de cientos de líneas casi todas gastos
+  // normales. Aun así no se marca sola, solo abre la edición para confirmar.
   function celdaProveedor(m, g) {
     if (m.es_devolucion) {
       return (
@@ -477,14 +479,11 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
             sacar del grupo
           </button>
         )}
-        <button
-          type="button"
-          className={m.probable_devolucion ? 'chip-sugerencia' : 'quitar-grupo'}
-          style={{ display: 'block', marginTop: 4 }}
-          onClick={() => alternarModoDevolucion(m)}
-        >
-          ¿Es una devolución?
-        </button>
+        {m.probable_devolucion && (
+          <button type="button" className="chip-sugerencia" style={{ display: 'block', marginTop: 4 }} onClick={() => alternarModoDevolucion(m)}>
+            ¿Es una devolución?
+          </button>
+        )}
       </>
     );
   }
