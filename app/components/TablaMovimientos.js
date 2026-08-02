@@ -272,19 +272,15 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   // la Nota es la referencia que se manda a gestoría, la columna larpmanager
   // es solo la comprobación de que el pago llegó. Si LarpManager ya sabe de
   // qué evento es (ej. "Wield #2"), se aprovecha para sugerir proyecto igual
-  // que ya hace el resto de la app por texto de concepto.
+  // que ya hace el resto de la app por texto de concepto. Un único endpoint
+  // (no dos fetches sueltos) para que también quede marcado en
+  // larpmanager_pagos que este pago concreto ya encontró su línea del
+  // banco -- si no, "ver pagos sin emparejar" seguiría listándolo.
   async function resolverConLarpManager(m, candidato) {
-    if (candidato.proyectoSugerido && !m.proyecto_id) {
-      await apiFetch(`/api/movimientos/${m.id}/proyecto`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proyectoId: candidato.proyectoSugerido.id }),
-      }, { mensajeError: 'No se pudo asignar el proyecto.' });
-    }
-    const r = await apiFetch(`/api/movimientos/${m.id}/confirmar`, {
+    const r = await apiFetch(`/api/movimientos/${m.id}/resolver-larpmanager`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nota: null }),
+      body: JSON.stringify(candidato),
     }, { mensajeOk: 'Marcado', mensajeError: 'No se pudo marcar.' });
     if (r) onCambio();
   }

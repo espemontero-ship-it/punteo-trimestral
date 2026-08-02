@@ -60,6 +60,8 @@ export default function Home() {
   const [cerrando, setCerrando] = useState(false);
   const [subiendoLarpManager, setSubiendoLarpManager] = useState(false);
   const [mensajeLarpManager, setMensajeLarpManager] = useState(null);
+  const [pagosSinEmparejar, setPagosSinEmparejar] = useState(null);
+  const [cargandoPagosSinEmparejar, setCargandoPagosSinEmparejar] = useState(false);
 
   useEffect(() => {
     const guardado = localStorage.getItem('trimestreId');
@@ -199,6 +201,21 @@ export default function Home() {
     }
   }
 
+  // Al revés que el cruce normal (banco -> LarpManager): aquí se pregunta
+  // "¿qué pagos dice LarpManager que existen que ninguna línea del banco ha
+  // reclamado todavía?" -- el hueco que antes no se podía ver. Se pide cada
+  // vez que se abre (no se guarda en estado aparte) para que siempre
+  // refleje lo último confirmado en la tabla.
+  async function verPagosSinEmparejar() {
+    setModalAbierto('larpmanager-pendientes');
+    setCargandoPagosSinEmparejar(true);
+    const data = await apiFetch(`/api/trimestres/${trimestreId}/larpmanager-sin-emparejar`, undefined, {
+      mensajeError: 'No se pudo obtener la lista de pagos sin emparejar.',
+    });
+    setPagosSinEmparejar((data && data.pagos) || []);
+    setCargandoPagosSinEmparejar(false);
+  }
+
   // Junta los resultados de una subida en lote: qué líneas quedaron
   // resueltas solas, cuáles tienen varias facturas con el mismo importe
   // (para elegir en la tabla) y qué archivos no encontraron ninguna línea.
@@ -316,6 +333,7 @@ export default function Home() {
             <button type="button" className="secundario" onClick={() => setVistaFacturas(true)}>Ver / borrar facturas</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('excel')}>Añadir excel</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('larpmanager')}>Subir LarpManager</button>
+            <button type="button" className="secundario" onClick={verPagosSinEmparejar}>Ver pagos de LarpManager sin emparejar</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('cierre')}>Cerrar trimestre</button>
             <button type="button" className="secundario" disabled={recalculando} onClick={recalcularClaves}>
               {recalculando ? 'Recalculando...' : 'Recalcular agrupación'}
@@ -395,6 +413,36 @@ export default function Home() {
           <button type="submit" disabled={subiendoLarpManager}>{subiendoLarpManager ? 'Procesando...' : 'Subir'}</button>
         </form>
         {mensajeLarpManager && <p className="muted" style={{ marginTop: 8 }}>{mensajeLarpManager}</p>}
+      </Modal>
+
+      <Modal abierto={modalAbierto === 'larpmanager-pendientes'} titulo="Pagos de LarpManager sin emparejar" onCerrar={() => setModalAbierto(null)}>
+        <p className="muted">Pagos que LarpManager dice que existen (transferencia o añadidos a mano) pero que ninguna línea del banco de este trimestre ha reclamado todavía — puede ser que la transferencia no haya llegado, que el nombre no se reconozca, o que el excel del banco de esa fecha aún no esté subido.</p>
+        {cargandoPagosSinEmparejar && <p className="muted">Cargando...</p>}
+        {!cargandoPagosSinEmparejar && pagosSinEmparejar && pagosSinEmparejar.length === 0 && (
+          <p className="muted">Ninguno — todos los pagos de LarpManager subidos ya están emparejados.</p>
+        )}
+        {!cargandoPagosSinEmparejar && pagosSinEmparejar && pagosSinEmparejar.length > 0 && (
+          <table style={{ width: '100%', fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: 'left' }}>
+                <th>Nombre</th>
+                <th>Evento</th>
+                <th>Importe</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagosSinEmparejar.map(p => (
+                <tr key={p.id}>
+                  <td>{p.nombre_real}</td>
+                  <td>{p.evento}</td>
+                  <td>{Number(p.importe).toFixed(2)}€</td>
+                  <td>{p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Modal>
 
       <Modal abierto={modalAbierto === 'cierre'} titulo="Cerrar trimestre" onCerrar={() => setModalAbierto(null)}>
