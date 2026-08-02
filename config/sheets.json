@@ -23,11 +23,13 @@
     },
     {
       "nombre": "paypal",
-      "dataStartRow": 1,
-      "textCols": ["E", "F", "S"],
-      "importeCol": "I",
-      "fechaCol": "B",
-      "notaCol": null
+      "modo": "nombres",
+      "cabeceraContiene": ["FECHA", "NETO"],
+      "columnas": {
+        "fecha": ["FECHA"],
+        "texto": ["NOMBRE", "TIPO", "ASUNTO", "NOTA"],
+        "importe": ["NETO"]
+      }
     }
   ]
 }
