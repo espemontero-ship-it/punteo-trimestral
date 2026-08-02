@@ -316,9 +316,11 @@ export default function Home() {
   const total = resumen?.total ?? 0;
   const resueltas = resumen?.resueltas ?? 0;
   const facturaFutura = resumen?.facturaFutura ?? 0;
-  // No cuenta como "pendiente" urgente: no tiene sentido reclamarla hasta
-  // que se cierre el proyecto (ver /proyectos, "Ver devoluciones").
-  const pendientesMov = total - resueltas - facturaFutura;
+  const ignoradas = resumen?.ignoradas ?? 0;
+  // Factura futura no cuenta como "pendiente" urgente: no tiene sentido
+  // reclamarla hasta que se cierre el proyecto (ver /proyectos). Ignorada
+  // tampoco: es deliberadamente "no hay nada que hacer aquí".
+  const pendientesMov = total - resueltas - facturaFutura - ignoradas;
 
   if (vistaFacturas) {
     return (

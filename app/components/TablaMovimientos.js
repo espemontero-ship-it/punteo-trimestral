@@ -127,7 +127,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         importeTotal: g.movimientos.reduce((s, m) => s + Number(m.importe), 0),
         movimientos: g.movimientos.filter(m => {
           if (filtroLote) return filtroLote.ids.has(m.id);
-          if (soloPendientes && m.estado === 'resuelta') return false;
+          if (soloPendientes && ['resuelta', 'ignorada', 'factura_futura'].includes(m.estado)) return false;
           if (!texto) return true;
           const campos = [m.concepto, g.clave, g.hoja, m.nota_final, m.importe, m.fecha, ...(m.datos_originales ? Object.values(m.datos_originales) : [])];
           return campos.some(v => v !== null && v !== undefined && String(v).toLowerCase().includes(texto));
@@ -370,6 +370,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (m.estado === 'resuelta') return 'resuelta';
     if (m.estado === 'pedida_pendiente') return 'pedida';
     if (m.estado === 'factura_futura') return 'factura_futura';
+    if (m.estado === 'ignorada') return 'ignorar';
     return 'pendiente';
   }
 
@@ -411,6 +412,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <option value="pendiente">pendiente</option>
           <option value="pedida">pedida</option>
           <option value="factura_futura">factura futura</option>
+          <option value="ignorar">ignorar</option>
           <option value="resuelta">resuelta</option>
         </select>
       </div>
