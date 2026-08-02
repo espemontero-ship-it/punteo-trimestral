@@ -72,6 +72,8 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   const [anchos, setAnchos] = useState({});
   const [importesManual, setImportesManual] = useState({});
   const [guardandoImporte, setGuardandoImporte] = useState(null);
+  const [modoDevolucion, setModoDevolucion] = useState(new Set());
+  const [jugadorManual, setJugadorManual] = useState({});
 
   function anchoDe(col) {
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? ANCHO_EXTRA_DEFECTO;
@@ -248,6 +250,36 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (r) onCambio();
   }
 
+  // Alternativa a Proveedor: en vez de un gasto, la línea es una devolución
+  // a un jugador de LarpManager. Se entra en "modo edición" para poder
+  // revisar/corregir el nombre sugerido antes de confirmar -- nunca se marca
+  // sola, ni con la sugerencia automática por texto.
+  function alternarModoDevolucion(m) {
+    setModoDevolucion(prev => {
+      const next = new Set(prev);
+      if (next.has(m.id)) {
+        next.delete(m.id);
+      } else {
+        next.add(m.id);
+        setJugadorManual(prevJ => (prevJ[m.id] !== undefined ? prevJ : { ...prevJ, [m.id]: m.jugador_sugerido || '' }));
+      }
+      return next;
+    });
+  }
+
+  async function confirmarDevolucion(m) {
+    const jugador = (jugadorManual[m.id] ?? '').trim();
+    const r = await apiFetch(`/api/movimientos/${m.id}/devolucion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jugador }),
+    }, { mensajeOk: 'Marcada como devolución', mensajeError: 'No se pudo guardar.' });
+    if (r) {
+      setModoDevolucion(prev => { const next = new Set(prev); next.delete(m.id); return next; });
+      onCambio();
+    }
+  }
+
   async function guardarProveedorGrupo(g, valor) {
     const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/proveedor-grupo`, {
       method: 'POST',
@@ -393,6 +425,70 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     );
   }
 
+  // Alternativa a Proveedor -- mutuamente excluyente (marcarDevolucion en
+  // lib/devoluciones.cjs quita el proveedor al confirmar). Es una devolución
+  // ya guardada: texto fijo. En edición: input de jugador, prellenado con la
+  // sugerencia sacada del propio texto del banco (ver sugerirJugador). Ni
+  // siquiera con la sugerencia automática (probable_devolucion) se marca
+  // sola -- solo resalta el enlace para que sea más fácil de ver.
+  function celdaProveedor(m, g) {
+    if (m.es_devolucion) {
+      return (
+        <>
+          <span>Devolución — {m.jugador_larpmanager || <span className="vacio">sin jugador</span>}</span>
+          <button type="button" className="quitar-grupo" onClick={() => alternarModoDevolucion(m)}>editar</button>
+        </>
+      );
+    }
+    if (modoDevolucion.has(m.id)) {
+      return (
+        <div>
+          <input
+            className="campo-proveedor"
+            type="text"
+            placeholder="Jugador en LarpManager..."
+            value={jugadorManual[m.id] ?? ''}
+            onChange={e => setJugadorManual(prev => ({ ...prev, [m.id]: e.target.value }))}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarDevolucion(m); } }}
+          />
+          <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+            <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => confirmarDevolucion(m)}>
+              Confirmar devolución
+            </button>
+            <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => alternarModoDevolucion(m)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <>
+        <input
+          className={`campo-proveedor${!proveedoresManual[m.id] && !m.proveedor && m.proveedor_sugerido ? ' prellenado' : ''}`}
+          type="text"
+          placeholder="Proveedor..."
+          value={proveedoresManual[m.id] ?? (m.proveedor || m.proveedor_sugerido || '')}
+          onChange={e => setProveedoresManual(prev => ({ ...prev, [m.id]: e.target.value }))}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedor(m.id, e.target.value); } }}
+        />
+        {g.total > 1 && (
+          <button type="button" className="quitar-grupo" onClick={() => separarDeGrupo(m.id)} title="Sacar esta línea del grupo, que quede aparte">
+            sacar del grupo
+          </button>
+        )}
+        <button
+          type="button"
+          className={m.probable_devolucion ? 'chip-sugerencia' : 'quitar-grupo'}
+          style={{ display: 'block', marginTop: 4 }}
+          onClick={() => alternarModoDevolucion(m)}
+        >
+          ¿Es una devolución?
+        </button>
+      </>
+    );
+  }
+
   function celdaProyecto(m) {
     return (
       <>
@@ -449,21 +545,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         <Celda col="Fecha" className="muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
         <Celda col="Concepto" className="concepto" anchoFecha={anchoFecha}>{m.concepto?.slice(0, 80)}</Celda>
         <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
-        <Celda col="Proveedor" className="proveedor">
-          <input
-            className={`campo-proveedor${!proveedoresManual[m.id] && !m.proveedor && m.proveedor_sugerido ? ' prellenado' : ''}`}
-            type="text"
-            placeholder="Proveedor..."
-            value={proveedoresManual[m.id] ?? (m.proveedor || m.proveedor_sugerido || '')}
-            onChange={e => setProveedoresManual(prev => ({ ...prev, [m.id]: e.target.value }))}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedor(m.id, e.target.value); } }}
-          />
-          {g.total > 1 && (
-            <button type="button" className="quitar-grupo" onClick={() => separarDeGrupo(m.id)} title="Sacar esta línea del grupo, que quede aparte">
-              sacar del grupo
-            </button>
-          )}
-        </Celda>
+        <Celda col="Proveedor" className="proveedor">{celdaProveedor(m, g)}</Celda>
         <Celda col="Importe" className="importe num">{Number(m.importe).toFixed(2)}€</Celda>
         <Celda col="Estado">{celdaEstado(m)}</Celda>
         <Celda col="Ver factura">{celdaFactura(m)}</Celda>

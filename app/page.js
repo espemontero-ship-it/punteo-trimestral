@@ -64,6 +64,8 @@ export default function Home() {
   const [cargandoPagosSinEmparejar, setCargandoPagosSinEmparejar] = useState(false);
   const [hojasSubidas, setHojasSubidas] = useState(null);
   const [cargandoHojas, setCargandoHojas] = useState(false);
+  const [devoluciones, setDevoluciones] = useState(null);
+  const [cargandoDevoluciones, setCargandoDevoluciones] = useState(false);
   const [confirmarBorrarHoja, setConfirmarBorrarHoja] = useState(null); // { hoja, total, resueltas } | null
   const [borrandoHoja, setBorrandoHoja] = useState(false);
 
@@ -220,6 +222,18 @@ export default function Home() {
     setCargandoPagosSinEmparejar(false);
   }
 
+  // Revisión antes de cerrar el trimestre (pestaña "Devoluciones" del excel
+  // final) y para la declaración de IVA del trimestre.
+  async function verDevoluciones() {
+    setModalAbierto('devoluciones');
+    setCargandoDevoluciones(true);
+    const data = await apiFetch(`/api/trimestres/${trimestreId}/devoluciones`, undefined, {
+      mensajeError: 'No se pudo obtener la lista de devoluciones.',
+    });
+    setDevoluciones((data && data.devoluciones) || []);
+    setCargandoDevoluciones(false);
+  }
+
   // Para cuando se sube el excel equivocado por error (ej. el de otra
   // cuenta) y hace falta quitarlo entero para volver a subir el correcto,
   // sin que se mezclen los movimientos malos con los buenos.
@@ -366,6 +380,7 @@ export default function Home() {
             <button type="button" className="secundario" onClick={() => setModalAbierto('excel')}>Añadir excel</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('larpmanager')}>Subir LarpManager</button>
             <button type="button" className="secundario" onClick={verPagosSinEmparejar}>Ver pagos de LarpManager sin emparejar</button>
+            <button type="button" className="secundario" onClick={verDevoluciones}>Ver devoluciones</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('cierre')}>Cerrar trimestre</button>
             <button type="button" className="secundario" disabled={recalculando} onClick={recalcularClaves}>
               {recalculando ? 'Recalculando...' : 'Recalcular agrupación'}
@@ -476,6 +491,38 @@ export default function Home() {
                   <td>{p.evento}</td>
                   <td>{Number(p.importe).toFixed(2)}€</td>
                   <td>{p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Modal>
+
+      <Modal abierto={modalAbierto === 'devoluciones'} titulo="Devoluciones de este trimestre" onCerrar={() => setModalAbierto(null)}>
+        <p className="muted">Se incluyen como pestaña propia ("Devoluciones") en el excel final al cerrar el trimestre.</p>
+        {cargandoDevoluciones && <p className="muted">Cargando...</p>}
+        {!cargandoDevoluciones && devoluciones && devoluciones.length === 0 && (
+          <p className="muted">Ninguna devolución marcada todavía en este trimestre.</p>
+        )}
+        {!cargandoDevoluciones && devoluciones && devoluciones.length > 0 && (
+          <table style={{ width: '100%', fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: 'left' }}>
+                <th>Fecha</th>
+                <th>Importe</th>
+                <th>Proyecto</th>
+                <th>Jugador (LarpManager)</th>
+                <th>Nota</th>
+              </tr>
+            </thead>
+            <tbody>
+              {devoluciones.map(d => (
+                <tr key={d.id}>
+                  <td>{d.fecha ? new Date(d.fecha).toLocaleDateString('es-ES') : '—'}</td>
+                  <td>{Number(d.importe).toFixed(2)}€</td>
+                  <td>{d.proyecto || '—'}</td>
+                  <td>{d.jugador_larpmanager || '—'}</td>
+                  <td>{d.nota_final || '—'}</td>
                 </tr>
               ))}
             </tbody>
