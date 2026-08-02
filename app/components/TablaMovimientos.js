@@ -10,8 +10,8 @@ const ETIQUETAS = {
   nueva: 'nueva',
 };
 
-const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Nota', 'Proyecto'];
-const ANCHO_DEFECTO = { Fecha: 90, Concepto: 280, Banco: 100, Proveedor: 190, Importe: 90, Estado: 150, Nota: 190, Proyecto: 130 };
+const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Ver factura', 'Nota', 'Proyecto'];
+const ANCHO_DEFECTO = { Fecha: 90, Concepto: 280, Banco: 100, Proveedor: 190, Importe: 90, Estado: 150, 'Ver factura': 90, Nota: 190, Proyecto: 130 };
 const ANCHO_EXTRA_DEFECTO = 140;
 
 // Celda vive fuera del componente a propósito: si se define dentro (como
@@ -372,7 +372,6 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   }
 
   function celdaEstado(m) {
-    const facturaIds = m.factura_ids || [];
     return (
       <div className="celda-estado">
         <select className="select-estado" value={valorEstadoSelect(m)} onChange={e => cambiarEstado(m, e.target.value)}>
@@ -380,12 +379,17 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <option value="pedida">pedida</option>
           <option value="resuelta">resuelta</option>
         </select>
-        {m.estado === 'resuelta' && facturaIds.length > 0 && (
-          <a className="link-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">
-            ver factura{facturaIds.length > 1 ? 's' : ''}
-          </a>
-        )}
       </div>
+    );
+  }
+
+  function celdaFactura(m) {
+    const facturaIds = m.factura_ids || [];
+    if (facturaIds.length === 0) return <span className="vacio">—</span>;
+    return (
+      <a className="link-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">
+        ver factura{facturaIds.length > 1 ? 's' : ''}
+      </a>
     );
   }
 
@@ -462,6 +466,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
         </Celda>
         <Celda col="Importe" className="importe num">{Number(m.importe).toFixed(2)}€</Celda>
         <Celda col="Estado">{celdaEstado(m)}</Celda>
+        <Celda col="Ver factura">{celdaFactura(m)}</Celda>
         <Celda col="Nota">{celdaNota(m, g)}</Celda>
         <Celda col="Proyecto">{celdaProyecto(m)}</Celda>
         {columnasVisiblesExtra.map(c => (
@@ -520,6 +525,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
             </select>
           )}
         </Celda>
+        <Celda col="Ver factura" />
         <Celda col="Nota">
           {permiteAccionesGrupo && (
             <>

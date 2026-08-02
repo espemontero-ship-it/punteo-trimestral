@@ -7,7 +7,7 @@ export async function GET(request, { params }) {
   await asegurarColumnasMotivo();
   const { rows } = await query(
     `SELECT f.id, f.numero, f.nombre_original, f.proveedor_clave, f.estado, f.es_imagen,
-            f.importes, f.totales, f.fechas, f.concepto, f.creado_en, f.motivo_tipo, f.motivo_detalle,
+            f.importes, f.totales, f.fechas, f.concepto, f.creado_en, f.motivo_tipo, f.motivo_detalle, f.motivo_candidatos,
             m.id AS movimiento_id, m.fecha AS movimiento_fecha, m.concepto AS movimiento_concepto, m.importe AS movimiento_importe
      FROM facturas f
      LEFT JOIN movimiento_facturas mf ON mf.factura_id = f.id

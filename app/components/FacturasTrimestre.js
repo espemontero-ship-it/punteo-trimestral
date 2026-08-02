@@ -334,13 +334,22 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   function contenidoCelda(col, f) {
     const duplicada = nombresDuplicados.has(f.nombre_original);
     const resultadoLocal = resultadosFila[f.id];
-    const candidatos = resultadoLocal?.tipo === 'ambiguo' ? resultadoLocal.candidatos.map(c => ({
-      movimientoId: c.movimientoId, numero: resultadoLocal.numero, facturaId: f.id, facturaConcepto: resultadoLocal.facturaConcepto,
+    // Si no se acaba de recalcular esta fila a mano en esta sesión (resultadoLocal),
+    // cae a lo que ya se calculó y se guardó en BD la última vez (subida de excel,
+    // "Recalcular facturas sin resolver"...) -- si no, los botones para elegir
+    // candidato solo aparecerían tras pulsar "Buscar" fila a fila, aunque el
+    // cruce ya estuviera hecho. Ver candidatosParaGuardar en facturaMatcher.cjs.
+    const persistido = !resultadoLocal && f.estado !== 'matcheada' && f.motivo_candidatos
+      ? { tipo: f.motivo_tipo, numero: f.numero, facturaConcepto: f.concepto, detalle: f.motivo_detalle, ...f.motivo_candidatos }
+      : null;
+    const activo = resultadoLocal || persistido;
+    const candidatos = activo?.tipo === 'ambiguo' ? activo.candidatos.map(c => ({
+      movimientoId: c.movimientoId, numero: activo.numero, facturaId: f.id, facturaConcepto: activo.facturaConcepto,
       concepto: c.concepto, importe: c.importe, fecha: c.fecha,
-    })) : resultadoLocal?.tipo === 'combo_sugerido' ? [{
-      movimientoId: resultadoLocal.movimientoId, esCombo: true, numero: resultadoLocal.numero,
-      otraFacturaNumero: resultadoLocal.otraFacturaNumero, facturaId: f.id, otraFacturaId: resultadoLocal.otraFacturaId,
-      facturaConcepto: resultadoLocal.facturaConcepto, detalle: resultadoLocal.detalle,
+    })) : activo?.tipo === 'combo_sugerido' ? [{
+      movimientoId: activo.movimientoId, esCombo: true, numero: activo.numero,
+      otraFacturaNumero: activo.otraFacturaNumero, facturaId: f.id, otraFacturaId: activo.otraFacturaId,
+      facturaConcepto: activo.facturaConcepto, detalle: activo.detalle,
     }] : null;
     const bloqueada = f.estado === 'matcheada' || !!candidatos;
 
@@ -356,7 +365,7 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
           return (
             <div>
               <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
-                {resultadoLocal.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:'}
+                {activo.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:'}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {candidatos.map((c, i) => (
