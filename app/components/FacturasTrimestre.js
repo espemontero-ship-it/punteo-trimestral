@@ -49,7 +49,7 @@ function Celda({ className = '', cabecera, children, style }) {
   );
 }
 
-export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
+export default function FacturasTrimestre({ facturas, onCambio }) {
   const [seleccionadas, setSeleccionadas] = useState(new Set());
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [borrando, setBorrando] = useState(false);
@@ -103,11 +103,11 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   // solos (ej. facturas con varios importes dentro de un mismo archivo).
   useEffect(() => {
     let cancelado = false;
-    apiFetch(`/api/trimestres/${trimestreId}/movimientos-pendientes`, undefined, {
+    apiFetch(`/api/movimientos-pendientes`, undefined, {
       mensajeError: 'No se pudo cargar la lista de movimientos.',
     }).then(r => { if (!cancelado && r) setMovimientosPendientes(r.movimientos || []); });
     return () => { cancelado = true; };
-  }, [trimestreId]);
+  }, []);
 
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
   const sinImporte = useMemo(
@@ -119,7 +119,7 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   // real y para no arriesgarse a que el servidor corte una petición muy larga
   // a mitad si hay muchas facturas pendientes.
   async function recalcular() {
-    const r = await apiFetch(`/api/trimestres/${trimestreId}/recalcular-facturas`, undefined, {
+    const r = await apiFetch(`/api/recalcular-facturas`, undefined, {
       mensajeError: 'No se pudo obtener la lista de facturas pendientes.',
     });
     if (!r || r.ids.length === 0) return;
@@ -147,7 +147,7 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   // aparte que se activa a mano después de haber probado ya el recálculo
   // normal, no algo automático.
   async function leerConIA() {
-    const r = await apiFetch(`/api/trimestres/${trimestreId}/facturas-sin-importe`, undefined, {
+    const r = await apiFetch(`/api/facturas-sin-importe`, undefined, {
       mensajeError: 'No se pudo obtener la lista de facturas sin importe.',
     });
     if (!r || r.ids.length === 0) return;
@@ -181,7 +181,7 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `facturas-sin-resolver-${trimestreId}.csv`;
+    a.download = `facturas-sin-resolver-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -311,7 +311,7 @@ export default function FacturasTrimestre({ trimestreId, facturas, onCambio }) {
   async function borrarSeleccionadas() {
     setConfirmarBorrado(false);
     setBorrando(true);
-    const r = await apiFetch(`/api/trimestres/${trimestreId}/facturas`, {
+    const r = await apiFetch(`/api/facturas`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: [...seleccionadas] }),

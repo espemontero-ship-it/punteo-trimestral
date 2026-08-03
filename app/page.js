@@ -5,18 +5,18 @@ import TablaMovimientos from './components/TablaMovimientos';
 import SubirFactura from './components/SubirFactura';
 import SubirFacturasLote from './components/SubirFacturasLote';
 import FacturasTrimestre from './components/FacturasTrimestre';
-import SelectorTrimestre from './components/SelectorTrimestre';
+import GestionProyectos from './components/GestionProyectos';
 import SeccionLotes from './components/SeccionLotes';
-import NuevoColaborador from './components/NuevoColaborador';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Modal } from './components/Modal';
 import { apiFetch, mostrarToast } from './lib/toast';
 
 const PESTANAS = [
   { id: 'inicio', etiqueta: 'Inicio' },
-  { id: 'trimestre', etiqueta: 'Trimestre' },
+  { id: 'movimientos', etiqueta: 'Movimientos' },
+  { id: 'facturas', etiqueta: 'Facturas' },
+  { id: 'proyectos', etiqueta: 'Proyectos' },
   { id: 'colaboradores', etiqueta: 'Colaboradores' },
-  { id: 'admin', etiqueta: 'Admin' },
 ];
 
 // Clasifica un resultado de matching (de la subida en lote o de fijar un
@@ -42,46 +42,50 @@ function clasificarResultado(resultado, ids, ambiguos) {
 }
 
 export default function Home() {
-  const [trimestreId, setTrimestreId] = useState('');
   const [proveedores, setProveedores] = useState(null);
   const [resumen, setResumen] = useState(null);
   const [facturas, setFacturas] = useState(null);
   const [proyectos, setProyectos] = useState([]);
   const [cargando, setCargando] = useState(false);
+  // Histórico continuo: sin filtro, trae todo. Con datos de años se podrá
+  // acotar aquí para no traer de más -- por ahora no hace falta un límite.
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const [subiendoExcel, setSubiendoExcel] = useState(false);
   const [mensajeExcel, setMensajeExcel] = useState(null);
   const [mensajeFacturaSuelta, setMensajeFacturaSuelta] = useState(null);
   const [pestana, setPestana] = useState('inicio');
-  const [confirmarCierre, setConfirmarCierre] = useState(false);
   const [lote, setLote] = useState(null);
-  const [modalAbierto, setModalAbierto] = useState(null); // 'excel' | 'cierre' | null
-  const [vistaFacturas, setVistaFacturas] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(null); // 'excel' | 'larpmanager' | 'larpmanager-pendientes' | 'devoluciones' | 'importaciones' | 'envio' | null
   const [recalculando, setRecalculando] = useState(false);
-  const [cerrando, setCerrando] = useState(false);
   const [subiendoLarpManager, setSubiendoLarpManager] = useState(false);
   const [mensajeLarpManager, setMensajeLarpManager] = useState(null);
   const [pagosSinEmparejar, setPagosSinEmparejar] = useState(null);
   const [cargandoPagosSinEmparejar, setCargandoPagosSinEmparejar] = useState(false);
-  const [hojasSubidas, setHojasSubidas] = useState(null);
-  const [cargandoHojas, setCargandoHojas] = useState(false);
+  const [importaciones, setImportaciones] = useState(null);
+  const [cargandoImportaciones, setCargandoImportaciones] = useState(false);
   const [devoluciones, setDevoluciones] = useState(null);
   const [cargandoDevoluciones, setCargandoDevoluciones] = useState(false);
-  const [confirmarBorrarHoja, setConfirmarBorrarHoja] = useState(null); // { hoja, total, resueltas } | null
-  const [borrandoHoja, setBorrandoHoja] = useState(false);
+  const [confirmarBorrarImportacion, setConfirmarBorrarImportacion] = useState(null); // { id, hoja, total, resueltas } | null
+  const [borrandoImportacion, setBorrandoImportacion] = useState(false);
+  const [envioHasta, setEnvioHasta] = useState('');
+  const [envioEtiqueta, setEnvioEtiqueta] = useState('');
+  const [envioPreview, setEnvioPreview] = useState(null);
+  const [cargandoEnvioPreview, setCargandoEnvioPreview] = useState(false);
+  const [generandoEnvio, setGenerandoEnvio] = useState(false);
+  const [confirmarEnvio, setConfirmarEnvio] = useState(false);
 
-  useEffect(() => {
-    const guardado = localStorage.getItem('trimestreId');
-    if (guardado) setTrimestreId(guardado);
-  }, []);
-
-  const cargar = useCallback(async id => {
-    if (!id) return;
+  const cargar = useCallback(async () => {
     setCargando(true);
     try {
+      const params = new URLSearchParams();
+      if (desde) params.set('desde', desde);
+      if (hasta) params.set('hasta', hasta);
+      const qs = params.toString() ? `?${params.toString()}` : '';
       const [rp, rr, rf, rpy] = await Promise.all([
-        apiFetch(`/api/trimestres/${id}/proveedores`, undefined, { mensajeError: 'No se pudieron cargar los proveedores.' }),
-        apiFetch(`/api/trimestres/${id}/resumen`, undefined, { mensajeError: 'No se pudo cargar el resumen.' }),
-        apiFetch(`/api/trimestres/${id}/facturas`, undefined, { mensajeError: 'No se pudieron cargar las facturas.' }),
+        apiFetch(`/api/movimientos${qs}`, undefined, { mensajeError: 'No se pudieron cargar los movimientos.' }),
+        apiFetch('/api/resumen', undefined, { mensajeError: 'No se pudo cargar el resumen.' }),
+        apiFetch('/api/facturas', undefined, { mensajeError: 'No se pudieron cargar las facturas.' }),
         apiFetch('/api/proyectos', undefined, { mensajeError: 'No se pudieron cargar los proyectos.' }),
       ]);
       setProveedores((rp && rp.proveedores) || []);
@@ -91,22 +95,9 @@ export default function Home() {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [desde, hasta]);
 
-  useEffect(() => {
-    if (trimestreId) cargar(trimestreId);
-  }, [trimestreId, cargar]);
-
-  function entrarTrimestre(id) {
-    localStorage.setItem('trimestreId', id);
-    setTrimestreId(id);
-  }
-
-  function cambiarTrimestre() {
-    localStorage.removeItem('trimestreId');
-    setTrimestreId('');
-    setProveedores(null);
-  }
+  useEffect(() => { cargar(); }, [cargar]);
 
   async function cerrarSesion() {
     await fetch('/api/logout', { method: 'POST' });
@@ -115,44 +106,18 @@ export default function Home() {
 
   async function recalcularClaves() {
     setRecalculando(true);
-    const r = await apiFetch(`/api/trimestres/${trimestreId}/recalcular-claves`, { method: 'POST' }, {
+    const r = await apiFetch('/api/recalcular-claves', { method: 'POST' }, {
       mensajeError: 'No se pudo recalcular.',
     });
     setRecalculando(false);
     if (r) {
       mostrarToast(`${r.cambiadas} de ${r.revisadas} línea(s) recalculadas`, 'ok');
-      await cargar(trimestreId);
+      await cargar();
     }
   }
 
   function irAPendientes() {
-    setPestana('trimestre');
-  }
-
-  async function cerrarTrimestre() {
-    setCerrando(true);
-    try {
-      const res = await fetch(`/api/trimestres/${trimestreId}/cerrar`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        mostrarToast((data && data.error) || 'No se pudo cerrar el trimestre.', 'error');
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `punteo-${trimestreId}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      mostrarToast('Descarga lista.', 'ok');
-    } catch {
-      mostrarToast('No se pudo cerrar el trimestre.', 'error');
-    } finally {
-      setCerrando(false);
-    }
+    setPestana('movimientos');
   }
 
   async function subirExcel(e) {
@@ -166,12 +131,12 @@ export default function Home() {
       const formData = new FormData();
       formData.append('file', file);
       if (hoja) formData.append('hoja', hoja);
-      const data = await apiFetch(`/api/trimestres/${trimestreId}/excels`, { method: 'POST', body: formData }, {
+      const data = await apiFetch('/api/excels', { method: 'POST', body: formData }, {
         mensajeError: 'No se pudo importar el excel.',
       });
       if (data) {
         setMensajeExcel(`Importado: ${data.hojas.join(', ')}`);
-        await cargar(trimestreId);
+        await cargar();
       }
     } finally {
       setSubiendoExcel(false);
@@ -180,11 +145,11 @@ export default function Home() {
   }
 
   // Sube el CSV de pagos de LarpManager y cruza sus filas Wire contra los
-  // ingresos sin resolver del trimestre por nombre (ver lib/larpmanager.cjs).
-  // El resultado queda guardado en cada movimiento (larpmanager_candidatos),
-  // no en un estado de este componente -- así el botón de confirmar sigue
-  // ahí aunque se recargue la página o se vuelva más tarde, sin tener que
-  // subir el mismo CSV otra vez.
+  // ingresos sin resolver por nombre (ver lib/larpmanager.cjs). El resultado
+  // queda guardado en cada movimiento (larpmanager_candidatos), no en un
+  // estado de este componente -- así el botón de confirmar sigue ahí aunque
+  // se recargue la página o se vuelva más tarde, sin tener que subir el
+  // mismo CSV otra vez.
   async function subirLarpManager(e) {
     e.preventDefault();
     const file = e.target.elements.file.files[0];
@@ -194,12 +159,12 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const data = await apiFetch(`/api/trimestres/${trimestreId}/larpmanager`, { method: 'POST', body: formData }, {
+      const data = await apiFetch('/api/larpmanager', { method: 'POST', body: formData }, {
         mensajeError: 'No se pudo procesar el CSV de LarpManager.',
       });
       if (data) {
         setMensajeLarpManager(`${data.emparejadas} de ${data.resultados.length} ingreso(s) emparejados con LarpManager.`);
-        await cargar(trimestreId);
+        await cargar();
       }
     } finally {
       setSubiendoLarpManager(false);
@@ -208,57 +173,112 @@ export default function Home() {
   }
 
   // Al revés que el cruce normal (banco -> LarpManager): aquí se pregunta
-  // "¿qué pagos dice LarpManager que existen que ninguna línea del banco ha
-  // reclamado todavía?" -- el hueco que antes no se podía ver. Se pide cada
-  // vez que se abre (no se guarda en estado aparte) para que siempre
+  // "¿qué pagos dice LarpManager que existen que ningún movimiento del banco
+  // ha reclamado todavía?" -- el hueco que antes no se podía ver. Se pide
+  // cada vez que se abre (no se guarda en estado aparte) para que siempre
   // refleje lo último confirmado en la tabla.
   async function verPagosSinEmparejar() {
     setModalAbierto('larpmanager-pendientes');
     setCargandoPagosSinEmparejar(true);
-    const data = await apiFetch(`/api/trimestres/${trimestreId}/larpmanager-sin-emparejar`, undefined, {
+    const data = await apiFetch('/api/larpmanager-sin-emparejar', undefined, {
       mensajeError: 'No se pudo obtener la lista de pagos sin emparejar.',
     });
     setPagosSinEmparejar((data && data.pagos) || []);
     setCargandoPagosSinEmparejar(false);
   }
 
-  // Revisión antes de cerrar el trimestre (pestaña "Devoluciones" del excel
-  // final) y para la declaración de IVA del trimestre.
+  // Revisión de las devoluciones pendientes de enviar -- también se incluyen
+  // como pestaña propia en el excel del próximo envío a gestoría.
   async function verDevoluciones() {
     setModalAbierto('devoluciones');
     setCargandoDevoluciones(true);
-    const data = await apiFetch(`/api/trimestres/${trimestreId}/devoluciones`, undefined, {
+    const data = await apiFetch('/api/devoluciones', undefined, {
       mensajeError: 'No se pudo obtener la lista de devoluciones.',
     });
     setDevoluciones((data && data.devoluciones) || []);
     setCargandoDevoluciones(false);
   }
 
-  // Para cuando se sube el excel equivocado por error (ej. el de otra
+  // Para cuando se sube el archivo equivocado por error (ej. el de otra
   // cuenta) y hace falta quitarlo entero para volver a subir el correcto,
-  // sin que se mezclen los movimientos malos con los buenos.
-  async function verHojas() {
-    setModalAbierto('hojas');
-    setCargandoHojas(true);
-    const data = await apiFetch(`/api/trimestres/${trimestreId}/hojas`, undefined, {
+  // sin que se mezclen los movimientos malos con los buenos. Cada excel
+  // subido es su propia importación (no un singleton por banco), así que se
+  // puede borrar una subida suelta sin tocar las demás.
+  async function verImportaciones() {
+    setModalAbierto('importaciones');
+    setCargandoImportaciones(true);
+    const data = await apiFetch('/api/importaciones', undefined, {
       mensajeError: 'No se pudo obtener la lista de excels subidos.',
     });
-    setHojasSubidas((data && data.hojas) || []);
-    setCargandoHojas(false);
+    setImportaciones((data && data.importaciones) || []);
+    setCargandoImportaciones(false);
   }
 
-  async function borrarHojaConfirmada() {
-    const hoja = confirmarBorrarHoja.hoja;
-    setConfirmarBorrarHoja(null);
-    setBorrandoHoja(true);
-    const r = await apiFetch(`/api/trimestres/${trimestreId}/hojas/${hoja}`, { method: 'DELETE' }, {
+  async function borrarImportacionConfirmada() {
+    const importacionId = confirmarBorrarImportacion.id;
+    setConfirmarBorrarImportacion(null);
+    setBorrandoImportacion(true);
+    const r = await apiFetch(`/api/importaciones/${importacionId}`, { method: 'DELETE' }, {
       mensajeError: 'No se pudo borrar.',
     });
-    setBorrandoHoja(false);
+    setBorrandoImportacion(false);
     if (r) {
-      mostrarToast(`Excel de ${hoja} borrado.`, 'ok');
-      await verHojas();
-      await cargar(trimestreId);
+      mostrarToast('Excel borrado.', 'ok');
+      await verImportaciones();
+      await cargar();
+    }
+  }
+
+  // El envío a gestoría reemplaza a "cerrar trimestre": se revisa qué
+  // entraría (todo lo resuelto y sin enviar hasta esa fecha, incluidas
+  // facturas futuras recuperadas tarde de fechas anteriores) antes de
+  // confirmar y descargar.
+  function abrirEnvio() {
+    setModalAbierto('envio');
+    setEnvioHasta(new Date().toISOString().slice(0, 10));
+    setEnvioEtiqueta('');
+    setEnvioPreview(null);
+  }
+
+  useEffect(() => {
+    if (modalAbierto !== 'envio' || !envioHasta) return;
+    let cancelado = false;
+    setCargandoEnvioPreview(true);
+    apiFetch(`/api/envios?hasta=${envioHasta}`, undefined, { mensajeError: 'No se pudo calcular el envío.' })
+      .then(r => { if (!cancelado) setEnvioPreview(r); })
+      .finally(() => { if (!cancelado) setCargandoEnvioPreview(false); });
+    return () => { cancelado = true; };
+  }, [modalAbierto, envioHasta]);
+
+  async function generarEnvio() {
+    setGenerandoEnvio(true);
+    try {
+      const res = await fetch('/api/envios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hasta: envioHasta, etiqueta: envioEtiqueta || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        mostrarToast((data && data.error) || 'No se pudo generar el envío.', 'error');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(envioEtiqueta || `envio-${envioHasta}`).replace(/[^a-z0-9]+/gi, '-')}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      mostrarToast('Descarga lista.', 'ok');
+      setModalAbierto(null);
+      await cargar();
+    } catch {
+      mostrarToast('No se pudo generar el envío.', 'error');
+    } finally {
+      setGenerandoEnvio(false);
     }
   }
 
@@ -279,7 +299,7 @@ export default function Home() {
     }
 
     setLote({ ids, ambiguos, sinEncontrar, total: resultados.length });
-    await cargar(trimestreId);
+    await cargar();
   }
 
   // Cuando el importe no se pudo leer del PDF, se escribe a mano y esto
@@ -306,11 +326,7 @@ export default function Home() {
 
       return { ...prev, ids, ambiguos, sinEncontrar };
     });
-    await cargar(trimestreId);
-  }
-
-  if (!trimestreId) {
-    return <SelectorTrimestre onEntrar={entrarTrimestre} />;
+    await cargar();
   }
 
   const total = resumen?.total ?? 0;
@@ -318,26 +334,18 @@ export default function Home() {
   const facturaFutura = resumen?.facturaFutura ?? 0;
   const ignoradas = resumen?.ignoradas ?? 0;
   // Factura futura no cuenta como "pendiente" urgente: no tiene sentido
-  // reclamarla hasta que se cierre el proyecto (ver /proyectos). Ignorada
-  // tampoco: es deliberadamente "no hay nada que hacer aquí".
+  // reclamarla hasta que se cierre el proyecto (ver pestaña Proyectos).
+  // Ignorada tampoco: es deliberadamente "no hay nada que hacer aquí".
   const pendientesMov = total - resueltas - facturaFutura - ignoradas;
 
-  if (vistaFacturas) {
-    return (
-      <div className="contenedor contenedor-ancho">
-        <div className="fila" style={{ margin: '16px 0 4px' }}>
-          <h1 style={{ margin: 0 }}>Facturas — {trimestreId}</h1>
-          <button type="button" className="secundario" onClick={() => setVistaFacturas(false)}>← Volver a Trimestre</button>
-        </div>
-        <FacturasTrimestre trimestreId={trimestreId} facturas={facturas || []} onCambio={() => cargar(trimestreId)} />
-      </div>
-    );
-  }
-
   return (
-    <div className={pestana === 'trimestre' ? 'contenedor contenedor-ancho' : 'contenedor'}>
+    <div className={pestana === 'movimientos' ? 'contenedor contenedor-ancho' : 'contenedor'}>
       <div className="fila" style={{ margin: '16px 0 8px' }}>
-        <h1 style={{ margin: 0 }}>{trimestreId}</h1>
+        <h1 style={{ margin: 0, fontSize: 18 }}>Punteo</h1>
+        <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
+      </div>
+
+      <div className="fila" style={{ margin: '0 0 8px' }}>
         <a href="#" className="muted" style={{ fontSize: 13 }} onClick={e => { e.preventDefault(); irAPendientes(); }}>
           {pendientesMov} pendiente{pendientesMov === 1 ? '' : 's'}
         </a>
@@ -357,9 +365,8 @@ export default function Home() {
             <p>Subir factura suelta</p>
             <div className="sub">Foto desde el móvil o PDF — se guarda y se empareja sola cuando toque.</div>
             <SubirFactura
-              trimestreId={trimestreId}
               etiqueta="Subir ahora"
-              onResultado={r => { setMensajeFacturaSuelta(r.detalle); cargar(trimestreId); }}
+              onResultado={r => { setMensajeFacturaSuelta(r.detalle); cargar(); }}
             />
           </div>
           {mensajeFacturaSuelta && <p className="muted" style={{ marginTop: -6, marginBottom: 12 }}>{mensajeFacturaSuelta}</p>}
@@ -377,33 +384,50 @@ export default function Home() {
         </>
       )}
 
-      {pestana === 'trimestre' && (
+      {pestana === 'movimientos' && (
         <>
-          <div className="fila" style={{ gap: 8, marginBottom: 14, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
-            <SubirFacturasLote trimestreId={trimestreId} onCompletado={completarLote} />
-            <button type="button" className="secundario" onClick={() => setVistaFacturas(true)}>Ver / borrar facturas</button>
+          <div className="fila" style={{ gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+            <label className="muted" style={{ fontSize: 13 }}>
+              Desde <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={{ marginLeft: 4 }} />
+            </label>
+            <label className="muted" style={{ fontSize: 13 }}>
+              Hasta <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={{ marginLeft: 4 }} />
+            </label>
+            {(desde || hasta) && (
+              <button type="button" className="secundario" onClick={() => { setDesde(''); setHasta(''); }}>Ver todo</button>
+            )}
+          </div>
+
+          <div className="fila" style={{ gap: 8, marginBottom: 6, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+            <span className="muted" style={{ fontSize: 12, width: '100%' }}>Subir</span>
             <button type="button" className="secundario" onClick={() => setModalAbierto('excel')}>Añadir excel</button>
             <button type="button" className="secundario" onClick={() => setModalAbierto('larpmanager')}>Subir LarpManager</button>
+          </div>
+          <div className="fila" style={{ gap: 8, marginBottom: 6, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+            <span className="muted" style={{ fontSize: 12, width: '100%' }}>Revisar</span>
             <button type="button" className="secundario" onClick={verPagosSinEmparejar}>Ver pagos de LarpManager sin emparejar</button>
             <button type="button" className="secundario" onClick={verDevoluciones}>Ver devoluciones</button>
-            <button type="button" className="secundario" onClick={() => setModalAbierto('cierre')}>Cerrar trimestre</button>
+            <button type="button" className="secundario" onClick={verImportaciones}>Ver / borrar excels subidos</button>
+          </div>
+          <div className="fila" style={{ gap: 8, marginBottom: 14, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+            <span className="muted" style={{ fontSize: 12, width: '100%' }}>Cierre</span>
             <button type="button" className="secundario" disabled={recalculando} onClick={recalcularClaves}>
               {recalculando ? 'Recalculando...' : 'Recalcular agrupación'}
             </button>
+            <button type="button" className="secundario" onClick={abrirEnvio}>Generar envío a gestoría</button>
           </div>
 
           {cargando && <p className="muted">Cargando...</p>}
 
           {proveedores && proveedores.length === 0 && (
-            <p className="muted">Todavía no hay movimientos. Sube el excel del trimestre para empezar.</p>
+            <p className="muted">Todavía no hay movimientos. Sube el excel del banco para empezar.</p>
           )}
 
           {proveedores && proveedores.length > 0 && (
             <TablaMovimientos
-              trimestreId={trimestreId}
               proveedores={proveedores}
               proyectos={proyectos}
-              onCambio={() => cargar(trimestreId)}
+              onCambio={cargar}
               filtroLote={lote}
               onQuitarFiltro={() => setLote(null)}
               onResolverImporteManual={resolverImporteManual}
@@ -412,38 +436,21 @@ export default function Home() {
         </>
       )}
 
-      {pestana === 'colaboradores' && (
-        <SeccionLotes trimestreId={trimestreId} />
+      {pestana === 'facturas' && (
+        <>
+          <div className="fila" style={{ marginBottom: 14 }}>
+            <SubirFacturasLote onCompletado={completarLote} />
+          </div>
+          {facturas && <FacturasTrimestre facturas={facturas} onCambio={cargar} />}
+        </>
       )}
 
-      {pestana === 'admin' && (
-        <>
-          <div className="tarjeta">
-            <strong>Proyectos</strong>
-            <p className="muted">Lista de proyectos/eventos, compartida entre trimestres.</p>
-            <a href="/proyectos"><button type="button" className="secundario">Ver proyectos</button></a>
-          </div>
+      {pestana === 'proyectos' && (
+        <GestionProyectos proyectos={proyectos} onCambio={cargar} />
+      )}
 
-          <div className="tarjeta">
-            <NuevoColaborador />
-          </div>
-
-          <div className="tarjeta">
-            <strong>Trimestre</strong>
-            <p className="muted">Estás en {trimestreId}.</p>
-            <button type="button" className="secundario" onClick={cambiarTrimestre}>Cambiar trimestre</button>
-          </div>
-
-          <div className="tarjeta">
-            <strong>Excels subidos</strong>
-            <p className="muted">Para cuando subes el archivo equivocado por error — borra todos los movimientos de ese banco en este trimestre para volver a subir el correcto sin que se mezclen.</p>
-            <button type="button" className="secundario" onClick={verHojas}>Ver / borrar excels subidos</button>
-          </div>
-
-          <div className="tarjeta">
-            <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
-          </div>
-        </>
+      {pestana === 'colaboradores' && (
+        <SeccionLotes />
       )}
 
       <Modal abierto={modalAbierto === 'excel'} titulo="Añadir excel del banco / paypal" onCerrar={() => setModalAbierto(null)}>
@@ -464,7 +471,7 @@ export default function Home() {
       </Modal>
 
       <Modal abierto={modalAbierto === 'larpmanager'} titulo="Subir pagos de LarpManager" onCerrar={() => setModalAbierto(null)}>
-        <p className="muted">Sube el CSV de pagos que exportas de LarpManager — solo se usan las filas por transferencia (Wire); el resto se ignora. Cruza por nombre contra los ingresos sin resolver de este trimestre.</p>
+        <p className="muted">Sube el CSV de pagos que exportas de LarpManager — solo se usan las filas por transferencia (Wire); el resto se ignora. Cruza por nombre contra los ingresos sin resolver.</p>
         <form onSubmit={subirLarpManager}>
           <input type="file" name="file" accept=".csv" />
           <div style={{ height: 12 }} />
@@ -474,7 +481,7 @@ export default function Home() {
       </Modal>
 
       <Modal abierto={modalAbierto === 'larpmanager-pendientes'} titulo="Pagos de LarpManager sin emparejar" onCerrar={() => setModalAbierto(null)}>
-        <p className="muted">Pagos que LarpManager dice que existen (transferencia o añadidos a mano) pero que ninguna línea del banco de este trimestre ha reclamado todavía — puede ser que la transferencia no haya llegado, que el nombre no se reconozca, o que el excel del banco de esa fecha aún no esté subido.</p>
+        <p className="muted">Pagos que LarpManager dice que existen (transferencia o añadidos a mano) pero que ninguna línea del banco ha reclamado todavía — puede ser que la transferencia no haya llegado, que el nombre no se reconozca, o que el excel del banco de esa fecha aún no esté subido.</p>
         {cargandoPagosSinEmparejar && <p className="muted">Cargando...</p>}
         {!cargandoPagosSinEmparejar && pagosSinEmparejar && pagosSinEmparejar.length === 0 && (
           <p className="muted">Ninguno — todos los pagos de LarpManager subidos ya están emparejados.</p>
@@ -503,11 +510,11 @@ export default function Home() {
         )}
       </Modal>
 
-      <Modal abierto={modalAbierto === 'devoluciones'} titulo="Devoluciones de este trimestre" onCerrar={() => setModalAbierto(null)}>
-        <p className="muted">Se incluyen como pestaña propia ("Devoluciones") en el excel final al cerrar el trimestre.</p>
+      <Modal abierto={modalAbierto === 'devoluciones'} titulo="Devoluciones sin enviar" onCerrar={() => setModalAbierto(null)}>
+        <p className="muted">Se incluyen como pestaña propia ("Devoluciones") en el excel del próximo envío a gestoría.</p>
         {cargandoDevoluciones && <p className="muted">Cargando...</p>}
         {!cargandoDevoluciones && devoluciones && devoluciones.length === 0 && (
-          <p className="muted">Ninguna devolución marcada todavía en este trimestre.</p>
+          <p className="muted">Ninguna devolución marcada todavía.</p>
         )}
         {!cargandoDevoluciones && devoluciones && devoluciones.length > 0 && (
           <table style={{ width: '100%', fontSize: 13 }}>
@@ -535,29 +542,34 @@ export default function Home() {
         )}
       </Modal>
 
-      <Modal abierto={modalAbierto === 'hojas'} titulo="Excels subidos en este trimestre" onCerrar={() => setModalAbierto(null)}>
-        {cargandoHojas && <p className="muted">Cargando...</p>}
-        {!cargandoHojas && hojasSubidas && hojasSubidas.length === 0 && (
-          <p className="muted">Todavía no se ha subido ningún excel de banco en este trimestre.</p>
+      <Modal abierto={modalAbierto === 'importaciones'} titulo="Excels subidos" onCerrar={() => setModalAbierto(null)}>
+        <p className="muted">Cada subida es independiente — borrar una no afecta a las demás, aunque sean del mismo banco.</p>
+        {cargandoImportaciones && <p className="muted">Cargando...</p>}
+        {!cargandoImportaciones && importaciones && importaciones.length === 0 && (
+          <p className="muted">Todavía no se ha subido ningún excel de banco.</p>
         )}
-        {!cargandoHojas && hojasSubidas && hojasSubidas.length > 0 && (
+        {!cargandoImportaciones && importaciones && importaciones.length > 0 && (
           <table style={{ width: '100%', fontSize: 13 }}>
             <thead>
               <tr style={{ textAlign: 'left' }}>
                 <th>Banco</th>
+                <th>Archivo</th>
+                <th>Subido</th>
                 <th>Movimientos</th>
                 <th>Resueltos</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {hojasSubidas.map(h => (
-                <tr key={h.hoja}>
-                  <td>{h.hoja}</td>
-                  <td>{h.total}</td>
-                  <td>{h.resueltas}</td>
+              {importaciones.map(imp => (
+                <tr key={imp.id}>
+                  <td>{imp.hoja}</td>
+                  <td className="muted">{imp.nombreArchivo || '—'}</td>
+                  <td className="muted">{imp.creadoEn ? new Date(imp.creadoEn).toLocaleDateString('es-ES') : '—'}</td>
+                  <td>{imp.total}</td>
+                  <td>{imp.resueltas}</td>
                   <td>
-                    <button type="button" className="secundario" disabled={borrandoHoja} onClick={() => setConfirmarBorrarHoja(h)}>
+                    <button type="button" className="secundario" disabled={borrandoImportacion} onClick={() => setConfirmarBorrarImportacion(imp)}>
                       Borrar
                     </button>
                   </td>
@@ -569,31 +581,56 @@ export default function Home() {
       </Modal>
 
       <ConfirmDialog
-        abierto={!!confirmarBorrarHoja}
-        titulo={`¿Borrar el excel de ${confirmarBorrarHoja?.hoja}?`}
+        abierto={!!confirmarBorrarImportacion}
+        titulo={`¿Borrar este excel de ${confirmarBorrarImportacion?.hoja}?`}
         mensaje={
-          confirmarBorrarHoja?.resueltas > 0
-            ? `Se borrarán los ${confirmarBorrarHoja.total} movimientos de ${confirmarBorrarHoja.hoja} de este trimestre — ${confirmarBorrarHoja.resueltas} de ellos ya están resueltos y se perderán sus notas/facturas emparejadas. No se puede deshacer.`
-            : `Se borrarán los ${confirmarBorrarHoja?.total} movimientos de ${confirmarBorrarHoja?.hoja} de este trimestre. No se puede deshacer.`
+          confirmarBorrarImportacion?.resueltas > 0
+            ? `Se borrarán los ${confirmarBorrarImportacion.total} movimientos de esta subida — ${confirmarBorrarImportacion.resueltas} de ellos ya están resueltos y se perderán sus notas/facturas emparejadas. No se puede deshacer.`
+            : `Se borrarán los ${confirmarBorrarImportacion?.total} movimientos de esta subida. No se puede deshacer.`
         }
         textoConfirmar="Borrar"
         peligroso
-        onConfirmar={borrarHojaConfirmada}
-        onCancelar={() => setConfirmarBorrarHoja(null)}
+        onConfirmar={borrarImportacionConfirmada}
+        onCancelar={() => setConfirmarBorrarImportacion(null)}
       />
 
-      <Modal abierto={modalAbierto === 'cierre'} titulo="Cerrar trimestre" onCerrar={() => setModalAbierto(null)}>
-        <p className="muted">Descarga el .zip con las facturas numeradas y el excel final con las notas — hazlo cuando ya esté todo punteado.</p>
-        <button className="grande" onClick={() => { setModalAbierto(null); setConfirmarCierre(true); }}>Cerrar trimestre (descargar .zip)</button>
+      <Modal abierto={modalAbierto === 'envio'} titulo="Generar envío a gestoría" onCerrar={() => setModalAbierto(null)} ancho={520}>
+        <p className="muted">Incluye todo lo resuelto y sin enviar todavía con fecha hasta el día elegido — también lo recuperado tarde de fechas anteriores (ej. una factura futura que llega después).</p>
+        <div className="fila" style={{ gap: 8 }}>
+          <label className="muted" style={{ fontSize: 13 }}>
+            Hasta <input type="date" value={envioHasta} onChange={e => setEnvioHasta(e.target.value)} style={{ marginLeft: 4 }} />
+          </label>
+        </div>
+        <div style={{ height: 8 }} />
+        <input type="text" placeholder="Etiqueta (ej. Enero-Marzo 2026)" value={envioEtiqueta} onChange={e => setEnvioEtiqueta(e.target.value)} />
+        <div style={{ height: 12 }} />
+        {cargandoEnvioPreview && <p className="muted">Calculando...</p>}
+        {!cargandoEnvioPreview && envioPreview && (
+          envioPreview.movimientos === 0 ? (
+            <p className="muted">No hay nada pendiente de enviar hasta esa fecha.</p>
+          ) : (
+            <p className="muted">
+              {envioPreview.movimientos} movimiento(s) · {envioPreview.facturas} factura(s) · {envioPreview.devoluciones} devolución(es) · {envioPreview.importeTotal.toFixed(2)}€
+            </p>
+          )
+        )}
+        <div style={{ height: 8 }} />
+        <button
+          className="grande"
+          disabled={generandoEnvio || !envioPreview || envioPreview.movimientos === 0}
+          onClick={() => setConfirmarEnvio(true)}
+        >
+          {generandoEnvio ? 'Generando...' : 'Generar envío (descargar .zip)'}
+        </button>
       </Modal>
 
       <ConfirmDialog
-        abierto={confirmarCierre}
-        titulo="¿Cerrar el trimestre?"
-        mensaje="Se descarga el .zip con las facturas numeradas y el excel final con las notas."
+        abierto={confirmarEnvio}
+        titulo="¿Generar el envío?"
+        mensaje="Se descarga el .zip con las facturas numeradas y el excel final con las notas. Todo lo incluido queda marcado como ya enviado."
         textoConfirmar="Descargar"
-        onConfirmar={() => { setConfirmarCierre(false); cerrarTrimestre(); }}
-        onCancelar={() => setConfirmarCierre(false)}
+        onConfirmar={() => { setConfirmarEnvio(false); generarEnvio(); }}
+        onCancelar={() => setConfirmarEnvio(false)}
       />
     </div>
   );

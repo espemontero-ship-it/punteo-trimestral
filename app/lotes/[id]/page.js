@@ -25,7 +25,7 @@ export default function LotePage({ params }) {
     setPagos(r.pagos || []);
     setTotales(r.totales);
     if (r.lote) {
-      const rm = await apiFetch(`/api/trimestres/${r.lote.trimestre_id}/movimientos-pendientes`);
+      const rm = await apiFetch(`/api/movimientos-pendientes`);
       setMovimientos((rm && rm.movimientos) || []);
     }
   }, [id]);

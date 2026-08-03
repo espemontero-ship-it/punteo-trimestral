@@ -12,9 +12,9 @@ export default function GestionProyectos({ proyectos, onCambio }) {
   const [facturasFuturas, setFacturasFuturas] = useState(null);
   const [cargandoDevoluciones, setCargandoDevoluciones] = useState(false);
 
-  // Un proyecto puede abarcar varios trimestres -- al cerrarlo hace falta ver
+  // Un proyecto no vive dentro de un trimestre -- al cerrarlo hace falta ver
   // todo lo que quede suelto (devoluciones sin hacer, facturas todavía sin
-  // recuperar) de cualquier trimestre, no solo del actual.
+  // recuperar) de cualquier fecha.
   async function verDevoluciones(proyecto) {
     setProyectoDevoluciones(proyecto);
     setCargandoDevoluciones(true);
@@ -31,9 +31,8 @@ export default function GestionProyectos({ proyectos, onCambio }) {
     if (!devoluciones || devoluciones.length === 0) return;
     const escapar = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const filas = [
-      ['Trimestre', 'Fecha', 'Importe', 'Jugador (LarpManager)', 'Nota'].map(escapar).join(','),
+      ['Fecha', 'Importe', 'Jugador (LarpManager)', 'Nota'].map(escapar).join(','),
       ...devoluciones.map(d => [
-        d.trimestre_id,
         d.fecha ? new Date(d.fecha).toLocaleDateString('es-ES') : '',
         Number(d.importe).toFixed(2),
         d.jugador_larpmanager,
@@ -97,7 +96,7 @@ export default function GestionProyectos({ proyectos, onCambio }) {
         {!cargandoDevoluciones && (
           <>
             <p style={{ fontWeight: 600, marginBottom: 4 }}>Devoluciones</p>
-            <p className="muted" style={{ marginTop: 0 }}>De cualquier trimestre — para el cierre de proyecto.</p>
+            <p className="muted" style={{ marginTop: 0 }}>De cualquier fecha — para el cierre de proyecto.</p>
             {devoluciones && devoluciones.length === 0 && <p className="muted">Ninguna devolución de este proyecto todavía.</p>}
             {devoluciones && devoluciones.length > 0 && (
               <>
@@ -105,7 +104,6 @@ export default function GestionProyectos({ proyectos, onCambio }) {
                 <table style={{ width: '100%', fontSize: 13 }}>
                   <thead>
                     <tr style={{ textAlign: 'left' }}>
-                      <th>Trimestre</th>
                       <th>Fecha</th>
                       <th>Importe</th>
                       <th>Jugador (LarpManager)</th>
@@ -115,7 +113,6 @@ export default function GestionProyectos({ proyectos, onCambio }) {
                   <tbody>
                     {devoluciones.map(d => (
                       <tr key={d.id}>
-                        <td>{d.trimestre_id}</td>
                         <td>{d.fecha ? new Date(d.fecha).toLocaleDateString('es-ES') : '—'}</td>
                         <td>{Number(d.importe).toFixed(2)}€</td>
                         <td>{d.jugador_larpmanager || '—'}</td>
@@ -134,7 +131,6 @@ export default function GestionProyectos({ proyectos, onCambio }) {
               <table style={{ width: '100%', fontSize: 13 }}>
                 <thead>
                   <tr style={{ textAlign: 'left' }}>
-                    <th>Trimestre</th>
                     <th>Fecha</th>
                     <th>Importe</th>
                     <th>Proveedor</th>
@@ -144,7 +140,6 @@ export default function GestionProyectos({ proyectos, onCambio }) {
                 <tbody>
                   {facturasFuturas.map(f => (
                     <tr key={f.id}>
-                      <td>{f.trimestre_id}</td>
                       <td>{f.fecha ? new Date(f.fecha).toLocaleDateString('es-ES') : '—'}</td>
                       <td>{Number(f.importe).toFixed(2)}€</td>
                       <td>{f.proveedor || '—'}</td>

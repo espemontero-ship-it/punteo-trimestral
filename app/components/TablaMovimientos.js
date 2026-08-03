@@ -59,7 +59,7 @@ function nombreGrupoMostrado(g) {
   return conProveedor ? conProveedor.proveedor : nombreGrupo(g.clave);
 }
 
-export default function TablaMovimientos({ trimestreId, proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual }) {
+export default function TablaMovimientos({ proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual }) {
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [ordenPor, setOrdenPor] = useState(null); // { campo, dir } | null (null = agrupado por proveedor)
@@ -221,7 +221,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
 
   async function confirmarNotaGrupo(g, nota) {
     const limpia = (nota ?? '').trim();
-    const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/confirmar-grupo`, {
+    const r = await apiFetch(`/api/proveedores/confirmar-grupo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hoja: g.hoja, clave: g.clave, nota: limpia }),
@@ -233,7 +233,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
     if (nuevoEstado === 'resuelta') {
       // La nota es opcional: se guarda si hay algo escrito, pero no bloquea marcar el grupo como resuelto.
       const nota = (notasGrupo[g.id] ?? '').trim();
-      const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/confirmar-grupo`, {
+      const r = await apiFetch(`/api/proveedores/confirmar-grupo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hoja: g.hoja, clave: g.clave, nota }),
@@ -242,7 +242,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
       return;
     }
     if (nuevoEstado === 'pedida') {
-      const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/pendiente`, {
+      const r = await apiFetch(`/api/proveedores/pendiente`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hoja: g.hoja, clave: g.clave }),
@@ -291,7 +291,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   }
 
   async function guardarProveedorGrupo(g, valor) {
-    const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/proveedor-grupo`, {
+    const r = await apiFetch(`/api/proveedores/proveedor-grupo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hoja: g.hoja, clave: g.clave, proveedor: (valor ?? '').trim() }),
@@ -353,7 +353,7 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
   }
 
   async function asignarProyectoGrupo(g, proyectoId) {
-    const r = await apiFetch(`/api/trimestres/${trimestreId}/proveedores/proyecto-grupo`, {
+    const r = await apiFetch(`/api/proveedores/proyecto-grupo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hoja: g.hoja, clave: g.clave, proyectoId: proyectoId || null }),
@@ -572,7 +572,6 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <Celda key={c} col={c} className={c === 'Subir factura' || c === 'larpmanager' ? '' : 'muted'}>
             {c === 'Subir factura' ? (
               <SubirFactura
-                trimestreId={trimestreId}
                 hoja={g.hoja}
                 clave={g.clave}
                 etiqueta="Subir"
@@ -655,7 +654,6 @@ export default function TablaMovimientos({ trimestreId, proveedores, proyectos, 
           <Celda key={c} col={c}>
             {c === 'Subir factura' && (
               <SubirFactura
-                trimestreId={trimestreId}
                 hoja={g.hoja}
                 clave={g.clave}
                 etiqueta="Subir"

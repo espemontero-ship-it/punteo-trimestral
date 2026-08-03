@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
 
-export default function SubirFactura({ trimestreId, hoja, clave, etiqueta, onResultado, className = 'secundario' }) {
+export default function SubirFactura({ hoja, clave, etiqueta, onResultado, className = 'secundario' }) {
   const inputRef = useRef(null);
   const [archivo, setArchivo] = useState(null);
   const [concepto, setConcepto] = useState('');
@@ -22,7 +22,7 @@ export default function SubirFactura({ trimestreId, hoja, clave, etiqueta, onRes
     setSubiendo(true);
     try {
       const prefijo = hoja && clave ? `${hoja}-${clave}` : 'sueltas';
-      const blob = await uploadPresigned(`${trimestreId}/${prefijo}-${Date.now()}-${archivo.name}`, archivo, {
+      const blob = await uploadPresigned(`facturas/${prefijo}-${Date.now()}-${archivo.name}`, archivo, {
         access: 'private',
         handleUploadUrl: '/api/blob-upload',
       });
@@ -30,7 +30,7 @@ export default function SubirFactura({ trimestreId, hoja, clave, etiqueta, onRes
       const res = await fetch('/api/facturas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trimestreId, hoja, clave, rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha }),
+        body: JSON.stringify({ hoja, clave, rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha }),
       });
       const resultado = await res.json();
       onResultado(resultado);
