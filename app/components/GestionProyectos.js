@@ -86,7 +86,7 @@ export default function GestionProyectos({ proyectos, onCambio }) {
             value={nombre}
             onChange={e => setNombre(e.target.value)}
           />
-          <button type="submit" disabled={creando}>{creando ? 'Creando...' : 'Crear'}</button>
+          <button type="submit" className="secundario" disabled={creando}>{creando ? 'Creando...' : 'Crear'}</button>
         </div>
       </form>
 

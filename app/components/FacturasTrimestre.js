@@ -398,7 +398,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       case 'Vincular':
         if (bloqueada) return <span className="muted">—</span>;
         if (!vinculandoManual.has(f.id)) {
-          return <button type="button" className="quitar-grupo" onClick={() => alternarVinculoManual(f.id)}>vincular a mano</button>;
+          return <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => alternarVinculoManual(f.id)}>vincular a mano</button>;
         }
         return (
           <div>
@@ -518,7 +518,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       )}
       {nombresDuplicados.size > 0 && (
         <div className="fila" style={{ marginBottom: 8 }}>
-          <p className="muted" style={{ color: 'var(--warn)', margin: 0 }}>
+          <p className="muted" style={{ fontWeight: 700, margin: 0 }}>
             ⚠ {nombresDuplicados.size} nombre(s) de archivo repetido(s) — marcados abajo.
           </p>
           <button type="button" className="secundario" disabled={duplicadasSinEmparejar.length === 0} onClick={marcarDuplicadasSinEmparejar}>
