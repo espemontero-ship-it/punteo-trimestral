@@ -10,34 +10,36 @@ const ETIQUETAS = {
   nueva: 'nueva',
 };
 
-const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Ver factura', 'Nota', 'Proyecto'];
-const ANCHO_DEFECTO = { Fecha: 90, Concepto: 280, Banco: 100, Proveedor: 190, Importe: 90, Estado: 150, 'Ver factura': 90, Nota: 190, Proyecto: 130 };
+const COLUMNAS_BASE = ['Grupo', 'Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Factura', 'Nota', 'Proyecto'];
+const ANCHO_DEFECTO = { Grupo: 44, Fecha: 90, Concepto: 280, Banco: 100, Proveedor: 190, Importe: 90, Estado: 150, Factura: 110, Nota: 190, Proyecto: 130 };
 const ANCHO_EXTRA_DEFECTO = 140;
 
 // Celda vive fuera del componente a propósito: si se define dentro (como
 // estaba antes), React la trata como un tipo de componente nuevo en cada
 // render y desmonta/remonta todo lo de dentro -- incluidos los <input>, que
-// pierden el foco en cada tecla. anchoFecha se pasa como prop en vez de leerlo
-// de un cierre porque Celda ya no tiene acceso al estado del componente.
+// pierden el foco en cada tecla. stickyLefts se pasa como prop en vez de
+// leerlo de un cierre porque Celda ya no tiene acceso al estado del componente.
 function claseCeldaTabla(col) {
+  if (col === 'Grupo') return 'col-grupo';
   if (col === 'Fecha') return 'col-fecha';
   if (col === 'Concepto') return 'col-concepto';
   if (col === 'Importe') return 'col-importe';
   return '';
 }
 
-function estiloCeldaTabla(col, cabecera, anchoFecha) {
-  if (col === 'Fecha') return { position: 'sticky', left: 0, zIndex: cabecera ? 4 : 3 };
-  if (col === 'Concepto') return { position: 'sticky', left: anchoFecha, zIndex: cabecera ? 4 : 3 };
+function estiloCeldaTabla(col, cabecera, stickyLefts) {
+  if (stickyLefts && col in stickyLefts) {
+    return { position: 'sticky', left: stickyLefts[col], zIndex: cabecera ? 4 : 3 };
+  }
   return undefined;
 }
 
-function Celda({ col, className = '', cabecera, children, anchoFecha }) {
+function Celda({ col, className = '', cabecera, children, stickyLefts }) {
   return (
     <div
       role={cabecera ? 'columnheader' : 'cell'}
       className={`celda ${claseCeldaTabla(col)} ${className}`.trim()}
-      style={estiloCeldaTabla(col, cabecera, anchoFecha)}
+      style={estiloCeldaTabla(col, cabecera, stickyLefts)}
     >
       {children}
     </div>
@@ -59,12 +61,16 @@ function nombreGrupoMostrado(g) {
   return conProveedor ? conProveedor.proveedor : nombreGrupo(g.clave);
 }
 
-export default function TablaMovimientos({ proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual }) {
+export default function TablaMovimientos({
+  proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual,
+  desde, hasta, onDesdeChange, onHastaChange, onRecalcular, recalculando, pendientes,
+}) {
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [ordenPor, setOrdenPor] = useState(null); // { campo, dir } | null (null = agrupado por proveedor)
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
-  const [columnasExtraVisibles, setColumnasExtraVisibles] = useState(() => new Set(['Subir factura', 'larpmanager']));
+  const [mostrarFechas, setMostrarFechas] = useState(false);
+  const [columnasExtraVisibles, setColumnasExtraVisibles] = useState(() => new Set(['larpmanager']));
   const [notasManual, setNotasManual] = useState({});
   const [proveedoresManual, setProveedoresManual] = useState({});
   const [notasGrupo, setNotasGrupo] = useState({});
@@ -74,6 +80,7 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
   const [guardandoImporte, setGuardandoImporte] = useState(null);
   const [modoDevolucion, setModoDevolucion] = useState(new Set());
   const [jugadorManual, setJugadorManual] = useState({});
+  const [grupoAbiertoPara, setGrupoAbiertoPara] = useState(null); // movimientoId | null -- "+" abierto en esa fila
 
   function anchoDe(col) {
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? ANCHO_EXTRA_DEFECTO;
@@ -102,8 +109,6 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
     window.addEventListener('pointerup', soltar);
   }
 
-  // "Subir factura" es una columna opcional más (mismo mostrar/ocultar que
-  // las de datos_originales), no un dato del excel -- se antepone a mano.
   const columnasExtra = useMemo(() => {
     const nombres = new Set();
     for (const g of proveedores) {
@@ -111,7 +116,7 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
         if (m.datos_originales) Object.keys(m.datos_originales).forEach(k => nombres.add(k));
       }
     }
-    return ['Subir factura', ...[...nombres].sort()];
+    return [...nombres].sort();
   }, [proveedores]);
 
   async function subirFacturaDesdeFila(g, resultado) {
@@ -343,6 +348,27 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
     if (r) onCambio();
   }
 
+  async function unirAGrupo(movimientoId, grupoDestino) {
+    setGrupoAbiertoPara(null);
+    const r = await apiFetch(`/api/movimientos/${movimientoId}/unir`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hoja: grupoDestino.hoja, clave: grupoDestino.clave }),
+    }, { mensajeOk: 'Unido al grupo', mensajeError: 'No se pudo unir al grupo.' });
+    if (r) onCambio();
+  }
+
+  // Grupos reales (>1 línea) por banco, para ofrecer como destino al pulsar
+  // "+" -- solo del mismo banco que la línea que se quiere unir.
+  const gruposPorHoja = useMemo(() => {
+    const mapa = {};
+    for (const g of proveedores) {
+      if (g.total <= 1) continue;
+      (mapa[g.hoja] ||= []).push({ hoja: g.hoja, clave: g.clave, nombre: nombreGrupoMostrado(g) });
+    }
+    return mapa;
+  }, [proveedores]);
+
   async function asignarProyecto(movimientoId, proyectoId) {
     const r = await apiFetch(`/api/movimientos/${movimientoId}/proyecto`, {
       method: 'POST',
@@ -370,11 +396,12 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
   // variable CSS aparte para las columnas fijas, y esos tres sitios podían
   // desincronizarse).
   const plantillaColumnas = columnasTodas.map(c => `${anchoDe(c)}px`).join(' ');
-  // Fecha y Concepto se quedan fijas al hacer scroll horizontal. El left de
-  // Concepto es el ancho actual de Fecha — se pasa como prop a Celda (ver
-  // definición fuera del componente) para que sea la misma fuente de verdad
-  // que la plantilla de arriba.
+  // Grupo, Fecha y Concepto se quedan fijas al hacer scroll horizontal --
+  // cada una necesita su propio left, calculado a partir de los anchos de
+  // las que van antes (misma fuente de verdad que la plantilla de arriba).
+  const anchoGrupo = anchoDe('Grupo');
   const anchoFecha = anchoDe('Fecha');
+  const stickyLefts = { Grupo: 0, Fecha: anchoGrupo, Concepto: anchoGrupo + anchoFecha };
 
   function valorEstadoSelect(m) {
     if (m.estado === 'resuelta') return 'resuelta';
@@ -384,84 +411,15 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
     return 'pendiente';
   }
 
+  // Devolución vive aquí, no en Proveedor: una devolución no tiene proveedor,
+  // el jugador es la referencia que de verdad se manda a gestoría (igual que
+  // la Nota de cualquier otra línea), así que comparten celda.
   function celdaNota(m, g) {
-    const resuelta = m.estado === 'resuelta';
-    if (resuelta) return <span className="nota-texto">{m.nota_final}</span>;
-    const opcionesLote = filtroLote?.ambiguos?.[m.id];
-    if (opcionesLote?.length) {
-      return (
-        <div className="opciones-lote">
-          <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>Varias facturas con este importe:</p>
-          {opcionesLote.map((o, i) => (
-            <button key={i} className="secundario" style={{ display: 'block', marginTop: 4, fontSize: 11, padding: '4px 8px' }} onClick={() => elegirCandidato(o)}>
-              {o.esCombo ? `Combinar con factura ${o.otraFacturaNumero}` : `Es la factura ${o.numero}${o.facturaConcepto ? ` (${o.facturaConcepto})` : ''}`}
-            </button>
-          ))}
-        </div>
-      );
-    }
-    const sugerencia = g.sugerenciaNota;
-    const valorActual = notasManual[m.id] ?? (sugerencia || '');
-    const prellenado = !notasManual[m.id] && !!sugerencia;
-    return (
-      <input
-        className={`campo-nota${prellenado ? ' prellenado' : ''}`}
-        type="text"
-        placeholder=""
-        value={valorActual}
-        onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
-        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNota(m.id, e.target.value); } }}
-      />
-    );
-  }
-
-  function celdaEstado(m) {
-    // Resaltado (mismo estilo que un campo prellenado) cuando el concepto
-    // sugiere que es una devolución -- pero elegirla sigue siendo una
-    // acción manual siempre, esto solo hace más fácil notar el candidato.
-    return (
-      <div className="celda-estado">
-        <select
-          className={`select-estado${m.probable_devolucion ? ' prellenado' : ''}`}
-          value={valorEstadoSelect(m)}
-          onChange={e => cambiarEstado(m, e.target.value)}
-        >
-          <option value="pendiente">pendiente</option>
-          <option value="pedida">pedida</option>
-          <option value="factura_futura">factura futura</option>
-          <option value="ignorar">ignorar</option>
-          <option value="devolucion">devolución</option>
-          <option value="resuelta">resuelta</option>
-        </select>
-      </div>
-    );
-  }
-
-  function celdaFactura(m) {
-    const facturaIds = m.factura_ids || [];
-    if (facturaIds.length === 0) return <span className="vacio">—</span>;
-    return (
-      <a className="link-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">
-        ver factura{facturaIds.length > 1 ? 's' : ''}
-      </a>
-    );
-  }
-
-  // Alternativa a Proveedor -- mutuamente excluyente (marcarDevolucion en
-  // lib/devoluciones.cjs quita el proveedor al confirmar). Es una devolución
-  // ya guardada: texto fijo. En edición: input de jugador, prellenado con la
-  // sugerencia sacada del propio texto del banco (ver sugerirJugador). Se
-  // entra en edición eligiendo "devolución" en el desplegable de Estado (ver
-  // celdaEstado) -- no hay un botón aparte aquí: así siempre está disponible
-  // en cualquier línea, no solo cuando el concepto la sugiere (antes era al
-  // revés y no había forma de marcarla a mano si el texto no traía la
-  // palabra clave).
-  function celdaProveedor(m, g) {
     if (m.es_devolucion) {
       return (
         <>
           <span>Devolución — {m.jugador_larpmanager || <span className="vacio">sin jugador</span>}</span>
-          <button type="button" className="quitar-grupo" onClick={() => alternarModoDevolucion(m)}>editar</button>
+          <button type="button" className="btn-editar-mini" title="Editar devolución" onClick={() => alternarModoDevolucion(m)}>✎</button>
         </>
       );
     }
@@ -487,22 +445,120 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
         </div>
       );
     }
+    const resuelta = m.estado === 'resuelta';
+    if (resuelta) return <span className="nota-texto">{m.nota_final}</span>;
+    const opcionesLote = filtroLote?.ambiguos?.[m.id];
+    if (opcionesLote?.length) {
+      return (
+        <div className="opciones-lote">
+          {opcionesLote.map((o, i) => (
+            <button key={i} type="button" className="chip-sugerencia" style={{ display: 'block', marginTop: 4 }} onClick={() => elegirCandidato(o)}>
+              {o.esCombo ? `Aplicar: combinar con factura ${o.otraFacturaNumero}` : `Aplicar: factura ${o.numero}${o.facturaConcepto ? ` (${o.facturaConcepto})` : ''}`}
+            </button>
+          ))}
+        </div>
+      );
+    }
+    const sugerencia = g.sugerenciaNota;
+    const valorActual = notasManual[m.id] ?? (sugerencia || '');
     return (
-      <>
-        <input
-          className={`campo-proveedor${!proveedoresManual[m.id] && !m.proveedor && m.proveedor_sugerido ? ' prellenado' : ''}`}
-          type="text"
-          placeholder="Proveedor..."
-          value={proveedoresManual[m.id] ?? (m.proveedor || m.proveedor_sugerido || '')}
-          onChange={e => setProveedoresManual(prev => ({ ...prev, [m.id]: e.target.value }))}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedor(m.id, e.target.value); } }}
-        />
-        {g.total > 1 && (
-          <button type="button" className="quitar-grupo" onClick={() => separarDeGrupo(m.id)} title="Sacar esta línea del grupo, que quede aparte">
-            sacar del grupo
+      <input
+        className="campo-nota"
+        type="text"
+        placeholder=""
+        value={valorActual}
+        onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNota(m.id, e.target.value); } }}
+      />
+    );
+  }
+
+  function celdaEstado(m) {
+    // Cuando el concepto sugiere que es una devolución, se avisa como
+    // cualquier otra sugerencia (chip "Aplicar: devolución") en vez de
+    // resaltar el desplegable con una caja de color -- elegirla sigue
+    // siendo siempre una acción manual.
+    return (
+      <div className="celda-estado">
+        <select
+          className="select-estado"
+          value={valorEstadoSelect(m)}
+          onChange={e => cambiarEstado(m, e.target.value)}
+        >
+          <option value="pendiente">pendiente</option>
+          <option value="pedida">pedida</option>
+          <option value="factura_futura">factura futura</option>
+          <option value="ignorar">ignorar</option>
+          <option value="devolucion">devolución</option>
+          <option value="resuelta">resuelta</option>
+        </select>
+        {m.probable_devolucion && (
+          <button type="button" className="chip-sugerencia" onClick={() => cambiarEstado(m, 'devolucion')}>
+            Aplicar: devolución
           </button>
         )}
-      </>
+      </div>
+    );
+  }
+
+  // Unificada: ver si ya hay factura, Subir si no, "—" si es devolución (no
+  // hay factura posible en una devolución).
+  function celdaFactura(m, g) {
+    if (m.es_devolucion) return <span className="vacio">—</span>;
+    const facturaIds = m.factura_ids || [];
+    if (facturaIds.length > 0) {
+      return (
+        <a className="link-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">
+          ver
+        </a>
+      );
+    }
+    return (
+      <SubirFactura
+        hoja={g.hoja}
+        clave={g.clave}
+        etiqueta="Subir"
+        onResultado={r => subirFacturaDesdeFila(g, r)}
+      />
+    );
+  }
+
+  // Proveedor ya no muestra nada de devolución -- una devolución no tiene
+  // proveedor (ver celdaNota, donde vive el jugador). "Sacar del grupo" se
+  // mudó a la columna Grupo (icono "−" siempre visible).
+  function celdaProveedor(m) {
+    return (
+      <input
+        className="campo-proveedor"
+        type="text"
+        placeholder="Proveedor..."
+        value={proveedoresManual[m.id] ?? (m.proveedor || m.proveedor_sugerido || '')}
+        onChange={e => setProveedoresManual(prev => ({ ...prev, [m.id]: e.target.value }))}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedor(m.id, e.target.value); } }}
+      />
+    );
+  }
+
+  // Columna Grupo: "−" siempre visible en filas ya agrupadas (sacar), "+" en
+  // filas sueltas (unir a un grupo existente del mismo banco).
+  function celdaGrupo(m, g) {
+    if (g.total > 1) {
+      return <button type="button" className="btn-quitar" title="Sacar del grupo" onClick={() => separarDeGrupo(m.id)}>−</button>;
+    }
+    const destinos = gruposPorHoja[g.hoja] || [];
+    return (
+      <div className="grupo-wrap">
+        <button type="button" className="btn-unir" title="Unir a un grupo" onClick={() => setGrupoAbiertoPara(prev => (prev === m.id ? null : m.id))}>+</button>
+        {grupoAbiertoPara === m.id && (
+          <div className="panel-grupos">
+            <div className="tit-panel">Unir a un grupo</div>
+            {destinos.length === 0 && <p className="muted" style={{ margin: '4px 8px', fontSize: 12 }}>No hay ningún grupo todavía.</p>}
+            {destinos.map(d => (
+              <button key={d.clave} type="button" onClick={() => unirAGrupo(m.id, d)}>{d.nombre}</button>
+            ))}
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -515,7 +571,7 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
         </select>
         {!m.proyecto_id && m.proyecto_sugerido && (
           <button type="button" className="chip-sugerencia" style={{ display: 'block', marginTop: 4 }} onClick={() => asignarProyecto(m.id, m.proyecto_sugerido.id)}>
-            ¿{m.proyecto_sugerido.nombre}?
+            Aplicar: {m.proyecto_sugerido.nombre}
           </button>
         )}
       </>
@@ -537,17 +593,16 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
       const c = resultado.candidatos[0];
       return (
         <button type="button" className="chip-sugerencia" onClick={() => resolverConLarpManager(m, c)}>
-          ¿{c.nombreReal} — {c.evento}?
+          Aplicar: {c.nombreReal} — {c.evento}
         </button>
       );
     }
     if (resultado?.tipo === 'ambiguo' && resultado.candidatos?.length) {
       return (
         <div className="opciones-lote">
-          <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>Varios pagos de LarpManager coinciden:</p>
           {resultado.candidatos.map((c, i) => (
-            <button key={i} className="secundario" style={{ display: 'block', marginTop: 4, fontSize: 11, padding: '4px 8px' }} onClick={() => resolverConLarpManager(m, c)}>
-              {c.nombreReal} — {c.evento} ({Number(c.importe).toFixed(2)}€)
+            <button key={i} type="button" className="chip-sugerencia" style={{ display: 'block', marginTop: 4 }} onClick={() => resolverConLarpManager(m, c)}>
+              Aplicar: {c.nombreReal} — {c.evento} ({Number(c.importe).toFixed(2)}€)
             </button>
           ))}
         </div>
@@ -559,29 +614,19 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
   function filaMovimiento(m, g, esInicioGrupo) {
     return (
       <div role="row" key={m.id} className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
-        <Celda col="Fecha" className="muted">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
-        <Celda col="Concepto" className="concepto" anchoFecha={anchoFecha}>{m.concepto?.slice(0, 80)}</Celda>
+        <Celda col="Grupo" stickyLefts={stickyLefts}>{celdaGrupo(m, g)}</Celda>
+        <Celda col="Fecha" className="muted" stickyLefts={stickyLefts}>{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
+        <Celda col="Concepto" className="concepto" stickyLefts={stickyLefts}>{m.concepto?.slice(0, 80)}</Celda>
         <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
-        <Celda col="Proveedor" className="proveedor">{celdaProveedor(m, g)}</Celda>
+        <Celda col="Proveedor" className="proveedor">{celdaProveedor(m)}</Celda>
         <Celda col="Importe" className="importe num">{Number(m.importe).toFixed(2)}€</Celda>
         <Celda col="Estado">{celdaEstado(m)}</Celda>
-        <Celda col="Ver factura">{celdaFactura(m)}</Celda>
+        <Celda col="Factura">{celdaFactura(m, g)}</Celda>
         <Celda col="Nota">{celdaNota(m, g)}</Celda>
         <Celda col="Proyecto">{celdaProyecto(m)}</Celda>
         {columnasVisiblesExtra.map(c => (
-          <Celda key={c} col={c} className={c === 'Subir factura' || c === 'larpmanager' ? '' : 'muted'}>
-            {c === 'Subir factura' ? (
-              <SubirFactura
-                hoja={g.hoja}
-                clave={g.clave}
-                etiqueta="Subir"
-                onResultado={r => subirFacturaDesdeFila(g, r)}
-              />
-            ) : c === 'larpmanager' ? (
-              celdaLarpManager(m)
-            ) : (
-              m.datos_originales?.[c] ?? <span className="vacio">—</span>
-            )}
+          <Celda key={c} col={c} className={c === 'larpmanager' ? '' : 'muted'}>
+            {c === 'larpmanager' ? celdaLarpManager(m) : (m.datos_originales?.[c] ?? <span className="vacio">—</span>)}
           </Celda>
         ))}
       </div>
@@ -597,15 +642,16 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
     const sugerenciaProveedorGrupo = g.movimientos.find(m => m.proveedor_sugerido)?.proveedor_sugerido || null;
     return (
       <div role="row" className="fila-tabla fila-grupo" key={`g-${g.id}`} style={{ gridTemplateColumns: plantillaColumnas }}>
-        <Celda col="Fecha" />
-        <Celda col="Concepto" anchoFecha={anchoFecha}>
+        <Celda col="Grupo" stickyLefts={stickyLefts} />
+        <Celda col="Fecha" stickyLefts={stickyLefts} />
+        <Celda col="Concepto" stickyLefts={stickyLefts}>
           <div className="grupo-nombre">{nombreGrupoMostrado(g)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
           <div className="meta">{g.resueltas} de {g.total} resueltas</div>
         </Celda>
         <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
         <Celda col="Proveedor">
           <input
-            className={`campo-proveedor${!proveedoresGrupo[g.id] && sugerenciaProveedorGrupo ? ' prellenado' : ''}`}
+            className="campo-proveedor"
             type="text"
             placeholder=""
             value={proveedoresGrupo[g.id] ?? (sugerenciaProveedorGrupo || '')}
@@ -623,13 +669,13 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
             </select>
           )}
         </Celda>
-        <Celda col="Ver factura" />
+        <Celda col="Factura" />
         <Celda col="Nota">
           {permiteAccionesGrupo && (
             <>
               {g.sugerenciaNota && (
                 <button type="button" className="chip-sugerencia" onClick={() => confirmarNotaGrupo(g, g.sugerenciaNota)}>
-                  ¿Aplicar &quot;{g.sugerenciaNota}&quot; a las {pendientesGrupo}?
+                  Aplicar: &quot;{g.sugerenciaNota}&quot; ({pendientesGrupo} línea{pendientesGrupo === 1 ? '' : 's'})
                 </button>
               )}
               <input
@@ -650,18 +696,7 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
             {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </Celda>
-        {columnasVisiblesExtra.map(c => (
-          <Celda key={c} col={c}>
-            {c === 'Subir factura' && (
-              <SubirFactura
-                hoja={g.hoja}
-                clave={g.clave}
-                etiqueta="Subir"
-                onResultado={r => subirFacturaDesdeFila(g, r)}
-              />
-            )}
-          </Celda>
-        ))}
+        {columnasVisiblesExtra.map(c => <Celda key={c} col={c} />)}
       </div>
     );
   }
@@ -712,16 +747,43 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
       )}
 
       <div className="buscador-fila">
-        <input type="text" placeholder="Buscar en cualquier columna..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+        <div className="grupo-tb">
+          <input type="text" placeholder="Buscar en cualquier columna..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+        </div>
+        <div className="div-v" />
+        <div style={{ position: 'relative' }}>
+          <button type="button" className="secundario" onClick={() => setMostrarFechas(v => !v)}>Fechas</button>
+          {mostrarFechas && (
+            <div className="panel-columnas">
+              <label className="muted" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
+                Desde <input type="date" value={desde} onChange={e => onDesdeChange(e.target.value)} style={{ marginLeft: 4 }} />
+              </label>
+              <label className="muted" style={{ fontSize: 13, display: 'block' }}>
+                Hasta <input type="date" value={hasta} onChange={e => onHastaChange(e.target.value)} style={{ marginLeft: 4 }} />
+              </label>
+              {(desde || hasta) && (
+                <button type="button" className="secundario" style={{ marginTop: 8 }} onClick={() => { onDesdeChange(''); onHastaChange(''); }}>Ver todo</button>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="div-v" />
         <label className="toggle-pendientes">
           <input type="checkbox" checked={soloPendientes} onChange={e => setSoloPendientes(e.target.checked)} />
           Solo pendientes
         </label>
-        <button type="button" className="secundario" disabled={!ordenPor} onClick={() => setOrdenPor(null)}>
-          Agrupar por proveedor
-        </button>
+        <div className="div-v" />
+        <div className="grupo-tb">
+          <button type="button" className="secundario" disabled={!ordenPor} onClick={() => setOrdenPor(null)}>
+            Agrupar proveedores
+          </button>
+          <button type="button" className="secundario" disabled={recalculando} onClick={onRecalcular}>
+            {recalculando ? 'Reagrupando...' : 'Reagrupar proveedores'}
+          </button>
+        </div>
+        <div className="div-v" />
         <div style={{ position: 'relative' }}>
-          <button className="secundario" onClick={() => setMostrarColumnas(v => !v)}>Columnas</button>
+          <button type="button" className="secundario" onClick={() => setMostrarColumnas(v => !v)}>Columnas</button>
           {mostrarColumnas && (
             <div className="panel-columnas">
               {columnasExtra.length === 0 && <p className="muted" style={{ margin: 0 }}>No hay columnas extra en los datos de este trimestre.</p>}
@@ -734,6 +796,7 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
             </div>
           )}
         </div>
+        <span className="pend" style={{ marginLeft: 'auto' }} onClick={() => setSoloPendientes(true)}>{pendientes}</span>
       </div>
 
       {grupos.length === 0 && <p className="muted">Nada que coincida con este filtro.</p>}
@@ -742,7 +805,7 @@ export default function TablaMovimientos({ proveedores, proyectos, onCambio, fil
         <div role="rowgroup">
           <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: plantillaColumnas }}>
             {columnasTodas.map(c => (
-              <Celda key={c} col={c} cabecera anchoFecha={anchoFecha}>
+              <Celda key={c} col={c} cabecera stickyLefts={stickyLefts}>
                 <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
                   {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
                 </span>

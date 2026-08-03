@@ -116,10 +116,6 @@ export default function Home() {
     }
   }
 
-  function irAPendientes() {
-    setPestana('movimientos');
-  }
-
   async function subirExcel(e) {
     e.preventDefault();
     const file = e.target.elements.file.files[0];
@@ -340,23 +336,16 @@ export default function Home() {
 
   return (
     <div className={pestana === 'movimientos' ? 'contenedor contenedor-ancho' : 'contenedor'}>
-      <div className="fila" style={{ margin: '16px 0 8px' }}>
-        <h1 style={{ margin: 0, fontSize: 18 }}>Punteo</h1>
+      <div className="cabecera-app">
+        <h1 className="marca">Punteo</h1>
+        <nav className="tabs-cabecera">
+          {PESTANAS.map(p => (
+            <button key={p.id} className={pestana === p.id ? 'activa' : ''} onClick={() => setPestana(p.id)}>
+              {p.etiqueta}
+            </button>
+          ))}
+        </nav>
         <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
-      </div>
-
-      <div className="fila" style={{ margin: '0 0 8px' }}>
-        <a href="#" className="muted" style={{ fontSize: 13 }} onClick={e => { e.preventDefault(); irAPendientes(); }}>
-          {pendientesMov} pendiente{pendientesMov === 1 ? '' : 's'}
-        </a>
-      </div>
-
-      <div className="tabbar">
-        {PESTANAS.map(p => (
-          <button key={p.id} className={pestana === p.id ? 'activa' : ''} onClick={() => setPestana(p.id)}>
-            {p.etiqueta}
-          </button>
-        ))}
       </div>
 
       {pestana === 'inicio' && (
@@ -386,35 +375,31 @@ export default function Home() {
 
       {pestana === 'movimientos' && (
         <>
-          <div className="fila" style={{ gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-            <label className="muted" style={{ fontSize: 13 }}>
-              Desde <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={{ marginLeft: 4 }} />
-            </label>
-            <label className="muted" style={{ fontSize: 13 }}>
-              Hasta <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={{ marginLeft: 4 }} />
-            </label>
-            {(desde || hasta) && (
-              <button type="button" className="secundario" onClick={() => { setDesde(''); setHasta(''); }}>Ver todo</button>
-            )}
-          </div>
-
-          <div className="fila" style={{ gap: 8, marginBottom: 6, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
-            <span className="muted" style={{ fontSize: 12, width: '100%' }}>Subir</span>
-            <button type="button" className="secundario" onClick={() => setModalAbierto('excel')}>Añadir excel</button>
-            <button type="button" className="secundario" onClick={() => setModalAbierto('larpmanager')}>Subir LarpManager</button>
-          </div>
-          <div className="fila" style={{ gap: 8, marginBottom: 6, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
-            <span className="muted" style={{ fontSize: 12, width: '100%' }}>Revisar</span>
-            <button type="button" className="secundario" onClick={verPagosSinEmparejar}>Ver pagos de LarpManager sin emparejar</button>
-            <button type="button" className="secundario" onClick={verDevoluciones}>Ver devoluciones</button>
-            <button type="button" className="secundario" onClick={verImportaciones}>Ver / borrar excels subidos</button>
-          </div>
-          <div className="fila" style={{ gap: 8, marginBottom: 14, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
-            <span className="muted" style={{ fontSize: 12, width: '100%' }}>Cierre</span>
-            <button type="button" className="secundario" disabled={recalculando} onClick={recalcularClaves}>
-              {recalculando ? 'Recalculando...' : 'Recalcular agrupación'}
-            </button>
-            <button type="button" className="secundario" onClick={abrirEnvio}>Generar envío a gestoría</button>
+          <div className="bloques">
+            <div className="bloque">
+              <div className="btns">
+                <button type="button" className="secundario btn-icono" title="Añadir excel" onClick={() => setModalAbierto('excel')}>
+                  <span className="ico">⬆</span>Excel
+                </button>
+                <button type="button" className="secundario btn-icono" title="Subir LarpManager" onClick={() => setModalAbierto('larpmanager')}>
+                  <span className="ico">⬆</span>LM
+                </button>
+              </div>
+            </div>
+            <div className="div-v" />
+            <div className="bloque">
+              <div className="btns">
+                <button type="button" className="secundario" onClick={verPagosSinEmparejar}>Match LM</button>
+                <button type="button" className="secundario" onClick={verDevoluciones}>Devoluciones</button>
+                <button type="button" className="secundario" onClick={verImportaciones}>Excel</button>
+              </div>
+            </div>
+            <div className="div-v" />
+            <div className="bloque">
+              <div className="btns">
+                <button type="button" className="secundario" onClick={abrirEnvio}>Enviar a gestoría</button>
+              </div>
+            </div>
           </div>
 
           {cargando && <p className="muted">Cargando...</p>}
@@ -431,6 +416,13 @@ export default function Home() {
               filtroLote={lote}
               onQuitarFiltro={() => setLote(null)}
               onResolverImporteManual={resolverImporteManual}
+              desde={desde}
+              hasta={hasta}
+              onDesdeChange={setDesde}
+              onHastaChange={setHasta}
+              onRecalcular={recalcularClaves}
+              recalculando={recalculando}
+              pendientes={`${pendientesMov} pendiente${pendientesMov === 1 ? '' : 's'}`}
             />
           )}
         </>

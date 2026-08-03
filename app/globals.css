@@ -56,6 +56,8 @@ button, input[type="submit"] {
 button.secundario {
   background: transparent;
   color: var(--text);
+  font-size: 13px;
+  padding: 7px 11px;
 }
 
 button.grande {
@@ -187,25 +189,40 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   background: var(--accent); border-color: var(--accent);
 }
 
-/* Pestañas del trimestre (Inicio / Trimestre / Colaboradores) */
-.tabbar {
+/* Cabecera: marca + pestañas + pendientes + sesión, todo en una sola fila */
+.cabecera-app {
   display: flex;
+  align-items: center;
+  gap: 20px;
   border-bottom: 1px solid var(--border);
-  margin: 14px 0 18px;
+  margin: 14px 0 16px;
 }
-.tabbar button {
-  flex: 1;
+.cabecera-app .marca { margin: 0; font-size: 17px; flex-shrink: 0; }
+.cabecera-app .tabs-cabecera { display: flex; gap: 2px; flex: 1; min-width: 0; }
+.cabecera-app .tabs-cabecera button {
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  padding: 11px 6px;
+  padding: 13px 10px;
   cursor: pointer;
   background: transparent;
   border: none;
   color: var(--muted);
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
 }
-.tabbar button.activa { color: var(--accent); border-bottom-color: var(--accent); }
+.cabecera-app .tabs-cabecera button.activa { color: var(--accent); border-bottom-color: var(--accent); }
+.cabecera-app .pendientes-cabecera { font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+.cabecera-app button.secundario { flex-shrink: 0; }
+
+/* Fila de acciones de Movimientos: bloques separados por un divisor vertical --
+   Subir (iconos) / Revisar (botones sueltos) / Enviar a gestoría (solo). */
+.bloques { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; }
+.bloque { display: flex; flex-direction: column; gap: 6px; }
+.bloque .btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.div-v { width: 1px; align-self: stretch; background: var(--border); }
+.btn-icono { display: flex; align-items: center; gap: 6px; }
+.btn-icono .ico { font-size: 15px; line-height: 1; }
 
 /* Tarjeta de acción principal (pestaña Inicio) */
 .cta-principal {
@@ -252,14 +269,18 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .importe-manual button { font-size: 12px; padding: 5px 10px; }
 .opciones-lote { font-size: 12px; }
 
-/* Buscador y filtro de la pestaña Trimestre */
-.buscador-fila { display: flex; gap: 8px; margin-bottom: 10px; }
-.buscador-fila input[type="text"] { flex: 1; }
+/* Barra de la tabla: bloques agrupados con divisor, igual lenguaje que
+   .bloques de la fila de acciones -- nada suelto sin relación visual. */
+.buscador-fila { display: flex; align-items: center; gap: 20px; margin-bottom: 10px; flex-wrap: wrap; }
+.buscador-fila input[type="text"] { width: 240px; }
+.grupo-tb { display: flex; align-items: center; gap: 8px; }
 .toggle-pendientes {
   display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted);
   white-space: nowrap; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; cursor: pointer;
 }
 .toggle-pendientes input { accent-color: var(--accent); }
+/* Texto plano, sin caja -- no es un botón ni una acción, es un dato de estado. */
+.pend { color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; background: none; border: none; }
 
 details.excel-toggle { margin-bottom: 14px; }
 details.excel-toggle > summary { cursor: pointer; font-size: 13px; color: var(--accent); font-weight: 600; list-style: none; }
@@ -306,14 +327,42 @@ input.campo-proveedor {
   font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
   width: 100%; background: var(--surface-alt); color: var(--text);
 }
-.quitar-grupo {
-  font: inherit; font-size: 11px; color: var(--muted); text-decoration: underline;
-  background: none; border: none; padding: 0; margin-top: 3px; cursor: pointer; display: block;
+/* Las celdas editables no parecen casillas de formulario hasta que se
+   interactúa con ellas -- con tantas columnas de inputs/selects, mostrar
+   siempre el recuadro convierte la tabla en un muro de rectángulos. */
+.celda input[type="text"], .celda select {
+  background: transparent; border-color: transparent;
 }
-.quitar-grupo:hover { color: var(--text); }
+.celda input[type="text"]:hover, .celda input[type="text"]:focus,
+.celda select:hover, .celda select:focus {
+  background: var(--surface-alt); border-color: var(--border);
+}
 .celda.importe { font-weight: 600; }
 .celda.col-importe { justify-content: flex-end; text-align: right; }
 .vacio { color: var(--border); }
+
+/* Columna Grupo: herramientas raras de fila (sacar/unir/editar), un único
+   lenguaje -- icono pequeño con borde, gris, sin color ni siquiera en hover
+   (el azul se queda solo para sugerencias). */
+.celda.col-grupo { padding: 9px 6px; justify-content: center; }
+.btn-quitar, .btn-unir, .btn-editar-mini {
+  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+  padding: 0; font-size: 12px; line-height: 1; background: var(--surface-alt);
+  border: 1px solid var(--border); border-radius: 4px; color: var(--muted); cursor: pointer;
+}
+.btn-quitar:hover, .btn-unir:hover, .btn-editar-mini:hover { color: var(--text); border-color: var(--text); }
+.grupo-wrap { position: relative; }
+.panel-grupos {
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 20;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 6px; min-width: 190px; box-shadow: 0 8px 24px rgba(0,0,0,.1);
+}
+.panel-grupos .tit-panel { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 5px 8px 3px; }
+.panel-grupos button {
+  display: block; width: 100%; text-align: left; font-size: 13px; padding: 7px 8px;
+  background: none; border: none; color: var(--text); cursor: pointer; border-radius: 6px;
+}
+.panel-grupos button:hover { background: var(--surface-alt); }
 
 /* Arrastrar el borde derecho de una cabecera para hacer la columna mas
    estrecha o mas ancha (a demanda, no se guarda entre sesiones). La zona de
@@ -324,7 +373,7 @@ input.campo-proveedor {
   content: ''; position: absolute; top: 4px; bottom: 4px; right: 3px; width: 2px;
   background: var(--border); border-radius: 2px;
 }
-.resize-handle:hover::after, .resize-handle:active::after { background: var(--accent); }
+.resize-handle:hover::after, .resize-handle:active::after { background: var(--text); }
 
 /* Fecha y Concepto se quedan fijas al hacer scroll horizontal (position y left
    se calculan en JS, en linea, junto a la plantilla de anchos de arriba). */
@@ -338,32 +387,33 @@ input.campo-proveedor {
   background: var(--surface-alt); border-bottom: 1px solid var(--border);
   white-space: normal; align-items: flex-start;
 }
-/* Un grupo de 1 sola línea no tiene cabecera propia — para que no se
-   confunda con el grupo real de arriba, su única fila lleva el mismo gris
-   que la cabecera de un grupo real, en vez de una simple línea separadora. */
-.inicio-grupo .celda { background: var(--surface-alt); }
 .fila-grupo .grupo-nombre { font-weight: 700; }
 .fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .fila-grupo select.select-estado, .fila-grupo input.campo-nota { width: 100%; }
 .fila-grupo .chip-sugerencia { display: block; margin-bottom: 4px; }
 
-/* Nota: campo único, guarda con Enter, se prellena en azul si hay sugerencia */
+/* Nota: campo único, guarda con Enter. Un valor sugerido pero no confirmado
+   no lleva ninguna caja/color especial -- ya se lee en el propio texto, no
+   hace falta un tratamiento aparte (antes tenía un fondo azul confuso). */
 input.campo-nota {
   font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
   width: 100%; background: var(--surface-alt); color: var(--text);
 }
-input.campo-nota.prellenado, input.campo-proveedor.prellenado { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
 .nota-texto { font-size: 13px; }
 
 /* Estado: siempre un desplegable editable (pendiente/pedida/resuelta); si hay
    factura emparejada, un enlace subrayado normal debajo, sin flecha ni color nuevo */
 .celda-estado { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 select.select-estado { font-size: 13px; padding: 5px 8px; border-radius: 6px; width: auto; }
-select.select-estado.prellenado { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
-.link-factura { color: var(--accent); font-size: 12px; text-decoration: underline; }
+/* Enlace real: subrayado, color de texto normal -- el azul se queda
+   reservado solo para sugerencias del sistema y la pestaña activa. */
+.link-factura { color: var(--text); font-size: 12px; text-decoration: underline; }
 
 select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; width: auto; min-width: 90px; }
+/* Sugerencia del sistema: texto de acento en negrita, sin caja, sin
+   subrayar -- siempre "Aplicar: X", nunca en formato pregunta. */
 .chip-sugerencia {
-  font: inherit; font-size: 12px; color: var(--accent); background: var(--accent-soft);
-  border: none; border-radius: 99px; padding: 3px 9px; cursor: pointer; white-space: nowrap;
+  font: inherit; font-size: 12px; color: var(--accent); font-weight: 600;
+  background: none; border: none; padding: 2px 0; cursor: pointer; white-space: nowrap; text-decoration: none;
 }
+.chip-sugerencia:hover { text-decoration: underline; }
