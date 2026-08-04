@@ -14,6 +14,25 @@ Ver [[feedback-validate-before-coding]] en memoria — esta regla ya se incumpli
 
 **2026-07-28 — subir cambios sin pedir permiso cada vez.** Una vez un cambio está verificado (build limpio, y probado en local cuando es posible), se hace commit y push directamente, sin esperar a que la usuaria escriba "commit y push" cada vez. Motivo explícito: "cuantos menos oks te dé mejor, porque hay veces que no puedo hacerte caso" — minimizar cuántas veces necesita responder, no solo por comodidad. Esto **no** afecta a la regla de arriba (mostrar antes de implementar cambios de diseño/estructura/navegación) — sigue exactamente igual, esa validación es sobre qué se construye, esta es sobre cuándo se publica algo ya construido y verificado.
 
+## Guía de diseño (fija, no negociable)
+
+Acordada explícitamente durante el rediseño de Movimientos (2026-08-03) y aplicada de verdad en `app/globals.css` — este documento existe para que no se pierda ni se reinvente cada vez (ya pasó una vez: vivía solo en un archivo de plan de Claude Code que se sobreescribió sin querer al empezar el siguiente plan; a partir de ahora vive aquí, que no se sobreescribe).
+
+- **Solo el azul de acento (`--accent`) está permitido como color en toda la aplicación.** Ningún otro color (verde, rojo, ámbar...) se usa en ningún sitio nuevo — tampoco en hovers de acciones destructivas, eso se resuelve con negrita o subrayado, nunca con color. (Excepción histórica ya conocida y deliberadamente no tocada: `.etiqueta.fija/.mixta/.nueva` en partes de la app no rediseñadas todavía — no es una plantilla a copiar en trabajo nuevo.)
+- **El azul solo aparece en tres sitios, ninguno más:** la sugerencia del sistema (siempre en formato "Aplicar: X", nunca pregunta, sin caja, `.chip-sugerencia`), la pestaña activa de la cabecera, y el relleno del botón CTA principal de Inicio ("Subir ahora"). Ningún otro botón, tirador, hover ni icono lleva azul — se resuelve con un gris más oscuro (`var(--text)`).
+- **Un enlace real** (abre algo, ej. ver una factura): subrayado, color de texto normal (`var(--text)`) — nunca azul.
+- **Un botón:** borde + fondo transparente casi siempre (clase `.secundario`, un único tamaño en toda la app — 13px, padding 7-11px); relleno de acento solo en el CTA de Inicio. No se crean tamaños de botón nuevos ni se deja ningún `<button>` sin clase (el `<button>` sin clase por defecto es azul relleno de 16px, reservado solo para ese único CTA).
+- **Campos y botones pequeños dentro de una tabla:** 12-12.5px, sin excepciones sueltas por estilo en línea.
+- **Espaciado:** escala fija 4/8/12/16/24px para huecos y márgenes entre bloques/filas. El padding interno de botones y campos es aparte, fijo por cada uno de los tamaños de arriba.
+- **Sombra:** solo en tarjetas sueltas, nunca en una tabla.
+- **Fondo de fila de una tabla:** solo cambia si hay un grupo real (más de una línea), nunca por decoración.
+- **Toda lista de datos con columnas es una tabla de verdad**, con el mismo motor ya usado en Movimientos y Facturas (CSS Grid: `.tabla-movimientos-envoltura`/`.fila-tabla-cabecera`/`.fila-tabla`/`.celda`, cabecera con `resize-handle`) — nunca tarjetas apiladas ni filas sueltas en flexbox para una lista de registros.
+- **Cada columna es un único tipo de dato — no se mezclan conceptos distintos en la misma celda.** Si dos cosas son de naturaleza diferente (ej. "qué tipo de pago es" y "la nota de referencia", o "el estado" y "el motivo de rechazo"), van en columnas separadas, no una dentro de otra a base de texto secundario o saltos de línea.
+- **Acciones raras de fila** (poco frecuentes, ej. sacar del grupo, unir a un grupo): icono pequeño con borde, 20x20px, sin color ni siquiera en hover (`.btn-quitar`/`.btn-unir`/`.btn-editar-mini`).
+- **Acciones normales/frecuentes de fila** (vincular a mano, etc.): botones `.secundario` reales. Excepción confirmada: el Estado de una factura (revisar/aceptada/rechazada/cerrada/borrada) SÍ es un desplegable, no botones — pero nunca se guarda solo: elegir "rechazada" pide motivo, "cerrada" pide fecha, "borrada" pasa por `ConfirmDialog`, todo antes de persistir. El desplegable siempre refleja el último valor guardado, nunca un estado local sin confirmar (mismo patrón que "adelanto colaborador" en `TablaMovimientos.js`).
+- **Confirmaciones de algo destructivo:** siempre `ConfirmDialog`, nunca `confirm()` nativo del navegador.
+- **Formularios de "crear/añadir algo nuevo"** (colaborador, proyecto, lote, pago...): siempre visibles, nunca colapsados detrás de un `<details>` (el navegador dibuja su propio triángulo nativo si no se oculta explícitamente, y en esta app ese triángulo no existe en ningún sitio) — mismo tamaño de campos, mismo botón `.secundario` de envío, misma disposición en todos.
+
 ## Qué es y para quién
 
 Aplicación para una asociación sin ánimo de lucro (carpeta de Drive: "NOT ONLY LARP" — administración). Cada trimestre hay que mandar a la gestoría el punteo del banco contra las facturas de gastos, para que preparen IVA, IRPF e IS.

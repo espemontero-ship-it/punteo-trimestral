@@ -1,5 +1,6 @@
 const { obtenerSesion } = require('../../../../../lib/auth.cjs');
 const { obtenerLote, listarFacturasDeLote, calcularTotales } = require('../../../../../lib/lotes.cjs');
+const { listarPagosDeLote } = require('../../../../../lib/pagos.cjs');
 
 export async function GET(request, { params }) {
   const sesion = await obtenerSesion(request);
@@ -11,6 +12,10 @@ export async function GET(request, { params }) {
     return Response.json({ error: 'No encontrado' }, { status: 404 });
   }
 
-  const [facturas, totales] = await Promise.all([listarFacturasDeLote(id), calcularTotales(id)]);
-  return Response.json({ lote, facturas, totales });
+  const [facturas, pagos, totales] = await Promise.all([
+    listarFacturasDeLote(id),
+    listarPagosDeLote(id),
+    calcularTotales(id),
+  ]);
+  return Response.json({ lote, facturas, pagos, totales });
 }

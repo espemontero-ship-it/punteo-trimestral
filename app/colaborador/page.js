@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import SubirFacturaLote from '../components/SubirFacturaLote';
+import TablaCuentas from '../components/TablaCuentas';
 
 export default function ColaboradorPage() {
   const [nombre, setNombre] = useState('');
@@ -10,6 +11,7 @@ export default function ColaboradorPage() {
   const [loteId, setLoteId] = useState(null);
   const [lote, setLote] = useState(null);
   const [facturas, setFacturas] = useState([]);
+  const [pagos, setPagos] = useState([]);
   const [totales, setTotales] = useState(null);
   const router = useRouter();
 
@@ -27,6 +29,7 @@ export default function ColaboradorPage() {
     const r = await fetch(`/api/colaborador/lotes/${loteId}`).then(res => res.json());
     setLote(r.lote);
     setFacturas(r.facturas || []);
+    setPagos(r.pagos || []);
     setTotales(r.totales);
   }, [loteId]);
 
@@ -63,7 +66,7 @@ export default function ColaboradorPage() {
   }
 
   return (
-    <div className="contenedor">
+    <div className="contenedor contenedor-ancho">
       <div className="fila" style={{ marginTop: 16 }}>
         <div>
           <h1 style={{ margin: 0 }}>{lote?.evento}</h1>
@@ -75,34 +78,9 @@ export default function ColaboradorPage() {
         </div>
       </div>
 
-      {totales && (
-        <div className="tarjeta">
-          <div className="fila"><span>Total subido hasta ahora</span><strong>{totales.totalSubido.toFixed(2)}€</strong></div>
-        </div>
-      )}
-
       <SubirFacturaLote loteId={loteId} onSubida={cargarLote} />
 
-      <div className="tarjeta">
-        <strong>Tus facturas</strong>
-        {facturas.length === 0 && <p className="muted">Todavía no has subido ninguna.</p>}
-        {facturas.map(f => (
-          <div key={f.id} className="tarjeta" style={{ background: 'rgba(255,255,255,0.03)' }}>
-            <div className="fila">
-              <div>
-                <div>{f.concepto || '(sin concepto)'}</div>
-                <div className="muted">
-                  {Number(f.importe_declarado || 0).toFixed(2)}€ · #{f.numero}
-                  {f.fechas?.[0] ? ` · ${new Date(f.fechas[0]).toLocaleDateString('es-ES')}` : ''}
-                </div>
-              </div>
-              {f.estado_revision && f.estado_revision !== 'subida' && (
-                <span className={`etiqueta ${f.estado_revision === 'aceptada' ? 'fija' : 'nueva'}`}>{f.estado_revision}</span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+      <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />
     </div>
   );
 }

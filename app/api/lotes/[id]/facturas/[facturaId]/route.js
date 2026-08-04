@@ -2,13 +2,21 @@ const { actualizarFactura, eliminarFactura } = require('../../../../../../lib/lo
 
 export async function PATCH(request, { params }) {
   const { facturaId } = await params;
-  const { concepto, importe, fecha, estadoRevision, motivoRechazo } = await request.json();
-  await actualizarFactura(facturaId, { concepto, importe, fecha, estadoRevision, motivoRechazo });
-  return Response.json({ ok: true });
+  const { concepto, importe, fecha, estadoRevision, motivoRechazo, fechaCierre } = await request.json();
+  try {
+    await actualizarFactura(facturaId, { concepto, importe, fecha, estadoRevision, motivoRechazo, fechaCierre });
+    return Response.json({ ok: true });
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: err.status || 500 });
+  }
 }
 
 export async function DELETE(request, { params }) {
   const { facturaId } = await params;
-  await eliminarFactura(facturaId);
-  return Response.json({ ok: true });
+  try {
+    await eliminarFactura(facturaId);
+    return Response.json({ ok: true });
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: err.status || 500 });
+  }
 }

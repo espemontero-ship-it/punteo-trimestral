@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS colaboradores (
   nombre TEXT NOT NULL,
   usuario TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
+  estado TEXT NOT NULL DEFAULT 'activo', -- activo | inactivo
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -64,8 +65,9 @@ CREATE TABLE IF NOT EXISTS facturas (
   lote_id BIGINT REFERENCES lotes(id) ON DELETE CASCADE,
   concepto TEXT,
   importe_declarado NUMERIC(12,2),        -- importe que cuenta para los totales del lote
-  estado_revision TEXT,                   -- subida | aceptada | rechazada
-  motivo_rechazo TEXT
+  estado_revision TEXT,                   -- subida | aceptada | rechazada | cerrada | borrada
+  motivo_rechazo TEXT,
+  fecha_cierre DATE                       -- fecha en la que se marcó 'cerrada' (liquidada, ya no editable)
 );
 
 -- Lista fija de proyectos/eventos (ej. "Wield 2"), creada una vez y reutilizada

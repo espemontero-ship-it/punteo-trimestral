@@ -1,4 +1,4 @@
-const { crearLote, listarTodosLosLotes } = require('../../../lib/lotes.cjs');
+const { crearColaboradorYLote, listarTodosLosLotes } = require('../../../lib/lotes.cjs');
 
 export async function GET() {
   const lotes = await listarTodosLosLotes();
@@ -6,11 +6,16 @@ export async function GET() {
 }
 
 export async function POST(request) {
-  const { trimestreId, colaboradorId, evento } = await request.json();
-  if (!trimestreId || !colaboradorId || !evento) {
-    return Response.json({ error: 'Faltan trimestreId, colaboradorId y evento.' }, { status: 400 });
+  const { nombre, usuario, proyecto } = await request.json();
+  if (!nombre || !usuario || !proyecto) {
+    return Response.json({ error: 'Faltan nombre, correo y proyecto.' }, { status: 400 });
   }
 
-  const loteId = await crearLote(trimestreId, colaboradorId, evento);
-  return Response.json({ ok: true, loteId });
+  try {
+    const { colaborador, loteId, password } = await crearColaboradorYLote(nombre, usuario, proyecto);
+    return Response.json({ ok: true, colaborador, loteId, password });
+  } catch (err) {
+    if (err.code === '23505') return Response.json({ error: 'Ya existe un colaborador con ese correo.' }, { status: 409 });
+    throw err;
+  }
 }

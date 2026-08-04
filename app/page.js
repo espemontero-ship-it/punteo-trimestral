@@ -6,7 +6,7 @@ import SubirFactura from './components/SubirFactura';
 import SubirFacturasLote from './components/SubirFacturasLote';
 import FacturasTrimestre from './components/FacturasTrimestre';
 import GestionProyectos from './components/GestionProyectos';
-import SeccionLotes from './components/SeccionLotes';
+import TablaColaboradores from './components/TablaColaboradores';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Modal } from './components/Modal';
 import { apiFetch, mostrarToast } from './lib/toast';
@@ -335,7 +335,7 @@ export default function Home() {
   const pendientesMov = total - resueltas - facturaFutura - ignoradas;
 
   return (
-    <div className={pestana === 'movimientos' ? 'contenedor contenedor-ancho' : 'contenedor'}>
+    <div className={(pestana === 'movimientos' || pestana === 'colaboradores') ? 'contenedor contenedor-ancho' : 'contenedor'}>
       <div className="cabecera-app">
         <h1 className="marca">Punteo</h1>
         <nav className="tabs-cabecera">
@@ -442,7 +442,7 @@ export default function Home() {
       )}
 
       {pestana === 'colaboradores' && (
-        <SeccionLotes />
+        <TablaColaboradores />
       )}
 
       <Modal abierto={modalAbierto === 'excel'} titulo="Añadir excel del banco / paypal" onCerrar={() => setModalAbierto(null)}>
