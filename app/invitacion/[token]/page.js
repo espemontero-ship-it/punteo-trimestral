@@ -63,7 +63,12 @@ export default function InvitacionPage({ params }) {
     <div className="contenedor" style={{ paddingTop: '20vh' }}>
       <div className="tarjeta">
         <h1 style={{ marginTop: 0 }}>Hola, {invitacion.nombre}</h1>
-        <p className="muted">Te han invitado a subir facturas de <strong>{invitacion.proyecto}</strong>. Elige tu contraseña:</p>
+        <p className="muted">
+          {invitacion.proyecto
+            ? <>Te han invitado a subir facturas de <strong>{invitacion.proyecto}</strong>.</>
+            : 'Te han invitado a subir facturas de NotOnlyLarp.'}
+          {' '}Elige tu contraseña:
+        </p>
         <form onSubmit={onSubmit}>
           <input
             type="password"

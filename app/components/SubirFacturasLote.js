@@ -6,7 +6,7 @@ import { uploadPresigned } from '@vercel/blob/client';
 // Sube varios archivos de golpe, uno a uno (misma lógica de siempre por
 // archivo, sin cambios de backend), y al terminar entrega la lista completa
 // de resultados para que la pantalla que la use decida qué mostrar.
-export default function SubirFacturasLote({ onCompletado }) {
+export default function SubirFacturasLote({ onCompletado, endpoint = '/api/facturas' }) {
   const inputRef = useRef(null);
   const [progreso, setProgreso] = useState(null); // { actual, total, nombre } | null
 
@@ -24,7 +24,7 @@ export default function SubirFacturasLote({ onCompletado }) {
           access: 'private',
           handleUploadUrl: '/api/blob-upload',
         });
-        const res = await fetch('/api/facturas', {
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rutaBlob: blob.url, nombreOriginal: file.name }),

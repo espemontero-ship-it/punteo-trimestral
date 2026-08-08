@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS colaboradores (
   password_hash TEXT NOT NULL,
   estado TEXT NOT NULL DEFAULT 'activo', -- activo | inactivo
   puede_invitar BOOLEAN NOT NULL DEFAULT false, -- puede invitar a más gente a su mismo proyecto
+  puede_subir_facturas_generales BOOLEAN NOT NULL DEFAULT false, -- facturas de NOL, sin proyecto
   rol TEXT NOT NULL DEFAULT 'colaborador', -- colaborador | admin
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -35,7 +36,8 @@ CREATE TABLE IF NOT EXISTS tokens_acceso (
   colaborador_id BIGINT REFERENCES colaboradores(id) ON DELETE CASCADE,
   nombre TEXT,
   usuario TEXT,
-  proyecto TEXT,
+  proyecto TEXT, -- NULL si es una invitación sin proyecto (solo facturas generales de NOL)
+  puede_subir_facturas_generales BOOLEAN NOT NULL DEFAULT false,
   invitado_por BIGINT REFERENCES colaboradores(id),
   expira_en TIMESTAMPTZ NOT NULL,
   usado_en TIMESTAMPTZ,

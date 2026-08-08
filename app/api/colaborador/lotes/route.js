@@ -10,5 +10,9 @@ export async function GET(request) {
     listarLotesPorColaborador(sesion.colaboradorId),
     obtenerColaborador(sesion.colaboradorId),
   ]);
-  return Response.json({ lotes, nombre: sesion.nombre, puedeInvitar: !!colaborador?.puede_invitar });
+  return Response.json({
+    lotes, nombre: sesion.nombre,
+    puedeInvitar: !!colaborador?.puede_invitar,
+    puedeSubirFacturasGenerales: !!colaborador?.puede_subir_facturas_generales,
+  });
 }

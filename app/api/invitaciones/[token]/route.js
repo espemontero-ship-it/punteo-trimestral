@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
   const { token } = await params;
   const invitacion = await verTokenPendiente(token, 'invitacion');
   if (!invitacion) return Response.json({ error: 'Este enlace no es válido o ya ha caducado.' }, { status: 404 });
-  return Response.json({ nombre: invitacion.nombre, proyecto: invitacion.proyecto });
+  return Response.json({ nombre: invitacion.nombre, proyecto: invitacion.proyecto, puedeSubirFacturasGenerales: invitacion.puede_subir_facturas_generales });
 }
 
 export async function POST(request, { params }) {
@@ -25,7 +25,9 @@ export async function POST(request, { params }) {
   const hash = await bcrypt.hash(password, 10);
   let colaborador, loteId;
   try {
-    ({ colaborador, loteId } = await crearColaboradorDesdeInvitacion(invitacion.nombre, invitacion.usuario, hash, invitacion.proyecto));
+    ({ colaborador, loteId } = await crearColaboradorDesdeInvitacion(
+      invitacion.nombre, invitacion.usuario, hash, invitacion.proyecto, invitacion.puede_subir_facturas_generales
+    ));
   } catch (err) {
     if (err.code === '23505') return Response.json({ error: 'Ya existe una cuenta con ese correo.' }, { status: 409 });
     throw err;

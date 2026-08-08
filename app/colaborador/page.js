@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import SubirFacturaLote from '../components/SubirFacturaLote';
+import SubirFacturasLote from '../components/SubirFacturasLote';
 import TablaCuentas from '../components/TablaCuentas';
 
 export default function ColaboradorPage() {
@@ -14,6 +15,7 @@ export default function ColaboradorPage() {
   const [pagos, setPagos] = useState([]);
   const [totales, setTotales] = useState(null);
   const [puedeInvitar, setPuedeInvitar] = useState(false);
+  const [puedeSubirFacturasGenerales, setPuedeSubirFacturasGenerales] = useState(false);
   const router = useRouter();
 
   const cargarLotes = useCallback(async () => {
@@ -21,6 +23,7 @@ export default function ColaboradorPage() {
     setNombre(r.nombre || '');
     setLotes(r.lotes || []);
     setPuedeInvitar(!!r.puedeInvitar);
+    setPuedeSubirFacturasGenerales(!!r.puedeSubirFacturasGenerales);
     if ((r.lotes || []).length === 1) setLoteId(r.lotes[0].id);
   }, []);
 
@@ -53,7 +56,7 @@ export default function ColaboradorPage() {
             <h1 style={{ margin: 0 }}>Hola, {nombre}</h1>
             <button className="secundario" onClick={salir}>Salir</button>
           </div>
-          {lotes.length === 0 && <p className="muted">Todavía no tienes ningún lote asignado.</p>}
+          {lotes.length === 0 && !puedeSubirFacturasGenerales && <p className="muted">Todavía no tienes ningún lote asignado.</p>}
           {lotes.map(l => (
             <div key={l.id} className="tarjeta fila" style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.03)' }} onClick={() => setLoteId(l.id)}>
               <div>
@@ -63,6 +66,7 @@ export default function ColaboradorPage() {
             </div>
           ))}
         </div>
+        {puedeSubirFacturasGenerales && <SubirFacturasGenerales />}
       </div>
     );
   }
@@ -96,8 +100,33 @@ export default function ColaboradorPage() {
       <SubirFacturaLote loteId={loteId} onSubida={cargarLote} />
 
       {puedeInvitar && <InvitarColaborador proyecto={lote?.evento} />}
+      {puedeSubirFacturasGenerales && <SubirFacturasGenerales />}
 
       <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />
+    </div>
+  );
+}
+
+function SubirFacturasGenerales() {
+  const [resumen, setResumen] = useState(null);
+
+  function onCompletado(resultados) {
+    const errores = resultados.filter(r => r.resultado?.tipo === 'error').length;
+    setResumen({ total: resultados.length, errores });
+  }
+
+  return (
+    <div className="tarjeta">
+      <strong>Subir facturas de NOL</strong>
+      <p className="muted" style={{ marginTop: 6 }}>Gastos de la propia asociación, no de un proyecto concreto.</p>
+      <div style={{ marginTop: 8 }}>
+        <SubirFacturasLote endpoint="/api/colaborador/facturas-generales" onCompletado={onCompletado} />
+      </div>
+      {resumen && (
+        <p className="muted" style={{ marginTop: 8 }}>
+          {resumen.total - resumen.errores} factura(s) subida(s){resumen.errores > 0 ? `, ${resumen.errores} con error` : ''}.
+        </p>
+      )}
     </div>
   );
 }
