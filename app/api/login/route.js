@@ -12,8 +12,8 @@ export async function POST(request) {
     if (!colaborador) {
       return Response.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 });
     }
-    payload = { rol: 'colaborador', colaboradorId: colaborador.id, nombre: colaborador.nombre };
-    redirect = '/colaborador';
+    payload = { rol: colaborador.rol, colaboradorId: colaborador.id, nombre: colaborador.nombre };
+    redirect = colaborador.rol === 'admin' ? '/' : '/colaborador';
   } else {
     if (!verificarPassword(password)) {
       return Response.json({ error: 'Contraseña incorrecta' }, { status: 401 });

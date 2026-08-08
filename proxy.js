@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 const { leerSesion, SESSION_COOKIE } = require('./lib/auth.cjs');
 
-const PUBLICAS = ['/login', '/api/login', '/api/logout'];
+const PUBLICAS = [
+  '/login', '/api/login', '/api/logout',
+  '/recuperar', '/api/recuperar',
+  '/restablecer', '/api/restablecer',
+  '/invitacion', '/api/invitaciones',
+];
 // Rutas que cualquier sesión válida (admin o colaborador) puede usar.
 const COMPARTIDAS = ['/api/blob-upload'];
 const PREFIJOS_COLABORADOR = ['/colaborador', '/api/colaborador'];

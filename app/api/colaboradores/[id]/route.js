@@ -1,10 +1,11 @@
-const { actualizarEstadoColaborador } = require('../../../../lib/colaboradores.cjs');
+const { actualizarEstadoColaborador, actualizarPermisoInvitar } = require('../../../../lib/colaboradores.cjs');
 
 export async function PATCH(request, { params }) {
   const { id } = await params;
-  const { estado } = await request.json();
+  const { estado, puedeInvitar } = await request.json();
   try {
-    await actualizarEstadoColaborador(id, estado);
+    if (estado !== undefined) await actualizarEstadoColaborador(id, estado);
+    if (puedeInvitar !== undefined) await actualizarPermisoInvitar(id, puedeInvitar);
     return Response.json({ ok: true });
   } catch (err) {
     return Response.json({ error: err.message }, { status: err.status || 500 });

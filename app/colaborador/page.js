@@ -13,12 +13,14 @@ export default function ColaboradorPage() {
   const [facturas, setFacturas] = useState([]);
   const [pagos, setPagos] = useState([]);
   const [totales, setTotales] = useState(null);
+  const [puedeInvitar, setPuedeInvitar] = useState(false);
   const router = useRouter();
 
   const cargarLotes = useCallback(async () => {
     const r = await fetch('/api/colaborador/lotes').then(res => res.json());
     setNombre(r.nombre || '');
     setLotes(r.lotes || []);
+    setPuedeInvitar(!!r.puedeInvitar);
     if ((r.lotes || []).length === 1) setLoteId(r.lotes[0].id);
   }, []);
 
@@ -78,9 +80,76 @@ export default function ColaboradorPage() {
         </div>
       </div>
 
+      <div className="tarjeta">
+        <strong>Datos para pedir la factura</strong>
+        <p className="muted" style={{ marginTop: 6, marginBottom: 0 }}>
+          NotOnlyLarp<br />
+          G87705794<br />
+          Josué Lillo 10, 1º B<br />
+          28053 Madrid
+        </p>
+        <p className="muted" style={{ marginTop: 10, marginBottom: 0 }}>
+          Sin factura a estos datos no podemos hacer el pago, por razones legales.
+        </p>
+      </div>
+
       <SubirFacturaLote loteId={loteId} onSubida={cargarLote} />
 
+      {puedeInvitar && <InvitarColaborador proyecto={lote?.evento} />}
+
       <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />
+    </div>
+  );
+}
+
+function InvitarColaborador({ proyecto }) {
+  const [nombre, setNombre] = useState('');
+  const [usuario, setUsuario] = useState('');
+  const [resultado, setResultado] = useState(null);
+  const [error, setError] = useState(null);
+  const [enviando, setEnviando] = useState(false);
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    if (!nombre || !usuario || !proyecto) return;
+    setEnviando(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/colaborador/invitaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, usuario, proyecto }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || 'No se pudo invitar.');
+        return;
+      }
+      setResultado(data.enlace);
+      setNombre('');
+      setUsuario('');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div className="tarjeta">
+      <strong>Invitar a alguien a {proyecto}</strong>
+      <p className="muted" style={{ marginTop: 6 }}>Le llega un correo para que elija su propia contraseña.</p>
+      <form onSubmit={onSubmit}>
+        <input type="text" placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} />
+        <div style={{ height: 8 }} />
+        <input type="text" placeholder="Correo" value={usuario} onChange={e => setUsuario(e.target.value)} />
+        <div style={{ height: 8 }} />
+        <button type="submit" className="secundario" disabled={enviando}>{enviando ? 'Invitando...' : 'Invitar'}</button>
+        {error && <p className="error">{error}</p>}
+      </form>
+      {resultado && (
+        <p className="muted" style={{ marginTop: 8 }}>
+          Invitación enviada. Si el correo aún no está configurado, este es el enlace: <a href={resultado}>{resultado}</a>
+        </p>
+      )}
     </div>
   );
 }

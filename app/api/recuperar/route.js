@@ -1,0 +1,18 @@
+const { query } = require('../../../lib/db.cjs');
+const { crearRestablecimiento } = require('../../../lib/tokens.cjs');
+const { enviarRecuperacion } = require('../../../lib/email.cjs');
+
+// Siempre responde igual, exista o no la cuenta -- para no filtrar qué
+// correos están registrados.
+export async function POST(request) {
+  const { usuario } = await request.json();
+  if (usuario) {
+    const { rows } = await query(`SELECT id FROM colaboradores WHERE usuario = $1`, [usuario]);
+    if (rows[0]) {
+      const token = await crearRestablecimiento(rows[0].id);
+      const enlace = `${process.env.SITE_URL || ''}/restablecer/${token}`;
+      await enviarRecuperacion(usuario, { enlace });
+    }
+  }
+  return Response.json({ ok: true, mensaje: 'Si ese correo tiene una cuenta, te ha llegado un enlace para elegir una contraseña nueva.' });
+}

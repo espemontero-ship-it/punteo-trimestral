@@ -47,6 +47,15 @@ export default function TablaColaboradores() {
     if (r) cargar();
   }
 
+  async function cambiarPuedeInvitar(colaboradorId, puedeInvitar) {
+    const r = await apiFetch(`/api/colaboradores/${colaboradorId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ puedeInvitar }),
+    }, { mensajeError: 'No se pudo actualizar el permiso.' });
+    if (r) cargar();
+  }
+
   return (
     <div className="tarjeta">
       <strong>Colaboradores</strong>
@@ -54,15 +63,16 @@ export default function TablaColaboradores() {
 
       <div className="tabla-movimientos-envoltura" role="table" style={{ marginTop: 8 }}>
         <div role="rowgroup">
-          <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: '1fr 1fr 130px 90px' }}>
+          <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: '1fr 1fr 130px 90px 110px' }}>
             <div role="columnheader" className="celda">Nombre</div>
             <div role="columnheader" className="celda">Correo</div>
             <div role="columnheader" className="celda">Proyecto</div>
             <div role="columnheader" className="celda">Estado</div>
+            <div role="columnheader" className="celda">Puede invitar</div>
           </div>
         </div>
         <div role="rowgroup">
-          <form role="row" className="fila-tabla" style={{ gridTemplateColumns: '1fr 1fr 130px 90px' }} onSubmit={crear}>
+          <form role="row" className="fila-tabla" style={{ gridTemplateColumns: '1fr 1fr 130px 90px 110px' }} onSubmit={crear}>
             <div role="cell" className="celda">
               <input className="campo-proveedor" type="text" placeholder="Nombre" value={nuevaFila.nombre}
                 onChange={e => setNuevaFila({ ...nuevaFila, nombre: e.target.value })} />
@@ -81,10 +91,11 @@ export default function TablaColaboradores() {
             <div role="cell" className="celda">
               <button type="submit" className="secundario">Añadir</button>
             </div>
+            <div role="cell" className="celda"></div>
           </form>
 
           {filas.map(l => (
-            <div key={l.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: '1fr 1fr 130px 90px' }}>
+            <div key={l.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: '1fr 1fr 130px 90px 110px' }}>
               <div role="cell" className="celda"><a href={`/lotes/${l.id}`} style={{ color: 'inherit' }}>{l.colaborador_nombre}</a></div>
               <div role="cell" className="celda muted">{l.colaborador_usuario}</div>
               <div role="cell" className="celda">{l.evento}</div>
@@ -92,6 +103,12 @@ export default function TablaColaboradores() {
                 <select className="select-estado" value={l.colaborador_estado} onChange={e => cambiarEstado(l.colaborador_id, e.target.value)}>
                   <option value="activo">activo</option>
                   <option value="inactivo">inactivo</option>
+                </select>
+              </div>
+              <div role="cell" className="celda">
+                <select className="select-estado" value={l.colaborador_puede_invitar ? 'si' : 'no'} onChange={e => cambiarPuedeInvitar(l.colaborador_id, e.target.value === 'si')}>
+                  <option value="no">no</option>
+                  <option value="si">sí</option>
                 </select>
               </div>
             </div>

@@ -21,6 +21,24 @@ CREATE TABLE IF NOT EXISTS colaboradores (
   usuario TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   estado TEXT NOT NULL DEFAULT 'activo', -- activo | inactivo
+  puede_invitar BOOLEAN NOT NULL DEFAULT false, -- puede invitar a más gente a su mismo proyecto
+  rol TEXT NOT NULL DEFAULT 'colaborador', -- colaborador | admin
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Invitaciones (alta sin contraseña dictada a mano) y recuperación de
+-- contraseña, ambas por enlace de un solo uso mandado por correo.
+CREATE TABLE IF NOT EXISTS tokens_acceso (
+  id BIGSERIAL PRIMARY KEY,
+  tipo TEXT NOT NULL,                 -- 'invitacion' | 'restablecimiento'
+  token_hash TEXT NOT NULL UNIQUE,
+  colaborador_id BIGINT REFERENCES colaboradores(id) ON DELETE CASCADE,
+  nombre TEXT,
+  usuario TEXT,
+  proyecto TEXT,
+  invitado_por BIGINT REFERENCES colaboradores(id),
+  expira_en TIMESTAMPTZ NOT NULL,
+  usado_en TIMESTAMPTZ,
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -166,4 +184,5 @@ CREATE INDEX IF NOT EXISTS idx_facturas_lote ON facturas(lote_id);
 CREATE INDEX IF NOT EXISTS idx_lotes_colaborador ON lotes(colaborador_id);
 CREATE INDEX IF NOT EXISTS idx_lotes_trimestre ON lotes(trimestre_id);
 CREATE INDEX IF NOT EXISTS idx_pagos_lote ON pagos(lote_id);
+CREATE INDEX IF NOT EXISTS idx_tokens_acceso_hash ON tokens_acceso(token_hash);
 CREATE UNIQUE INDEX IF NOT EXISTS larpmanager_pagos_natural_key ON larpmanager_pagos(nombre_real, evento, importe, fecha);

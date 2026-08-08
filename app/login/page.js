@@ -60,6 +60,9 @@ export default function LoginPage() {
           <p className="muted" style={{ marginTop: 12 }}>
             Si eres administradora, deja el usuario en blanco y pon solo la contraseña.
           </p>
+          <p className="muted" style={{ marginTop: 6 }}>
+            <a href="/recuperar">¿Olvidaste tu contraseña?</a>
+          </p>
         </form>
       </div>
     </div>
