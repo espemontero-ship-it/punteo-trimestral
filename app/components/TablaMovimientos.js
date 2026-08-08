@@ -613,7 +613,7 @@ export default function TablaMovimientos({
 
   function filaMovimiento(m, g, esInicioGrupo) {
     return (
-      <div role="row" key={m.id} className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
+      <div role="row" key={m.id} className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}${g.total > 1 ? ' miembro-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
         <Celda col="Grupo" stickyLefts={stickyLefts}>{celdaGrupo(m, g)}</Celda>
         <Celda col="Fecha" className="muted" stickyLefts={stickyLefts}>{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
         <Celda col="Concepto" className="concepto" stickyLefts={stickyLefts}>{m.concepto?.slice(0, 80)}</Celda>

@@ -388,6 +388,7 @@ input.campo-proveedor {
   background: var(--surface-alt); border-bottom: 1px solid var(--border);
   white-space: normal; align-items: flex-start;
 }
+.miembro-grupo .celda { background: var(--surface-alt); }
 .fila-grupo .grupo-nombre { font-weight: 700; }
 .fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .fila-grupo select.select-estado, .fila-grupo input.campo-nota { width: 100%; }
