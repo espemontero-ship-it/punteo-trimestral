@@ -343,6 +343,13 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
   padding: 9px 12px; display: flex; align-items: center; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; border-bottom: 1px solid var(--border); background: var(--bg);
 }
+/* Único tamaño para todo lo que va dentro de una celda de tabla -- texto,
+   inputs, selects, botones, enlaces -- nunca font-size suelto en línea por
+   componente (Guía de diseño en PROYECTO.md: "12-12.5px, sin excepciones
+   sueltas"). La cabecera ya tiene el suyo aparte y gana por especificidad. */
+.celda, .celda input, .celda select, .celda button, .celda a, .celda .muted {
+  font-size: 12.5px;
+}
 .fila-tabla-cabecera .celda {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
   color: var(--muted); font-weight: 700; border-bottom: 2px solid var(--border);

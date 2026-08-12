@@ -94,7 +94,7 @@ export default function GestionProyectos({ proyectos, onCambio }) {
         </div>
       </form>
 
-      <Modal abierto={!!proyectoDevoluciones} titulo={`${proyectoDevoluciones?.nombre || ''} — pendientes de cierre`} onCerrar={() => setProyectoDevoluciones(null)}>
+      <Modal abierto={!!proyectoDevoluciones} titulo={`${proyectoDevoluciones?.nombre || ''} — pendientes de cierre`} onCerrar={() => setProyectoDevoluciones(null)} ancho={1000}>
         {cargandoDevoluciones && <p className="muted">Cargando...</p>}
 
         {!cargandoDevoluciones && (

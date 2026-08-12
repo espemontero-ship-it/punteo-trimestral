@@ -2,6 +2,7 @@
 
 import { useState, useMemo, Fragment } from 'react';
 import { apiFetch, mostrarToast } from '../lib/toast';
+import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 import SubirFactura from './SubirFactura';
 
 const ETIQUETAS = {
@@ -75,7 +76,7 @@ export default function TablaMovimientos({
   const [proveedoresManual, setProveedoresManual] = useState({});
   const [notasGrupo, setNotasGrupo] = useState({});
   const [proveedoresGrupo, setProveedoresGrupo] = useState({});
-  const [anchos, setAnchos] = useState({});
+  const [anchos, setAnchos] = useAnchosPersistidos('punteo-anchos-movimientos');
   const [importesManual, setImportesManual] = useState({});
   const [guardandoImporte, setGuardandoImporte] = useState(null);
   const [modoDevolucion, setModoDevolucion] = useState(new Set());

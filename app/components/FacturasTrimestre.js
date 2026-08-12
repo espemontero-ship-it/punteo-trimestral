@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { apiFetch, mostrarToast } from '../lib/toast';
+import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 
 const ETIQUETAS_TIPO = {
   match_directo: 'Emparejada',
@@ -20,7 +21,7 @@ const ETIQUETAS_TIPO = {
 // estructuralmente imposible que se desalineen, y cada columna tiene su
 // propio sitio fijo — nada se mete a compartir celda con otra cosa.
 const COLUMNAS = ['Fecha', 'Concepto', 'Importe', 'Nombre', 'Subida', 'Subido por', 'Vincular', 'Motivo', 'Movimiento'];
-const ANCHO_DEFECTO = { Fecha: 130, Concepto: 180, Importe: 90, Nombre: 220, Subida: 120, 'Subido por': 130, Vincular: 210, Motivo: 220, Movimiento: 240 };
+const ANCHO_DEFECTO = { Fecha: 115, Concepto: 150, Importe: 70, Nombre: 190, Subida: 100, 'Subido por': 90, Vincular: 120, Motivo: 175, Movimiento: 190 };
 const ANCHO_CHECKBOX = 30;
 
 function montoCaracteristico(f) {
@@ -65,7 +66,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [movimientoElegido, setMovimientoElegido] = useState({});
   const [vinculando, setVinculando] = useState(new Set());
   const [soloPendientes, setSoloPendientes] = useState(true);
-  const [anchos, setAnchos] = useState({});
+  const [anchos, setAnchos] = useAnchosPersistidos('punteo-anchos-facturas');
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
 
