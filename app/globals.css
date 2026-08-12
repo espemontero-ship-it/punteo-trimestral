@@ -389,6 +389,13 @@ input.campo-proveedor {
   white-space: normal; align-items: flex-start;
 }
 .miembro-grupo .celda { background: var(--surface-alt); }
+
+/* Facturas en móvil: tarjeta apilada en vez de la cuadrícula ancha -- misma
+   info, sin scroll lateral. Reutiliza .tarjeta/.muted, cero color nuevo. */
+.lista-facturas-movil { display: flex; flex-direction: column; gap: 10px; }
+.tarjeta-factura-movil { margin-bottom: 0; }
+.campo-factura-movil { padding: 6px 0; border-top: 1px solid var(--border); }
+.campo-factura-movil-etiqueta { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
 .fila-grupo .grupo-nombre { font-weight: 700; }
 .fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .fila-grupo select.select-estado, .fila-grupo input.campo-nota { width: 100%; }
