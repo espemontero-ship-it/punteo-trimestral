@@ -27,6 +27,16 @@ CREATE TABLE IF NOT EXISTS colaboradores (
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Lista fija de proyectos/eventos (ej. "Wield 2"), creada una vez y reutilizada
+-- entre trimestres. Un movimiento puede etiquetarse con uno, inferido por texto
+-- o asignado a mano. Se define aquí (antes de tokens_acceso/lotes) porque
+-- ambas la referencian.
+CREATE TABLE IF NOT EXISTS proyectos (
+  id BIGSERIAL PRIMARY KEY,
+  nombre TEXT NOT NULL UNIQUE,
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Invitaciones (alta sin contraseña dictada a mano) y recuperación de
 -- contraseña, ambas por enlace de un solo uso mandado por correo.
 CREATE TABLE IF NOT EXISTS tokens_acceso (
@@ -36,7 +46,8 @@ CREATE TABLE IF NOT EXISTS tokens_acceso (
   colaborador_id BIGINT REFERENCES colaboradores(id) ON DELETE CASCADE,
   nombre TEXT,
   usuario TEXT,
-  proyecto TEXT, -- NULL si es una invitación sin proyecto (solo facturas generales de NOL)
+  proyecto TEXT, -- histórico, ya no se escribe -- ver proyecto_id
+  proyecto_id BIGINT REFERENCES proyectos(id), -- NULL si es una invitación sin proyecto (solo facturas generales de NOL)
   puede_subir_facturas_generales BOOLEAN NOT NULL DEFAULT false,
   invitado_por BIGINT REFERENCES colaboradores(id),
   expira_en TIMESTAMPTZ NOT NULL,
@@ -44,12 +55,13 @@ CREATE TABLE IF NOT EXISTS tokens_acceso (
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Un lote = las facturas de un colaborador para un evento concreto, dentro de un trimestre.
+-- Un lote = las facturas de un colaborador para un proyecto concreto, dentro de un trimestre.
 CREATE TABLE IF NOT EXISTS lotes (
   id BIGSERIAL PRIMARY KEY,
   trimestre_id TEXT NOT NULL REFERENCES trimestres(id) ON DELETE CASCADE,
   colaborador_id BIGINT NOT NULL REFERENCES colaboradores(id) ON DELETE CASCADE,
-  evento TEXT NOT NULL,
+  evento TEXT NOT NULL, -- histórico, ya no se escribe -- ver proyecto_id
+  proyecto_id BIGINT NOT NULL REFERENCES proyectos(id),
   estado TEXT NOT NULL DEFAULT 'abierto', -- abierto | cerrado
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -89,15 +101,6 @@ CREATE TABLE IF NOT EXISTS facturas (
   estado_revision TEXT,                   -- subida | aceptada | rechazada | cerrada | borrada
   motivo_rechazo TEXT,
   fecha_cierre DATE                       -- fecha en la que se marcó 'cerrada' (liquidada, ya no editable)
-);
-
--- Lista fija de proyectos/eventos (ej. "Wield 2"), creada una vez y reutilizada
--- entre trimestres. Un movimiento puede etiquetarse con uno, inferido por texto
--- o asignado a mano.
-CREATE TABLE IF NOT EXISTS proyectos (
-  id BIGSERIAL PRIMARY KEY,
-  nombre TEXT NOT NULL UNIQUE,
-  creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Cada excel subido es su propia importación (no un singleton por banco) --

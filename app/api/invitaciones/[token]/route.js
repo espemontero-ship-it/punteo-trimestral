@@ -26,7 +26,7 @@ export async function POST(request, { params }) {
   let colaborador, loteId;
   try {
     ({ colaborador, loteId } = await crearColaboradorDesdeInvitacion(
-      invitacion.nombre, invitacion.usuario, hash, invitacion.proyecto, invitacion.puede_subir_facturas_generales
+      invitacion.nombre, invitacion.usuario, hash, invitacion.proyecto_id, invitacion.puede_subir_facturas_generales
     ));
   } catch (err) {
     if (err.code === '23505') return Response.json({ error: 'Ya existe una cuenta con ese correo.' }, { status: 409 });

@@ -10,7 +10,7 @@ import { apiFetch } from '../lib/toast';
 export default function TablaColaboradores() {
   const [filas, setFilas] = useState([]);
   const [proyectos, setProyectos] = useState([]);
-  const [nuevaFila, setNuevaFila] = useState({ nombre: '', usuario: '', proyecto: '' });
+  const [nuevaFila, setNuevaFila] = useState({ nombre: '', usuario: '', proyectoId: '' });
   const [passwordGenerada, setPasswordGenerada] = useState(null);
 
   const cargar = useCallback(async () => {
@@ -26,7 +26,7 @@ export default function TablaColaboradores() {
 
   async function crear(e) {
     e.preventDefault();
-    if (!nuevaFila.nombre || !nuevaFila.usuario || !nuevaFila.proyecto) return;
+    if (!nuevaFila.nombre || !nuevaFila.usuario || !nuevaFila.proyectoId) return;
     const r = await apiFetch('/api/lotes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -34,7 +34,7 @@ export default function TablaColaboradores() {
     }, { mensajeError: 'No se pudo guardar.' });
     if (!r) return;
     setPasswordGenerada(r.password ? { usuario: r.colaborador.usuario, password: r.password } : null);
-    setNuevaFila({ nombre: '', usuario: '', proyecto: '' });
+    setNuevaFila({ nombre: '', usuario: '', proyectoId: '' });
     cargar();
   }
 
@@ -93,10 +93,10 @@ export default function TablaColaboradores() {
                 onChange={e => setNuevaFila({ ...nuevaFila, usuario: e.target.value })} />
             </div>
             <div role="cell" className="celda">
-              <select className="select-proyecto" style={{ width: '100%' }} value={nuevaFila.proyecto}
-                onChange={e => setNuevaFila({ ...nuevaFila, proyecto: e.target.value })}>
+              <select className="select-proyecto" style={{ width: '100%' }} value={nuevaFila.proyectoId}
+                onChange={e => setNuevaFila({ ...nuevaFila, proyectoId: e.target.value })}>
                 <option value="">Elige proyecto...</option>
-                {proyectos.map(p => <option key={p.id} value={p.nombre}>{p.nombre}</option>)}
+                {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
             </div>
             <div role="cell" className="celda">

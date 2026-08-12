@@ -10,20 +10,24 @@ export default function GestionProyectos({ proyectos, onCambio }) {
   const [proyectoDevoluciones, setProyectoDevoluciones] = useState(null); // proyecto | null
   const [devoluciones, setDevoluciones] = useState(null);
   const [facturasFuturas, setFacturasFuturas] = useState(null);
+  const [facturasLote, setFacturasLote] = useState(null);
   const [cargandoDevoluciones, setCargandoDevoluciones] = useState(false);
 
   // Un proyecto no vive dentro de un trimestre -- al cerrarlo hace falta ver
   // todo lo que quede suelto (devoluciones sin hacer, facturas todavía sin
-  // recuperar) de cualquier fecha.
+  // recuperar, facturas de colaboradores del proyecto sin cerrar) de
+  // cualquier fecha.
   async function verDevoluciones(proyecto) {
     setProyectoDevoluciones(proyecto);
     setCargandoDevoluciones(true);
-    const [r, rf] = await Promise.all([
+    const [r, rf, rl] = await Promise.all([
       apiFetch(`/api/proyectos/${proyecto.id}/devoluciones`, undefined, { mensajeError: 'No se pudo obtener la lista de devoluciones.' }),
       apiFetch(`/api/proyectos/${proyecto.id}/facturas-futuras`, undefined, { mensajeError: 'No se pudo obtener la lista de facturas futuras.' }),
+      apiFetch(`/api/proyectos/${proyecto.id}/facturas-lote`, undefined, { mensajeError: 'No se pudo obtener la lista de facturas de colaboradores.' }),
     ]);
     setDevoluciones((r && r.devoluciones) || []);
     setFacturasFuturas((rf && rf.facturas) || []);
+    setFacturasLote((rl && rl.facturas) || []);
     setCargandoDevoluciones(false);
   }
 
@@ -144,6 +148,32 @@ export default function GestionProyectos({ proyectos, onCambio }) {
                       <td>{Number(f.importe).toFixed(2)}€</td>
                       <td>{f.proveedor || '—'}</td>
                       <td className="muted">{f.concepto?.slice(0, 60) || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            <p style={{ fontWeight: 600, marginTop: 20, marginBottom: 4 }}>Facturas de colaboradores pendientes</p>
+            <p className="muted" style={{ marginTop: 0 }}>De cualquier lote de este proyecto, todavía sin revisar o revisadas pero sin cerrar.</p>
+            {facturasLote && facturasLote.length === 0 && <p className="muted">Ninguna factura de colaborador pendiente de este proyecto.</p>}
+            {facturasLote && facturasLote.length > 0 && (
+              <table style={{ width: '100%', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ textAlign: 'left' }}>
+                    <th>Colaborador</th>
+                    <th>Concepto</th>
+                    <th>Importe</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {facturasLote.map(f => (
+                    <tr key={f.id}>
+                      <td>{f.colaborador_nombre}</td>
+                      <td className="muted">{f.concepto?.slice(0, 60) || '—'}</td>
+                      <td>{f.importe_declarado != null ? `${Number(f.importe_declarado).toFixed(2)}€` : '—'}</td>
+                      <td>{f.estado_revision === 'aceptada' ? 'Aceptada' : 'Sin revisar'}</td>
                     </tr>
                   ))}
                 </tbody>

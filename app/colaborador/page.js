@@ -99,7 +99,7 @@ export default function ColaboradorPage() {
 
       <SubirFacturaLote loteId={loteId} onSubida={cargarLote} />
 
-      {puedeInvitar && <InvitarColaborador proyecto={lote?.evento} />}
+      {puedeInvitar && <InvitarColaborador proyectoNombre={lote?.evento} proyectoId={lote?.proyecto_id} />}
       {puedeSubirFacturasGenerales && <SubirFacturasGenerales />}
 
       <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />
@@ -131,7 +131,7 @@ function SubirFacturasGenerales() {
   );
 }
 
-function InvitarColaborador({ proyecto }) {
+function InvitarColaborador({ proyectoNombre, proyectoId }) {
   const [nombre, setNombre] = useState('');
   const [usuario, setUsuario] = useState('');
   const [resultado, setResultado] = useState(null);
@@ -140,14 +140,14 @@ function InvitarColaborador({ proyecto }) {
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (!nombre || !usuario || !proyecto) return;
+    if (!nombre || !usuario || !proyectoId) return;
     setEnviando(true);
     setError(null);
     try {
       const res = await fetch('/api/colaborador/invitaciones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, usuario, proyecto }),
+        body: JSON.stringify({ nombre, usuario, proyectoId }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -164,7 +164,7 @@ function InvitarColaborador({ proyecto }) {
 
   return (
     <div className="tarjeta">
-      <strong>Invitar a alguien a {proyecto}</strong>
+      <strong>Invitar a alguien a {proyectoNombre}</strong>
       <p className="muted" style={{ marginTop: 6 }}>Le llega un correo para que elija su propia contraseña.</p>
       <form onSubmit={onSubmit}>
         <input type="text" placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} />

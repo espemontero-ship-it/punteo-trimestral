@@ -13,19 +13,20 @@ export async function POST(request) {
     return Response.json({ error: 'No tienes permiso para invitar.' }, { status: 403 });
   }
 
-  const { nombre, usuario, proyecto } = await request.json();
-  if (!nombre || !usuario || !proyecto) {
+  const { nombre, usuario, proyectoId } = await request.json();
+  if (!nombre || !usuario || !proyectoId) {
     return Response.json({ error: 'Faltan nombre, correo y proyecto.' }, { status: 400 });
   }
 
   const misLotes = await listarLotesPorColaborador(sesion.colaboradorId);
-  if (!misLotes.some(l => l.evento === proyecto)) {
+  const lote = misLotes.find(l => String(l.proyecto_id) === String(proyectoId));
+  if (!lote) {
     return Response.json({ error: 'Solo puedes invitar a tu propio proyecto.' }, { status: 403 });
   }
 
-  const token = await crearInvitacion({ nombre, usuario, proyecto, invitadoPor: sesion.colaboradorId });
+  const token = await crearInvitacion({ nombre, usuario, proyectoId, invitadoPor: sesion.colaboradorId });
   const enlace = `${process.env.SITE_URL || ''}/invitacion/${token}`;
-  await enviarInvitacion(usuario, { nombre, proyecto, enlace });
+  await enviarInvitacion(usuario, { nombre, proyecto: lote.evento, enlace });
 
   return Response.json({ ok: true, enlace });
 }
