@@ -2,16 +2,22 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '../lib/toast';
+import { Modal } from './Modal';
 
 // Una fila por colaborador+proyecto (= un lote), así que quien está en dos
-// proyectos aparece dos veces. Alta y asignación de proyecto viven en la misma
-// fila siempre visible: escribir el mismo nombre/correo con otro proyecto
-// añade un lote nuevo sin duplicar a la persona ni pedir contraseña otra vez.
+// proyectos aparece dos veces. El alta vive en un modal aparte (botón "+
+// Añadir colaborador"): proyecto y "sube facturas de NOL" son campos
+// independientes, nunca una elección excluyente -- un colaborador de
+// proyecto puede además subir facturas que paga NOL directamente. Si la
+// persona ya existe (mismo correo), se le añade el lote/permiso sin pedirle
+// otra contraseña; si no existe, recibe una invitación por correo.
 export default function TablaColaboradores() {
   const [filas, setFilas] = useState([]);
   const [proyectos, setProyectos] = useState([]);
-  const [nuevaFila, setNuevaFila] = useState({ nombre: '', usuario: '', proyectoId: '' });
-  const [passwordGenerada, setPasswordGenerada] = useState(null);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [nuevo, setNuevo] = useState({ nombre: '', usuario: '', proyectoId: '', puedeSubirFacturasGenerales: false });
+  const [enviando, setEnviando] = useState(false);
+  const [resultado, setResultado] = useState(null);
 
   const cargar = useCallback(async () => {
     const [rl, rp] = await Promise.all([
@@ -24,18 +30,32 @@ export default function TablaColaboradores() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  function abrirModal() {
+    setNuevo({ nombre: '', usuario: '', proyectoId: '', puedeSubirFacturasGenerales: false });
+    setResultado(null);
+    setModalAbierto(true);
+  }
+
   async function crear(e) {
     e.preventDefault();
-    if (!nuevaFila.nombre || !nuevaFila.usuario || !nuevaFila.proyectoId) return;
-    const r = await apiFetch('/api/lotes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(nuevaFila),
-    }, { mensajeError: 'No se pudo guardar.' });
-    if (!r) return;
-    setPasswordGenerada(r.password ? { usuario: r.colaborador.usuario, password: r.password } : null);
-    setNuevaFila({ nombre: '', usuario: '', proyectoId: '' });
-    cargar();
+    if (!nuevo.nombre || !nuevo.usuario || (!nuevo.proyectoId && !nuevo.puedeSubirFacturasGenerales)) return;
+    setEnviando(true);
+    try {
+      const r = await apiFetch('/api/lotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevo),
+      }, { mensajeError: 'No se pudo guardar.' });
+      if (!r) return;
+      if (r.yaExistia) {
+        setResultado({ tipo: 'existente', nombre: r.colaborador.nombre });
+      } else {
+        setResultado({ tipo: 'invitado', enlace: r.enlace });
+      }
+      cargar();
+    } finally {
+      setEnviando(false);
+    }
   }
 
   async function cambiarEstado(colaboradorId, estado) {
@@ -66,10 +86,14 @@ export default function TablaColaboradores() {
   }
 
   return (
-    <>
     <div className="tarjeta">
-      <strong>Colaboradores</strong>
-      <p className="muted">Una fila por persona y proyecto — quien esté en dos proyectos aparece dos veces. Asignar un proyecto aquí es lo que crea su lote de cuentas.</p>
+      <div className="fila" style={{ marginBottom: 8 }}>
+        <div>
+          <strong>Colaboradores</strong>
+          <p className="muted" style={{ margin: '4px 0 0' }}>Una fila por persona y proyecto — quien esté en dos proyectos aparece dos veces.</p>
+        </div>
+        <button type="button" className="secundario" onClick={abrirModal}>+ Añadir colaborador</button>
+      </div>
 
       <div className="tabla-movimientos-envoltura" role="table" style={{ marginTop: 8 }}>
         <div role="rowgroup">
@@ -83,29 +107,6 @@ export default function TablaColaboradores() {
           </div>
         </div>
         <div role="rowgroup">
-          <form role="row" className="fila-tabla" style={{ gridTemplateColumns: '1fr 1fr 130px 90px 110px 140px' }} onSubmit={crear}>
-            <div role="cell" className="celda">
-              <input className="campo-proveedor" type="text" placeholder="Nombre" value={nuevaFila.nombre}
-                onChange={e => setNuevaFila({ ...nuevaFila, nombre: e.target.value })} />
-            </div>
-            <div role="cell" className="celda">
-              <input className="campo-proveedor" type="text" placeholder="Correo" value={nuevaFila.usuario}
-                onChange={e => setNuevaFila({ ...nuevaFila, usuario: e.target.value })} />
-            </div>
-            <div role="cell" className="celda">
-              <select className="select-proyecto" style={{ width: '100%' }} value={nuevaFila.proyectoId}
-                onChange={e => setNuevaFila({ ...nuevaFila, proyectoId: e.target.value })}>
-                <option value="">Elige proyecto...</option>
-                {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
-            </div>
-            <div role="cell" className="celda">
-              <button type="submit" className="secundario">Añadir</button>
-            </div>
-            <div role="cell" className="celda"></div>
-            <div role="cell" className="celda"></div>
-          </form>
-
           {filas.map(l => (
             <div key={l.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: '1fr 1fr 130px 90px 110px 140px' }}>
               <div role="cell" className="celda"><a href={`/lotes/${l.id}`} style={{ color: 'inherit' }}>{l.colaborador_nombre}</a></div>
@@ -134,62 +135,49 @@ export default function TablaColaboradores() {
         </div>
       </div>
 
-      {passwordGenerada && (
-        <p className="muted" style={{ marginTop: 8 }}>
-          Correo: <strong>{passwordGenerada.usuario}</strong> · Contraseña: <strong>{passwordGenerada.password}</strong>
-          <br />Apúntala ahora — no se puede volver a ver.
-        </p>
-      )}
-    </div>
-    <InvitarAsistenteFacturas />
-    </>
-  );
-}
+      <Modal abierto={modalAbierto} titulo="Añadir colaborador" onCerrar={() => setModalAbierto(false)}>
+        <form onSubmit={crear}>
+          <div style={{ marginBottom: 14 }}>
+            <span className="etiqueta">Nombre</span>
+            <input type="text" placeholder="Nombre y apellidos" value={nuevo.nombre}
+              onChange={e => setNuevo({ ...nuevo, nombre: e.target.value })} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <span className="etiqueta">Correo</span>
+            <input type="text" placeholder="correo@ejemplo.com" value={nuevo.usuario}
+              onChange={e => setNuevo({ ...nuevo, usuario: e.target.value })} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <span className="etiqueta">Proyecto (opcional)</span>
+            <select value={nuevo.proyectoId} onChange={e => setNuevo({ ...nuevo, proyectoId: e.target.value })}>
+              <option value="">Sin proyecto</option>
+              {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
+          <label className="fila" style={{ gap: 8, fontSize: 13, cursor: 'pointer', marginBottom: 14, justifyContent: 'flex-start' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={nuevo.puedeSubirFacturasGenerales}
+              onChange={e => setNuevo({ ...nuevo, puedeSubirFacturasGenerales: e.target.checked })} />
+            También sube facturas pagadas por NOL directamente
+          </label>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+            Si es una persona nueva, le llega un correo para que elija su propia contraseña. Si ya existe (mismo correo), solo se le añade el proyecto y/o el permiso.
+          </p>
+          <button type="submit" className="secundario" style={{ width: '100%' }} disabled={enviando}>
+            {enviando ? 'Guardando...' : 'Invitar'}
+          </button>
+        </form>
 
-// Alguien que te asiste subiendo facturas de gastos de NOL (no de un
-// proyecto concreto) -- no hace falta proyecto, así que va aparte de la fila
-// de alta de arriba (que siempre crea un lote).
-function InvitarAsistenteFacturas() {
-  const [nombre, setNombre] = useState('');
-  const [usuario, setUsuario] = useState('');
-  const [resultado, setResultado] = useState(null);
-  const [enviando, setEnviando] = useState(false);
-
-  async function onSubmit(e) {
-    e.preventDefault();
-    if (!nombre || !usuario) return;
-    setEnviando(true);
-    try {
-      const r = await apiFetch('/api/colaboradores/invitar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, usuario }),
-      }, { mensajeError: 'No se pudo invitar.' });
-      if (!r) return;
-      setResultado(r.enlace);
-      setNombre('');
-      setUsuario('');
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  return (
-    <div className="tarjeta">
-      <strong>Dar acceso para subir facturas de NOL</strong>
-      <p className="muted" style={{ marginTop: 6 }}>Para cuando alguien te asiste subiendo gastos de la asociación (no de un proyecto concreto) — recibe un correo para elegir su propia contraseña.</p>
-      <form onSubmit={onSubmit}>
-        <input type="text" placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} />
-        <div style={{ height: 8 }} />
-        <input type="text" placeholder="Correo" value={usuario} onChange={e => setUsuario(e.target.value)} />
-        <div style={{ height: 8 }} />
-        <button type="submit" className="secundario" disabled={enviando}>{enviando ? 'Invitando...' : 'Invitar'}</button>
-      </form>
-      {resultado && (
-        <p className="muted" style={{ marginTop: 8 }}>
-          Invitación enviada. Si el correo aún no está configurado, este es el enlace: <a href={resultado}>{resultado}</a>
-        </p>
-      )}
+        {resultado?.tipo === 'invitado' && (
+          <p className="muted" style={{ marginTop: 12 }}>
+            Invitación enviada. Si el correo aún no está configurado, este es el enlace: <a href={resultado.enlace}>{resultado.enlace}</a>
+          </p>
+        )}
+        {resultado?.tipo === 'existente' && (
+          <p className="muted" style={{ marginTop: 12 }}>
+            {resultado.nombre} ya tenía cuenta — se ha actualizado sin mandar ningún correo nuevo.
+          </p>
+        )}
+      </Modal>
     </div>
   );
 }
