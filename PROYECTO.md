@@ -32,6 +32,7 @@ Acordada explícitamente durante el rediseño de Movimientos (2026-08-03) y apli
 - **Acciones normales/frecuentes de fila** (vincular a mano, etc.): botones `.secundario` reales. Excepción confirmada: el Estado de una factura (revisar/aceptada/rechazada/cerrada/borrada) SÍ es un desplegable, no botones — pero nunca se guarda solo: elegir "rechazada" pide motivo, "cerrada" pide fecha, "borrada" pasa por `ConfirmDialog`, todo antes de persistir. El desplegable siempre refleja el último valor guardado, nunca un estado local sin confirmar (mismo patrón que "adelanto colaborador" en `TablaMovimientos.js`).
 - **Confirmaciones de algo destructivo:** siempre `ConfirmDialog`, nunca `confirm()` nativo del navegador.
 - **Formularios de "crear/añadir algo nuevo"** (colaborador, proyecto, lote, pago...): siempre visibles, nunca colapsados detrás de un `<details>` (el navegador dibuja su propio triángulo nativo si no se oculta explícitamente, y en esta app ese triángulo no existe en ningún sitio) — mismo tamaño de campos, mismo botón `.secundario` de envío, misma disposición en todos.
+- **Tipografía: una sola, en toda la app, sin excepción.** `html, body` fija `Calibri, Candara, "Segoe UI", system-ui, sans-serif`, pero botones/inputs/selects no la heredan por defecto del navegador si no se fuerza — `button, input, select, textarea { font-family: inherit; }` en `app/globals.css` lo garantiza globalmente. No se resuelve caso a caso con `font: inherit` suelto en clases concretas (así se quedó desincronizado una vez, ver 2026-08-12).
 
 ## Qué es y para quién
 

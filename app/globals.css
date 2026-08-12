@@ -24,6 +24,13 @@ html, body {
   font-family: Calibri, Candara, "Segoe UI", system-ui, sans-serif;
 }
 
+/* Botones/inputs/selects no heredan la tipografía del body por defecto del
+   navegador -- sin esto usan la fuente del sistema operativo en vez de la de
+   la web, mezclada con el resto del texto. Ver Guía de diseño en PROYECTO.md. */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 a { color: var(--accent); }
 
 .contenedor {
