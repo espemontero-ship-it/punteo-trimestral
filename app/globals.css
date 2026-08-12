@@ -215,6 +215,17 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .cabecera-app .pendientes-cabecera { font-size: 13px; white-space: nowrap; flex-shrink: 0; }
 .cabecera-app button.secundario { flex-shrink: 0; }
 
+/* Móvil: 5 pestañas + logo + Cerrar sesión no caben en una fila sin
+   apretarse hasta ilegible -- el logo y Cerrar sesión se quedan arriba, las
+   pestañas bajan a su propia fila con scroll horizontal en vez de encoger. */
+@media (max-width: 768px) {
+  .cabecera-app { flex-wrap: wrap; row-gap: 6px; }
+  .cabecera-app .tabs-cabecera {
+    order: 3; flex-basis: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .cabecera-app .tabs-cabecera button { white-space: nowrap; flex-shrink: 0; }
+}
+
 /* Fila de acciones de Movimientos: bloques separados por un divisor vertical --
    Subir (iconos) / Revisar (botones sueltos) / Enviar a gestoría (solo). */
 .bloques { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; }
