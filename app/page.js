@@ -9,15 +9,8 @@ import GestionProyectos from './components/GestionProyectos';
 import TablaColaboradores from './components/TablaColaboradores';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Modal } from './components/Modal';
+import CabeceraApp, { PESTANAS } from './components/CabeceraApp';
 import { apiFetch, mostrarToast } from './lib/toast';
-
-const PESTANAS = [
-  { id: 'inicio', etiqueta: 'Inicio' },
-  { id: 'movimientos', etiqueta: 'Movimientos' },
-  { id: 'facturas', etiqueta: 'Facturas' },
-  { id: 'proyectos', etiqueta: 'Proyectos' },
-  { id: 'colaboradores', etiqueta: 'Colaboradores' },
-];
 
 // Clasifica un resultado de matching (de la subida en lote o de fijar un
 // importe a mano) en los mismos ids/ambiguos que ya sabe pintar la tabla.
@@ -54,8 +47,11 @@ export default function Home() {
   const [subiendoExcel, setSubiendoExcel] = useState(false);
   const [mensajeExcel, setMensajeExcel] = useState(null);
   const [mensajeFacturaSuelta, setMensajeFacturaSuelta] = useState(null);
-  const [pestana, setPestana] = useState('inicio');
-  const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
+  const [pestana, setPestana] = useState(() => {
+    if (typeof window === 'undefined') return 'inicio';
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    return PESTANAS.some(p => p.id === tab) ? tab : 'inicio';
+  });
   const [lote, setLote] = useState(null);
   const [modalAbierto, setModalAbierto] = useState(null); // 'excel' | 'larpmanager' | 'larpmanager-pendientes' | 'devoluciones' | 'importaciones' | 'envio' | null
   const [recalculando, setRecalculando] = useState(false);
@@ -337,39 +333,7 @@ export default function Home() {
 
   return (
     <div className={(pestana === 'movimientos' || pestana === 'colaboradores' || pestana === 'facturas' || pestana === 'proyectos') ? 'contenedor contenedor-ancho' : 'contenedor'}>
-      <div className="cabecera-app">
-        <h1 className="marca">Punteo</h1>
-        <nav className="tabs-cabecera">
-          {PESTANAS.map(p => (
-            <button key={p.id} className={pestana === p.id ? 'activa' : ''} onClick={() => setPestana(p.id)}>
-              {p.etiqueta}
-            </button>
-          ))}
-        </nav>
-        <button type="button" className="btn-menu-movil" onClick={() => setMenuMovilAbierto(true)} aria-label="Abrir menú">☰</button>
-        <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
-      </div>
-
-      {menuMovilAbierto && (
-        <div className="menu-movil-fondo">
-          <div className="menu-movil-cabecera">
-            <strong>Punteo</strong>
-            <button type="button" className="btn-menu-movil" onClick={() => setMenuMovilAbierto(false)} aria-label="Cerrar menú">✕</button>
-          </div>
-          <nav className="menu-movil-lista">
-            {PESTANAS.map(p => (
-              <button
-                key={p.id}
-                className={pestana === p.id ? 'activa' : ''}
-                onClick={() => { setPestana(p.id); setMenuMovilAbierto(false); }}
-              >
-                {p.etiqueta}
-              </button>
-            ))}
-            <button onClick={() => { setMenuMovilAbierto(false); cerrarSesion(); }}>Cerrar sesión</button>
-          </nav>
-        </div>
-      )}
+      <CabeceraApp pestanaActiva={pestana} onCambiarPestana={setPestana} cerrarSesion={cerrarSesion} />
 
       {pestana === 'inicio' && (
         <>

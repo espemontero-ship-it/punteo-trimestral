@@ -3,7 +3,13 @@
 import { useEffect, useState, useCallback, use } from 'react';
 import { ConfirmDialog, MotivoDialog } from '../../components/ConfirmDialog';
 import TablaCuentas from '../../components/TablaCuentas';
+import CabeceraApp from '../../components/CabeceraApp';
 import { apiFetch } from '../../lib/toast';
+
+async function cerrarSesion() {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
 
 const MOTIVOS_RECHAZO = ['Ticket, no factura', 'Duplicada', 'Importe no coincide'];
 
@@ -75,10 +81,16 @@ export default function LotePage({ params }) {
     if (r) cargar();
   }
 
-  if (!lote) return <div className="contenedor"><p className="muted">Cargando...</p></div>;
+  if (!lote) return (
+    <div className="contenedor contenedor-ancho">
+      <CabeceraApp pestanaActiva="colaboradores" cerrarSesion={cerrarSesion} />
+      <p className="muted">Cargando...</p>
+    </div>
+  );
 
   return (
     <div className="contenedor contenedor-ancho">
+      <CabeceraApp pestanaActiva="colaboradores" cerrarSesion={cerrarSesion} />
       <div className="fila" style={{ marginTop: 16 }}>
         <div>
           <h1 style={{ margin: 0 }}>{lote.evento}</h1>
