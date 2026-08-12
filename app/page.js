@@ -55,6 +55,7 @@ export default function Home() {
   const [mensajeExcel, setMensajeExcel] = useState(null);
   const [mensajeFacturaSuelta, setMensajeFacturaSuelta] = useState(null);
   const [pestana, setPestana] = useState('inicio');
+  const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [lote, setLote] = useState(null);
   const [modalAbierto, setModalAbierto] = useState(null); // 'excel' | 'larpmanager' | 'larpmanager-pendientes' | 'devoluciones' | 'importaciones' | 'envio' | null
   const [recalculando, setRecalculando] = useState(false);
@@ -345,8 +346,30 @@ export default function Home() {
             </button>
           ))}
         </nav>
+        <button type="button" className="btn-menu-movil" onClick={() => setMenuMovilAbierto(true)} aria-label="Abrir menú">☰</button>
         <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
       </div>
+
+      {menuMovilAbierto && (
+        <div className="menu-movil-fondo">
+          <div className="menu-movil-cabecera">
+            <strong>Punteo</strong>
+            <button type="button" className="btn-menu-movil" onClick={() => setMenuMovilAbierto(false)} aria-label="Cerrar menú">✕</button>
+          </div>
+          <nav className="menu-movil-lista">
+            {PESTANAS.map(p => (
+              <button
+                key={p.id}
+                className={pestana === p.id ? 'activa' : ''}
+                onClick={() => { setPestana(p.id); setMenuMovilAbierto(false); }}
+              >
+                {p.etiqueta}
+              </button>
+            ))}
+            <button onClick={() => { setMenuMovilAbierto(false); cerrarSesion(); }}>Cerrar sesión</button>
+          </nav>
+        </div>
+      )}
 
       {pestana === 'inicio' && (
         <>
