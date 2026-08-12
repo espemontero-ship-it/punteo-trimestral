@@ -12,8 +12,8 @@ const ETIQUETAS = {
 };
 
 const COLUMNAS_BASE = ['Grupo', 'Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Factura', 'Nota', 'Proyecto'];
-const ANCHO_DEFECTO = { Grupo: 44, Fecha: 90, Concepto: 280, Banco: 100, Proveedor: 190, Importe: 90, Estado: 150, Factura: 110, Nota: 190, Proyecto: 130 };
-const ANCHO_EXTRA_DEFECTO = 140;
+const ANCHO_DEFECTO = { Grupo: 40, Fecha: 85, Concepto: 200, Banco: 85, Proveedor: 150, Importe: 80, Estado: 130, Factura: 90, Nota: 135, Proyecto: 110 };
+const ANCHO_EXTRA_DEFECTO = 120;
 
 // Celda vive fuera del componente a propósito: si se define dentro (como
 // estaba antes), React la trata como un tipo de componente nuevo en cada

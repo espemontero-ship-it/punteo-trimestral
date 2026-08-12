@@ -154,12 +154,12 @@ export default function TablaColaboradores() {
               {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
-          <label className="fila" style={{ gap: 8, fontSize: 13, cursor: 'pointer', marginBottom: 14, justifyContent: 'flex-start' }}>
+          <label className="fila dialogo-cuerpo" style={{ gap: 8, cursor: 'pointer', marginBottom: 14, justifyContent: 'flex-start' }}>
             <input type="checkbox" style={{ width: 'auto' }} checked={nuevo.puedeSubirFacturasGenerales}
               onChange={e => setNuevo({ ...nuevo, puedeSubirFacturasGenerales: e.target.checked })} />
             También sube facturas pagadas por NOL directamente
           </label>
-          <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+          <p className="dialogo-cuerpo" style={{ marginBottom: 14 }}>
             Si es una persona nueva, le llega un correo para que elija su propia contraseña. Si ya existe (mismo correo), solo se le añade el proyecto y/o el permiso.
           </p>
           <button type="submit" className="secundario" style={{ width: '100%' }} disabled={enviando}>
@@ -168,12 +168,12 @@ export default function TablaColaboradores() {
         </form>
 
         {resultado?.tipo === 'invitado' && (
-          <p className="muted" style={{ marginTop: 12 }}>
+          <p className="dialogo-cuerpo" style={{ marginTop: 12 }}>
             Invitación enviada. Si el correo aún no está configurado, este es el enlace: <a href={resultado.enlace}>{resultado.enlace}</a>
           </p>
         )}
         {resultado?.tipo === 'existente' && (
-          <p className="muted" style={{ marginTop: 12 }}>
+          <p className="dialogo-cuerpo" style={{ marginTop: 12 }}>
             {resultado.nombre} ya tenía cuenta — se ha actualizado sin mandar ningún correo nuevo.
           </p>
         )}
