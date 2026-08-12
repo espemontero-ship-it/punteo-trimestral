@@ -19,8 +19,8 @@ const ETIQUETAS_TIPO = {
 // única plantilla de anchos se aplica a la cabecera y a cada fila, así que es
 // estructuralmente imposible que se desalineen, y cada columna tiene su
 // propio sitio fijo — nada se mete a compartir celda con otra cosa.
-const COLUMNAS = ['Archivo', 'Concepto', 'Subida', 'Ver', 'Motivo', 'Vincular', 'Movimiento', 'Fecha', 'Importe', 'Buscar'];
-const ANCHO_DEFECTO = { Archivo: 220, Concepto: 180, Subida: 160, Ver: 40, Motivo: 220, Vincular: 210, Movimiento: 240, Fecha: 130, Importe: 90, Buscar: 90 };
+const COLUMNAS = ['Fecha', 'Concepto', 'Importe', 'Nombre', 'Subida', 'Subido por', 'Vincular', 'Motivo', 'Movimiento'];
+const ANCHO_DEFECTO = { Fecha: 130, Concepto: 180, Importe: 90, Nombre: 220, Subida: 120, 'Subido por': 130, Vincular: 210, Motivo: 220, Movimiento: 240 };
 const ANCHO_CHECKBOX = 30;
 
 function montoCaracteristico(f) {
@@ -187,9 +187,11 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     URL.revokeObjectURL(url);
   }
 
-  // Guarda importe/fecha (si se han tocado) y relanza el matching -- si hay
-  // varias líneas con el mismo importe o se sugiere una combinación, la fila
-  // se expande para elegir a mano en vez de quedarse sin más.
+  // Guarda importe/fecha/concepto (si se han tocado) y relanza el matching --
+  // si hay varias líneas con el mismo importe o se sugiere una combinación,
+  // la fila se expande para elegir a mano (ver Motivo). Si no encuentra nada
+  // en absoluto, se abre directamente el selector de vincular a mano -- un
+  // único botón "Buscar" cubre las dos vías, sin un botón aparte para cada una.
   async function buscarFila(f) {
     const importeTexto = (edicionImporte[f.id] ?? importeInicial(f)).replace(',', '.').trim();
     const importe = importeTexto ? Number(importeTexto) : null;
@@ -213,6 +215,11 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     if (resultado.tipo === 'match_directo') {
       mostrarToast('Emparejada', 'ok');
       onCambio();
+    } else if (!['ambiguo', 'combo_sugerido'].includes(resultado.tipo)) {
+      // Nada encontrado -- se abre el selector manual directamente, sin
+      // esperar un segundo clic (los casos ambiguo/combo ya ofrecen su
+      // propia elección en la celda Motivo, no hace falta duplicarlo aquí).
+      setVinculandoManual(prev => new Set(prev).add(f.id));
     }
   }
 
@@ -356,8 +363,18 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     const bloqueada = f.estado === 'matcheada' || !!candidatos;
 
     switch (col) {
-      case 'Archivo':
-        return <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{f.nombre_original}{duplicada ? ' ⚠' : ''}</span>;
+      case 'Nombre':
+        return (
+          <a
+            className="link-factura"
+            href={`/api/facturas/${f.id}/archivo`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
+          >
+            {f.nombre_original}{duplicada ? ' ⚠' : ''}
+          </a>
+        );
 
       case 'Concepto':
         if (bloqueada) return <span className="muted">{f.concepto || '—'}</span>;
@@ -375,12 +392,11 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         return (
           <span className="muted" style={{ fontSize: 11.5 }}>
             {f.creado_en ? new Date(f.creado_en).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
-            {f.subido_por_nombre ? ` · ${f.subido_por_nombre}` : ''}
           </span>
         );
 
-      case 'Ver':
-        return <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">ver</a>;
+      case 'Subido por':
+        return <span className="muted" style={{ fontSize: 11.5 }}>{f.subido_por_nombre || '—'}</span>;
 
       case 'Motivo':
         if (candidatos) {
@@ -420,7 +436,11 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       case 'Vincular':
         if (bloqueada) return <span className="muted">—</span>;
         if (!vinculandoManual.has(f.id)) {
-          return <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => alternarVinculoManual(f.id)}>vincular a mano</button>;
+          return (
+            <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={buscando.has(f.id)} onClick={() => buscarFila(f)}>
+              {buscando.has(f.id) ? '...' : 'Buscar'}
+            </button>
+          );
         }
         return (
           <div>
@@ -478,14 +498,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
             onChange={e => setEdicionImporte(prev => ({ ...prev, [f.id]: e.target.value }))}
             style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
           />
-        );
-
-      case 'Buscar':
-        if (bloqueada) return null;
-        return (
-          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={buscando.has(f.id)} onClick={() => buscarFila(f)}>
-            {buscando.has(f.id) ? '...' : 'Buscar'}
-          </button>
         );
 
       default:
