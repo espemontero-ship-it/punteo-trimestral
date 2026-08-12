@@ -81,7 +81,6 @@ CREATE TABLE IF NOT EXISTS facturas (
   motivo_detalle TEXT,                -- detalle legible del ultimo intento de match
   motivo_candidatos JSONB,            -- candidatos de un caso ambiguo/combo_sugerido, para pintar los botones sin recalcular
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
-  subido_por BIGINT REFERENCES colaboradores(id), -- quién la subió (facturas generales); NULL si fue con AUTH_PASSWORD de emergencia
   -- Campos de facturas subidas por un colaborador a un lote:
   lote_id BIGINT REFERENCES lotes(id) ON DELETE CASCADE,
   concepto TEXT,

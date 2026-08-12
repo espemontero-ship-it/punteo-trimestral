@@ -19,13 +19,9 @@ const ETIQUETAS_TIPO = {
 // única plantilla de anchos se aplica a la cabecera y a cada fila, así que es
 // estructuralmente imposible que se desalineen, y cada columna tiene su
 // propio sitio fijo — nada se mete a compartir celda con otra cosa.
-const COLUMNAS = ['Archivo', 'Concepto', 'Ver', 'Motivo', 'Vincular', 'Movimiento', 'Fecha', 'Importe', 'Subida', 'Buscar'];
-const ANCHO_DEFECTO = { Archivo: 220, Concepto: 160, Ver: 40, Motivo: 220, Vincular: 210, Movimiento: 240, Fecha: 130, Importe: 90, Subida: 150, Buscar: 90 };
+const COLUMNAS = ['Archivo', 'Ver', 'Motivo', 'Vincular', 'Movimiento', 'Fecha', 'Importe', 'Buscar'];
+const ANCHO_DEFECTO = { Archivo: 220, Ver: 40, Motivo: 220, Vincular: 210, Movimiento: 240, Fecha: 130, Importe: 90, Buscar: 90 };
 const ANCHO_CHECKBOX = 30;
-
-// Por debajo de este ancho la cuadrícula deja de caber (aunque el
-// contenedor sea ancho) -- se pinta como tarjetas apiladas en su lugar.
-const ANCHO_MOVIL = 768;
 
 function montoCaracteristico(f) {
   if (f.totales && f.totales.length) return Math.max(...f.totales.map(Number));
@@ -71,15 +67,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [anchos, setAnchos] = useState({});
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
-  const [esMovil, setEsMovil] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${ANCHO_MOVIL}px)`);
-    setEsMovil(mq.matches);
-    const onChange = e => setEsMovil(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
 
   function anchoDe(col) {
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? 140;
@@ -370,17 +357,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       case 'Archivo':
         return <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{f.nombre_original}{duplicada ? ' ⚠' : ''}</span>;
 
-      case 'Concepto':
-        return f.concepto ? <span>{f.concepto}</span> : <span className="vacio">—</span>;
-
-      case 'Subida':
-        return (
-          <span className="muted" style={{ fontSize: 11.5, whiteSpace: 'normal' }}>
-            {new Date(f.creado_en).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            {f.subido_por_nombre ? <><br />{f.subido_por_nombre}</> : null}
-          </span>
-        );
-
       case 'Ver':
         return <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">ver</a>;
 
@@ -551,56 +527,34 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         </div>
       )}
 
-      {esMovil ? (
-        <div className="lista-facturas-movil">
+      <div className="tabla-movimientos-envoltura" role="table">
+        <div role="rowgroup">
+          <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: plantillaColumnas }}>
+            <Celda cabecera>
+              <input type="checkbox" checked={facturasVisibles.length > 0 && seleccionadas.size === facturasVisibles.length} onChange={() => alternarTodas(facturasVisibles)} />
+            </Celda>
+            {columnasMostradas.map(c => (
+              <Celda key={c} cabecera>
+                <span className="etiqueta-orden">{c}</span>
+                <span className="resize-handle" onPointerDown={e => iniciarArrastre(e, c)} />
+              </Celda>
+            ))}
+          </div>
+        </div>
+        <div role="rowgroup">
           {facturasVisibles.map(f => {
             const duplicada = nombresDuplicados.has(f.nombre_original);
             return (
-              <div key={f.id} className="tarjeta tarjeta-factura-movil" style={{ background: duplicada ? 'rgba(166, 124, 46, 0.08)' : undefined }}>
-                <label className="fila" style={{ marginBottom: 8 }}>
-                  <span style={{ fontWeight: 600 }}>{f.nombre_original}{duplicada ? ' ⚠' : ''}</span>
-                  <input type="checkbox" checked={seleccionadas.has(f.id)} onChange={() => alternar(f.id)} />
-                </label>
-                {columnasMostradas.filter(c => c !== 'Archivo').map(c => (
-                  <div key={c} className="campo-factura-movil">
-                    <span className="muted campo-factura-movil-etiqueta">{c}</span>
-                    <div>{contenidoCelda(c, f)}</div>
-                  </div>
+              <div role="row" key={f.id} className="fila-tabla" style={{ gridTemplateColumns: plantillaColumnas, background: duplicada ? 'rgba(166, 124, 46, 0.08)' : undefined }}>
+                <Celda><input type="checkbox" checked={seleccionadas.has(f.id)} onChange={() => alternar(f.id)} /></Celda>
+                {columnasMostradas.map(c => (
+                  <Celda key={c}>{contenidoCelda(c, f)}</Celda>
                 ))}
               </div>
             );
           })}
         </div>
-      ) : (
-        <div className="tabla-movimientos-envoltura" role="table">
-          <div role="rowgroup">
-            <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: plantillaColumnas }}>
-              <Celda cabecera>
-                <input type="checkbox" checked={facturasVisibles.length > 0 && seleccionadas.size === facturasVisibles.length} onChange={() => alternarTodas(facturasVisibles)} />
-              </Celda>
-              {columnasMostradas.map(c => (
-                <Celda key={c} cabecera>
-                  <span className="etiqueta-orden">{c}</span>
-                  <span className="resize-handle" onPointerDown={e => iniciarArrastre(e, c)} />
-                </Celda>
-              ))}
-            </div>
-          </div>
-          <div role="rowgroup">
-            {facturasVisibles.map(f => {
-              const duplicada = nombresDuplicados.has(f.nombre_original);
-              return (
-                <div role="row" key={f.id} className="fila-tabla" style={{ gridTemplateColumns: plantillaColumnas, background: duplicada ? 'rgba(166, 124, 46, 0.08)' : undefined }}>
-                  <Celda><input type="checkbox" checked={seleccionadas.has(f.id)} onChange={() => alternar(f.id)} /></Celda>
-                  {columnasMostradas.map(c => (
-                    <Celda key={c}>{contenidoCelda(c, f)}</Celda>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      </div>
 
       <div className="fila" style={{ marginTop: 12 }}>
         <span className="muted">{seleccionadas.size} seleccionada(s)</span>

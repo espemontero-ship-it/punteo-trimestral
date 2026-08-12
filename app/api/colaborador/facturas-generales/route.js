@@ -35,7 +35,7 @@ export async function POST(request) {
     }
     if (fecha) analisis.fechas = [new Date(fecha), ...analisis.fechas];
 
-    const resultado = await procesarFacturaSubida({ rutaBlob, nombreOriginal, concepto, analisis, subidoPor: sesion.colaboradorId });
+    const resultado = await procesarFacturaSubida({ rutaBlob, nombreOriginal, concepto, analisis });
     return Response.json(resultado);
   } catch (err) {
     return Response.json({ tipo: 'error', detalle: `Fallo al procesar el archivo: ${err.message}` });
