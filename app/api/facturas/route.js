@@ -3,6 +3,7 @@ const { descargarBlob } = require('../../../lib/blob.cjs');
 const { eliminarBlob } = require('../../../lib/blob.cjs');
 const { analizarBuffer } = require('../../../lib/facturas.cjs');
 const { procesarFacturaSubida, asegurarColumnasMotivo } = require('../../../lib/facturaMatcher.cjs');
+const { obtenerSesion } = require('../../../lib/auth.cjs');
 
 // Analizar un PDF (descarga + pdf-parse) puede tardar más de los 10s por
 // defecto de una función serverless, sobre todo con archivos escaneados o
@@ -16,8 +17,10 @@ export async function GET() {
   const { rows } = await query(
     `SELECT f.id, f.numero, f.nombre_original, f.proveedor_clave, f.estado, f.es_imagen,
             f.importes, f.totales, f.fechas, f.concepto, f.creado_en, f.motivo_tipo, f.motivo_detalle, f.motivo_candidatos,
+            c.nombre AS subido_por_nombre,
             m.id AS movimiento_id, m.fecha AS movimiento_fecha, m.concepto AS movimiento_concepto, m.importe AS movimiento_importe
      FROM facturas f
+     LEFT JOIN colaboradores c ON c.id = f.subido_por
      LEFT JOIN movimiento_facturas mf ON mf.factura_id = f.id
      LEFT JOIN movimientos m ON m.id = mf.movimiento_id
      WHERE f.trimestre_id IS NULL AND f.lote_id IS NULL
@@ -27,6 +30,7 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const sesion = await obtenerSesion(request);
   const { hoja, clave, rutaBlob, nombreOriginal, concepto, importe, fecha } = await request.json();
   if (!rutaBlob) {
     return Response.json({ error: 'Faltan datos (rutaBlob).' }, { status: 400 });
@@ -52,7 +56,7 @@ export async function POST(request) {
     if (fecha) analisis.fechas = [new Date(fecha), ...analisis.fechas];
 
     const resultado = await procesarFacturaSubida({
-      hoja, clave, rutaBlob, nombreOriginal, concepto, analisis,
+      hoja, clave, rutaBlob, nombreOriginal, concepto, analisis, subidoPor: sesion?.colaboradorId || null,
     });
 
     return Response.json(resultado);

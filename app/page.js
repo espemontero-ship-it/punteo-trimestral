@@ -335,7 +335,7 @@ export default function Home() {
   const pendientesMov = total - resueltas - facturaFutura - ignoradas;
 
   return (
-    <div className={(pestana === 'movimientos' || pestana === 'colaboradores') ? 'contenedor contenedor-ancho' : 'contenedor'}>
+    <div className={(pestana === 'movimientos' || pestana === 'colaboradores' || pestana === 'facturas') ? 'contenedor contenedor-ancho' : 'contenedor'}>
       <div className="cabecera-app">
         <h1 className="marca">Punteo</h1>
         <nav className="tabs-cabecera">

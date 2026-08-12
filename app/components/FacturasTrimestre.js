@@ -19,8 +19,8 @@ const ETIQUETAS_TIPO = {
 // única plantilla de anchos se aplica a la cabecera y a cada fila, así que es
 // estructuralmente imposible que se desalineen, y cada columna tiene su
 // propio sitio fijo — nada se mete a compartir celda con otra cosa.
-const COLUMNAS = ['Archivo', 'Ver', 'Motivo', 'Vincular', 'Movimiento', 'Fecha', 'Importe', 'Buscar'];
-const ANCHO_DEFECTO = { Archivo: 220, Ver: 40, Motivo: 220, Vincular: 210, Movimiento: 240, Fecha: 130, Importe: 90, Buscar: 90 };
+const COLUMNAS = ['Archivo', 'Concepto', 'Subida', 'Ver', 'Motivo', 'Vincular', 'Movimiento', 'Fecha', 'Importe', 'Buscar'];
+const ANCHO_DEFECTO = { Archivo: 220, Concepto: 180, Subida: 160, Ver: 40, Motivo: 220, Vincular: 210, Movimiento: 240, Fecha: 130, Importe: 90, Buscar: 90 };
 const ANCHO_CHECKBOX = 30;
 
 function montoCaracteristico(f) {
@@ -57,6 +57,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [progresoIA, setProgresoIA] = useState(null); // { actual, total } | null
   const [edicionImporte, setEdicionImporte] = useState({});
   const [edicionFecha, setEdicionFecha] = useState({});
+  const [edicionConcepto, setEdicionConcepto] = useState({});
   const [buscando, setBuscando] = useState(new Set());
   const [resultadosFila, setResultadosFila] = useState({}); // { [facturaId]: resultado } — sobreescribe el motivo guardado hasta recargar
   const [movimientosPendientes, setMovimientosPendientes] = useState([]);
@@ -193,6 +194,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     const importeTexto = (edicionImporte[f.id] ?? importeInicial(f)).replace(',', '.').trim();
     const importe = importeTexto ? Number(importeTexto) : null;
     const fecha = edicionFecha[f.id] ?? fechaInicial(f) ?? null;
+    const concepto = edicionConcepto[f.id] ?? f.concepto ?? null;
 
     setBuscando(prev => new Set(prev).add(f.id));
     let resultado;
@@ -200,7 +202,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       const res = await fetch(`/api/facturas/${f.id}/datos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ importe, fecha: fecha || null }),
+        body: JSON.stringify({ importe, fecha: fecha || null, concepto: concepto || null }),
       });
       resultado = await res.json();
     } catch (err) {
@@ -356,6 +358,26 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     switch (col) {
       case 'Archivo':
         return <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{f.nombre_original}{duplicada ? ' ⚠' : ''}</span>;
+
+      case 'Concepto':
+        if (bloqueada) return <span className="muted">{f.concepto || '—'}</span>;
+        return (
+          <input
+            type="text"
+            placeholder="Concepto"
+            value={edicionConcepto[f.id] ?? f.concepto ?? ''}
+            onChange={e => setEdicionConcepto(prev => ({ ...prev, [f.id]: e.target.value }))}
+            style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
+          />
+        );
+
+      case 'Subida':
+        return (
+          <span className="muted" style={{ fontSize: 11.5 }}>
+            {f.creado_en ? new Date(f.creado_en).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+            {f.subido_por_nombre ? ` · ${f.subido_por_nombre}` : ''}
+          </span>
+        );
 
       case 'Ver':
         return <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">ver</a>;
