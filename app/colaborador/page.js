@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import SubirFacturaLote from '../components/SubirFacturaLote';
-import SubirFacturasNol from '../components/SubirFacturasNol';
+import SubirFacturaColaborador from '../components/SubirFacturaColaborador';
 import TablaCuentas from '../components/TablaCuentas';
 
 export default function ColaboradorPage() {
@@ -66,7 +65,9 @@ export default function ColaboradorPage() {
             </div>
           ))}
         </div>
-        {puedeSubirFacturasGenerales && <SubirFacturasGenerales />}
+        {puedeSubirFacturasGenerales && (
+          <SubirFacturaColaborador puedeSubirFacturasGenerales onSubida={cargarLotes} />
+        )}
       </div>
     );
   }
@@ -97,24 +98,16 @@ export default function ColaboradorPage() {
         </p>
       </div>
 
-      <SubirFacturaLote loteId={loteId} onSubida={cargarLote} />
+      <SubirFacturaColaborador
+        loteId={loteId}
+        proyectoId={lote?.proyecto_id}
+        puedeSubirFacturasGenerales={puedeSubirFacturasGenerales}
+        onSubida={cargarLote}
+      />
 
       {puedeInvitar && <InvitarColaborador proyectoNombre={lote?.evento} proyectoId={lote?.proyecto_id} />}
-      {puedeSubirFacturasGenerales && <SubirFacturasGenerales proyectoIdPorDefecto={lote?.proyecto_id} />}
 
       <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />
-    </div>
-  );
-}
-
-function SubirFacturasGenerales({ proyectoIdPorDefecto }) {
-  return (
-    <div className="tarjeta">
-      <strong>Upload NOL invoices</strong>
-      <p className="muted" style={{ marginTop: 6 }}>Choose who pays and the project once; each file has its own date, description and amount.</p>
-      <div style={{ marginTop: 8 }}>
-        <SubirFacturasNol proyectoIdPorDefecto={proyectoIdPorDefecto} />
-      </div>
     </div>
   );
 }

@@ -95,7 +95,10 @@ const SECCIONES_COLABORADORES = [
   },
   {
     titulo: 'Subir una factura', cuerpo: (
-      <p>Adjunta el PDF o hazle una foto desde el móvil. Se sube a la cuenta del proyecto que tienes abierto y queda pendiente de revisión.</p>
+      <>
+        <p>Adjunta el PDF o hazle una foto desde el móvil, con su fecha, concepto e importe. Se sube a la cuenta del proyecto que tienes abierto y queda pendiente de revisión.</p>
+        <p className="muted">Si administración te ha dado el permiso de NOL, en el mismo formulario aparecen además "Quién paga" (marcado "Yo" por defecto) y "Proyecto" — para registrar una factura pagada por NOL directamente, o una tuya de otro proyecto distinto al que tienes abierto.</p>
+      </>
     ),
   },
   {
@@ -115,14 +118,6 @@ const SECCIONES_COLABORADORES = [
   {
     titulo: 'Invitar a alguien más', cuando: 'Solo visible si administración te ha dado permiso para este proyecto.', cuerpo: (
       <p>Con nombre y correo, le llega una invitación para que elija su propia contraseña y se una al mismo proyecto.</p>
-    ),
-  },
-  {
-    titulo: 'Facturas de NOL o pagadas por ti', cuando: 'Solo visible si administración te ha dado este permiso.', cuerpo: (
-      <>
-        <p>Para facturas que no van por el flujo normal de tu lote: eliges una vez, para toda la tanda de archivos que subas, <strong>quién paga</strong> (NOL directamente, o tú) y a <strong>qué proyecto</strong> pertenecen. Después añades los archivos — cada uno con su propia fecha, concepto e importe.</p>
-        <p>Si eliges que pagas tú, la factura entra en tu lote de ese proyecto igual que si la hubieras subido desde ahí (si todavía no tienes lote en ese proyecto, se crea solo). Si eliges NOL, queda como gasto general de la asociación, asociado a ese proyecto.</p>
-      </>
     ),
   },
 ];

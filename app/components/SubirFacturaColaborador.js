@@ -1,0 +1,114 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { uploadPresigned } from '@vercel/blob/client';
+
+// Un único formulario de subida para colaboradores, un archivo cada vez.
+// Quien no tiene el permiso puede_subir_facturas_generales ni ve "Quién
+// paga" ni "Proyecto" -- sube directo a su lote como siempre. Quien sí lo
+// tiene ve ambos campos, con "Yo" y el proyecto actual marcados por defecto,
+// y puede cambiarlos para registrar un gasto de NOL o de otro proyecto.
+export default function SubirFacturaColaborador({ loteId, proyectoId, puedeSubirFacturasGenerales, onSubida }) {
+  const inputRef = useRef(null);
+  const [archivo, setArchivo] = useState(null);
+  const [concepto, setConcepto] = useState('');
+  const [importe, setImporte] = useState('');
+  const [fecha, setFecha] = useState('');
+  const [quienPaga, setQuienPaga] = useState('colaborador');
+  const [proyectoSeleccionado, setProyectoSeleccionado] = useState(proyectoId || '');
+  const [proyectos, setProyectos] = useState([]);
+  const [subiendo, setSubiendo] = useState(false);
+  const [mensaje, setMensaje] = useState(null);
+
+  useEffect(() => {
+    if (puedeSubirFacturasGenerales) {
+      fetch('/api/colaborador/proyectos').then(r => r.json()).then(d => setProyectos(d.proyectos || []));
+    }
+  }, [puedeSubirFacturasGenerales]);
+
+  useEffect(() => { setProyectoSeleccionado(proyectoId || ''); }, [proyectoId]);
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    if (!archivo) { setMensaje('Choose a file first.'); return; }
+    setSubiendo(true);
+    setMensaje(null);
+    try {
+      const blob = await uploadPresigned(`facturas/colaborador-${Date.now()}-${archivo.name}`, archivo, {
+        access: 'private',
+        handleUploadUrl: '/api/blob-upload',
+      });
+
+      let res;
+      if (puedeSubirFacturasGenerales) {
+        res = await fetch('/api/colaborador/facturas-generales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha,
+            proyectoId: proyectoSeleccionado, quienPaga,
+          }),
+        });
+      } else {
+        res = await fetch(`/api/colaborador/lotes/${loteId}/facturas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha }),
+        });
+      }
+      const data = await res.json();
+      if (!res.ok || data?.tipo === 'error') {
+        setMensaje(data.error || data.detalle || 'Could not upload.');
+      } else {
+        setMensaje('Uploaded.');
+        setConcepto('');
+        setImporte('');
+        setFecha('');
+        setArchivo(null);
+        if (inputRef.current) inputRef.current.value = '';
+        onSubida();
+      }
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="tarjeta" style={{ background: 'rgba(255,255,255,0.03)' }}>
+      <strong>Upload invoice</strong>
+      <div style={{ height: 8 }} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,image/*"
+        capture="environment"
+        onChange={e => setArchivo(e.target.files[0])}
+      />
+      <div style={{ height: 8 }} />
+      <input type="text" placeholder="Description (e.g. petrol, gaffer tape...)" value={concepto} onChange={e => setConcepto(e.target.value)} />
+      <div style={{ height: 8 }} />
+      <input type="number" step="0.01" placeholder="Amount" value={importe} onChange={e => setImporte(e.target.value)} />
+      <div style={{ height: 8 }} />
+      <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+
+      {puedeSubirFacturasGenerales && (
+        <>
+          <div style={{ height: 8 }} />
+          <select value={quienPaga} onChange={e => setQuienPaga(e.target.value)}>
+            <option value="colaborador">I pay</option>
+            <option value="nol">NOL pays</option>
+          </select>
+          <div style={{ height: 8 }} />
+          <select value={proyectoSeleccionado} onChange={e => setProyectoSeleccionado(e.target.value)}>
+            <option value="">Choose project...</option>
+            {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+        </>
+      )}
+
+      <div style={{ height: 8 }} />
+      <button className="grande" type="submit" disabled={subiendo}>{subiendo ? 'Uploading...' : 'Upload invoice'}</button>
+      {mensaje && <p className="muted" style={{ marginTop: 8 }}>{mensaje}</p>}
+    </form>
+  );
+}
