@@ -68,7 +68,7 @@ export default function ProyectoPage({ params }) {
       <CabeceraApp pestanaActiva="proyectos" cerrarSesion={cerrarSesion} />
       <div className="fila" style={{ marginTop: 16 }}>
         <div>
-          <h1 style={{ margin: 0 }}>{proyecto.nombre}</h1>
+          <h1 className="titulo-pagina" style={{ margin: 0 }}>{proyecto.nombre}</h1>
           <p className="muted" style={{ margin: 0 }}>Pendientes de cierre</p>
         </div>
         <a href="/"><button className="secundario">Volver</button></a>

@@ -93,7 +93,7 @@ export default function LotePage({ params }) {
       <CabeceraApp pestanaActiva="colaboradores" cerrarSesion={cerrarSesion} />
       <div className="fila" style={{ marginTop: 16 }}>
         <div>
-          <h1 style={{ margin: 0 }}>{lote.evento}</h1>
+          <h1 className="titulo-pagina" style={{ margin: 0 }}>{lote.evento}</h1>
           <p className="muted" style={{ margin: 0 }}>{lote.colaborador_nombre} · {lote.trimestre_id}</p>
         </div>
         <a href="/"><button className="secundario">Volver</button></a>

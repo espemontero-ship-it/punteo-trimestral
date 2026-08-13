@@ -194,6 +194,11 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   background: var(--accent); border-color: var(--accent);
 }
 
+/* Título de una página de detalle suelta (/lotes/[id], /proyectos/[id]) --
+   un <h1> sin clase hereda el tamaño por defecto del navegador (32px), muy
+   por encima de toda la escala tipográfica de la app (12.5-18px). */
+.titulo-pagina { font-size: 18px; font-weight: 700; }
+
 /* Cabecera: marca + pestañas + pendientes + sesión, todo en una sola fila */
 .cabecera-app {
   display: flex;
@@ -202,21 +207,33 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   border-bottom: 1px solid var(--border);
   margin: 14px 0 16px;
 }
-.cabecera-app .marca { margin: 0; font-size: 17px; flex-shrink: 0; }
-.cabecera-app .tabs-cabecera { display: flex; gap: 2px; flex: 1; min-width: 0; }
-.cabecera-app .tabs-cabecera button {
+/* Menú "subrayado depurado" (maqueta_menu.html, opción A, 2026-08-13): misma
+   idea que antes -- texto + raya bajo la pestaña activa -- pero con más aire,
+   raya más gruesa y de esquinas redondeadas, y la marca con más peso. */
+.cabecera-app .marca { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -.01em; flex-shrink: 0; }
+.cabecera-app .tabs-cabecera { display: flex; gap: 4px; flex: 1; min-width: 0; }
+/* button en la SPA (cambia de pestaña sin navegar), <a> en las páginas
+   sueltas (/lotes/[id], /proyectos/[id], /proyectos -- vuelven a "/?tab=x").
+   Sin esta doble selección, las páginas sueltas quedaban con el enlace azul
+   subrayado por defecto del navegador, sin ningún estilo (bug encontrado
+   2026-08-13: nunca se cubrió el caso <a>, solo el de <button>). */
+.cabecera-app .tabs-cabecera button, .cabecera-app .tabs-cabecera a {
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  padding: 13px 10px;
+  padding: 15px 12px;
   cursor: pointer;
   background: transparent;
   border: none;
   color: var(--muted);
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
   white-space: nowrap;
+  text-decoration: none;
+  display: inline-block;
 }
-.cabecera-app .tabs-cabecera button.activa { color: var(--accent); border-bottom-color: var(--accent); }
+.cabecera-app .tabs-cabecera button.activa, .cabecera-app .tabs-cabecera a.activa { color: var(--accent); border-bottom-color: var(--accent); border-radius: 3px 3px 0 0; }
+.cabecera-app .tabs-cabecera button:hover:not(.activa), .cabecera-app .tabs-cabecera a:hover:not(.activa) { color: var(--text); }
 .cabecera-app .pendientes-cabecera { font-size: 13px; white-space: nowrap; flex-shrink: 0; }
 .cabecera-app button.secundario { flex-shrink: 0; }
 
@@ -231,13 +248,13 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .menu-movil-fondo { position: fixed; inset: 0; background: var(--bg); z-index: 100; }
 .menu-movil-cabecera { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); }
 .menu-movil-lista { padding: 8px 16px; }
-.menu-movil-lista button {
+.menu-movil-lista button, .menu-movil-lista a {
   display: block; width: 100%; text-align: left; background: transparent; border: none;
   border-bottom: 1px solid var(--border); padding: 16px 4px; font-size: 16px; font-weight: 600;
-  color: var(--muted); cursor: pointer;
+  color: var(--muted); cursor: pointer; text-decoration: none; box-sizing: border-box;
 }
-.menu-movil-lista button.activa { color: var(--accent); }
-.menu-movil-lista button:last-child { border-bottom: none; }
+.menu-movil-lista button.activa, .menu-movil-lista a.activa { color: var(--accent); }
+.menu-movil-lista button:last-child, .menu-movil-lista a:last-child { border-bottom: none; }
 
 @media (max-width: 768px) {
   .cabecera-app .tabs-cabecera { display: none; }
