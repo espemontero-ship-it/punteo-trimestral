@@ -14,7 +14,7 @@ export default function SubirFacturaLote({ loteId, onSubida }) {
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (!archivo) { setMensaje('Elige un archivo primero.'); return; }
+    if (!archivo) { setMensaje('Choose a file first.'); return; }
     setSubiendo(true);
     setMensaje(null);
     try {
@@ -29,9 +29,9 @@ export default function SubirFacturaLote({ loteId, onSubida }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setMensaje(data.error || 'No se pudo subir.');
+        setMensaje(data.error || 'Could not upload.');
       } else {
-        setMensaje(`Subida como factura #${data.factura.numero}.`);
+        setMensaje(`Uploaded as invoice #${data.factura.numero}.`);
         setConcepto('');
         setImporte('');
         setFecha('');
@@ -46,7 +46,7 @@ export default function SubirFacturaLote({ loteId, onSubida }) {
 
   return (
     <form onSubmit={onSubmit} className="tarjeta" style={{ background: 'rgba(255,255,255,0.03)' }}>
-      <strong>Subir factura</strong>
+      <strong>Upload invoice</strong>
       <div style={{ height: 8 }} />
       <input
         ref={inputRef}
@@ -56,13 +56,13 @@ export default function SubirFacturaLote({ loteId, onSubida }) {
         onChange={e => setArchivo(e.target.files[0])}
       />
       <div style={{ height: 8 }} />
-      <input type="text" placeholder="Concepto (ej. gasolina, cinta americana...)" value={concepto} onChange={e => setConcepto(e.target.value)} />
+      <input type="text" placeholder="Description (e.g. petrol, gaffer tape...)" value={concepto} onChange={e => setConcepto(e.target.value)} />
       <div style={{ height: 8 }} />
-      <input type="number" step="0.01" placeholder="Importe" value={importe} onChange={e => setImporte(e.target.value)} />
+      <input type="number" step="0.01" placeholder="Amount" value={importe} onChange={e => setImporte(e.target.value)} />
       <div style={{ height: 8 }} />
       <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
       <div style={{ height: 8 }} />
-      <button className="grande" type="submit" disabled={subiendo}>{subiendo ? 'Subiendo...' : 'Subir factura'}</button>
+      <button className="grande" type="submit" disabled={subiendo}>{subiendo ? 'Uploading...' : 'Upload invoice'}</button>
       {mensaje && <p className="muted" style={{ marginTop: 8 }}>{mensaje}</p>}
     </form>
   );

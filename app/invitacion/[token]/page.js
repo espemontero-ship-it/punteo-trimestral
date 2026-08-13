@@ -22,7 +22,7 @@ export default function InvitacionPage({ params }) {
     e.preventDefault();
     setError(null);
     if (password !== confirmar) {
-      setError('Las dos contraseñas no coinciden.');
+      setError('The two passwords don\'t match.');
       return;
     }
     setEnviando(true);
@@ -34,7 +34,7 @@ export default function InvitacionPage({ params }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'No se pudo completar el alta.');
+        setError(data.error || 'Could not create the account.');
         return;
       }
       router.push(data.redirect || '/colaborador');
@@ -45,15 +45,15 @@ export default function InvitacionPage({ params }) {
   }
 
   if (invitacion === undefined) {
-    return <div className="contenedor" style={{ paddingTop: '20vh' }}><p className="muted">Cargando...</p></div>;
+    return <div className="contenedor" style={{ paddingTop: '20vh' }}><p className="muted">Loading...</p></div>;
   }
 
   if (!invitacion) {
     return (
       <div className="contenedor" style={{ paddingTop: '20vh' }}>
         <div className="tarjeta">
-          <h1 style={{ marginTop: 0 }}>Enlace no válido</h1>
-          <p className="muted">Este enlace de invitación ya ha caducado o ya se usó. Pide que te inviten de nuevo.</p>
+          <h1 style={{ marginTop: 0 }}>Invalid link</h1>
+          <p className="muted">This invitation link has expired or was already used. Ask to be invited again.</p>
         </div>
       </div>
     );
@@ -62,17 +62,17 @@ export default function InvitacionPage({ params }) {
   return (
     <div className="contenedor" style={{ paddingTop: '20vh' }}>
       <div className="tarjeta">
-        <h1 style={{ marginTop: 0 }}>Hola, {invitacion.nombre}</h1>
+        <h1 style={{ marginTop: 0 }}>Hi, {invitacion.nombre}</h1>
         <p className="muted">
           {invitacion.proyecto
-            ? <>Te han invitado a subir facturas de <strong>{invitacion.proyecto}</strong>.</>
-            : 'Te han invitado a subir facturas de NotOnlyLarp.'}
-          {' '}Elige tu contraseña:
+            ? <>You've been invited to upload invoices for <strong>{invitacion.proyecto}</strong>.</>
+            : "You've been invited to upload invoices for NotOnlyLarp."}
+          {' '}Choose your password:
         </p>
         <form onSubmit={onSubmit}>
           <input
             type="password"
-            placeholder="Contraseña"
+            placeholder="Password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             autoComplete="new-password"
@@ -80,14 +80,14 @@ export default function InvitacionPage({ params }) {
           <div style={{ height: 12 }} />
           <input
             type="password"
-            placeholder="Repite la contraseña"
+            placeholder="Repeat the password"
             value={confirmar}
             onChange={e => setConfirmar(e.target.value)}
             autoComplete="new-password"
           />
           <div style={{ height: 12 }} />
           <button className="grande" type="submit" disabled={enviando}>
-            {enviando ? 'Creando cuenta...' : 'Crear mi cuenta'}
+            {enviando ? 'Creating account...' : 'Create my account'}
           </button>
           {error && <p className="error">{error}</p>}
         </form>

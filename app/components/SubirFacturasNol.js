@@ -76,11 +76,11 @@ export default function SubirFacturasNol({ proyectoIdPorDefecto } = {}) {
     <div>
       <div className="fila" style={{ gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
         <select value={quienPaga} onChange={e => setQuienPaga(e.target.value)} style={{ width: 'auto' }}>
-          <option value="nol">Paga NOL</option>
-          <option value="colaborador">Pago yo</option>
+          <option value="nol">NOL pays</option>
+          <option value="colaborador">I pay</option>
         </select>
         <select value={proyectoId} onChange={e => setProyectoId(e.target.value)} style={{ width: 'auto' }}>
-          <option value="">Elige proyecto...</option>
+          <option value="">Choose project...</option>
           {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
         </select>
       </div>
@@ -97,28 +97,28 @@ export default function SubirFacturasNol({ proyectoIdPorDefecto } = {}) {
       {archivos.map((a, i) => (
         <div key={i} className="form-factura-suelta" style={{ marginBottom: 8 }}>
           <p className="muted" style={{ margin: '0 0 8px' }}>{a.file.name}</p>
-          <input type="text" placeholder="Concepto" value={a.concepto} onChange={e => actualizarArchivo(i, 'concepto', e.target.value)} />
+          <input type="text" placeholder="Description" value={a.concepto} onChange={e => actualizarArchivo(i, 'concepto', e.target.value)} />
           <div style={{ height: 8 }} />
-          <input type="number" step="0.01" placeholder="Importe" value={a.importe} onChange={e => actualizarArchivo(i, 'importe', e.target.value)} />
+          <input type="number" step="0.01" placeholder="Amount" value={a.importe} onChange={e => actualizarArchivo(i, 'importe', e.target.value)} />
           <div style={{ height: 8 }} />
           <input type="date" value={a.fecha} onChange={e => actualizarArchivo(i, 'fecha', e.target.value)} />
           <div style={{ height: 8 }} />
-          <button type="button" className="secundario" onClick={() => quitarArchivo(i)}>Quitar</button>
+          <button type="button" className="secundario" onClick={() => quitarArchivo(i)}>Remove</button>
         </div>
       ))}
 
       <div className="fila" style={{ gap: 8 }}>
-        <button type="button" className="secundario" onClick={() => inputRef.current?.click()}>📎 Añadir archivos</button>
+        <button type="button" className="secundario" onClick={() => inputRef.current?.click()}>📎 Add files</button>
         {archivos.length > 0 && (
           <button type="button" disabled={!proyectoId || subiendo} onClick={subirTodas}>
-            {subiendo ? `Subiendo ${progreso?.actual}/${progreso?.total}...` : `Subir ${archivos.length} factura(s)`}
+            {subiendo ? `Uploading ${progreso?.actual}/${progreso?.total}...` : `Upload ${archivos.length} invoice(s)`}
           </button>
         )}
       </div>
 
       {resumen && (
         <p className="muted" style={{ marginTop: 8 }}>
-          {resumen.ok} factura(s) subida(s){resumen.errores > 0 ? `, ${resumen.errores} con error` : ''}.
+          {resumen.ok} invoice(s) uploaded{resumen.errores > 0 ? `, ${resumen.errores} with error` : ''}.
         </p>
       )}
     </div>

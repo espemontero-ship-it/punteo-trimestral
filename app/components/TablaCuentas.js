@@ -43,21 +43,40 @@ export default function TablaCuentas({
 
   const cols = '1fr 50px 100px 100px 100px 100px 100px 100px 220px';
 
+  // soloLectura solo es true en la vista de colaborador (nunca en la de
+  // administración) -- se usa como interruptor de idioma: colaboradores ven
+  // esta tabla compartida en inglés, administración la sigue viendo en
+  // español, sin necesidad de una i18n de verdad para un único componente.
+  const locale = soloLectura ? 'en-GB' : 'es-ES';
+  const t = soloLectura ? {
+    cuentas: 'Accounts', concepto: 'Description', ver: 'View', fecha: 'Date',
+    sinRevisar: 'Unreviewed', aceptada: 'Accepted', rechazada: 'Rejected', pagos: 'Payments', pendiente: 'Pending', estado: 'Status',
+    sinConcepto: '(no description)', verLink: 'view', sinNada: 'No invoices or payments yet.',
+    cerrada: 'Closed', pago: 'Payment', total: 'Total',
+    estadoTexto: { subida: 'unreviewed', aceptada: 'accepted', rechazada: 'rejected' },
+  } : {
+    cuentas: 'Cuentas', concepto: 'Concepto', ver: 'Ver', fecha: 'Fecha',
+    sinRevisar: 'Sin revisar', aceptada: 'Aceptada', rechazada: 'Rechazada', pagos: 'Pagos', pendiente: 'Pendiente', estado: 'Estado',
+    sinConcepto: '(sin concepto)', verLink: 'ver', sinNada: 'Todavía no hay facturas ni pagos.',
+    cerrada: 'Cerrada', pago: 'Pago', total: 'Total',
+    estadoTexto: { subida: 'subida', aceptada: 'aceptada', rechazada: 'rechazada' },
+  };
+
   return (
     <div>
-      <strong>Cuentas</strong>
+      <strong>{t.cuentas}</strong>
       <div className="tabla-movimientos-envoltura" role="table" style={{ marginTop: 8 }}>
         <div role="rowgroup">
           <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: cols }}>
-            <div role="columnheader" className="celda">Concepto</div>
-            <div role="columnheader" className="celda">Ver</div>
-            <div role="columnheader" className="celda">Fecha</div>
-            <div role="columnheader" className="celda">Sin revisar</div>
-            <div role="columnheader" className="celda">Aceptada</div>
-            <div role="columnheader" className="celda">Rechazada</div>
-            <div role="columnheader" className="celda">Pagos</div>
-            <div role="columnheader" className="celda">Pendiente</div>
-            <div role="columnheader" className="celda">Estado</div>
+            <div role="columnheader" className="celda">{t.concepto}</div>
+            <div role="columnheader" className="celda">{t.ver}</div>
+            <div role="columnheader" className="celda">{t.fecha}</div>
+            <div role="columnheader" className="celda">{t.sinRevisar}</div>
+            <div role="columnheader" className="celda">{t.aceptada}</div>
+            <div role="columnheader" className="celda">{t.rechazada}</div>
+            <div role="columnheader" className="celda">{t.pagos}</div>
+            <div role="columnheader" className="celda">{t.pendiente}</div>
+            <div role="columnheader" className="celda">{t.estado}</div>
           </div>
         </div>
         <div role="rowgroup">
@@ -77,7 +96,7 @@ export default function TablaCuentas({
 
           {facturas.length === 0 && pagos.length === 0 && (
             <div role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
-              <div role="cell" className="celda muted">Todavía no hay facturas ni pagos.</div>
+              <div role="cell" className="celda muted">{t.sinNada}</div>
             </div>
           )}
 
@@ -88,11 +107,11 @@ export default function TablaCuentas({
             const bloqueada = f.estado_revision === 'cerrada';
             return (
               <div key={f.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
-                <div role="cell" className="celda concepto">{f.concepto || '(sin concepto)'}</div>
+                <div role="cell" className="celda concepto">{f.concepto || t.sinConcepto}</div>
                 <div role="cell" className="celda">
-                  <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">ver</a>
+                  <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">{t.verLink}</a>
                 </div>
-                <div role="cell" className="celda">{f.fechas?.[0] ? new Date(f.fechas[0]).toLocaleDateString('es-ES') : <span className="vacio">—</span>}</div>
+                <div role="cell" className="celda">{f.fechas?.[0] ? new Date(f.fechas[0]).toLocaleDateString(locale) : <span className="vacio">—</span>}</div>
                 <div role="cell" className="celda col-importe importe">{enSubida ? FMT(f.importe_declarado) : <span className="vacio">—</span>}</div>
                 <div role="cell" className="celda col-importe importe">{enAceptada ? FMT(f.importe_declarado) : <span className="vacio">—</span>}</div>
                 <div role="cell" className="celda col-importe importe">{enRechazada ? FMT(f.importe_declarado) : <span className="vacio">—</span>}</div>
@@ -101,9 +120,9 @@ export default function TablaCuentas({
                 <div role="cell" className="celda">
                   {soloLectura ? (
                     <span className="nota-texto">
-                      {f.estado_revision === 'cerrada' && `Cerrada · ${new Date(f.fecha_cierre).toLocaleDateString('es-ES')}`}
-                      {f.estado_revision === 'rechazada' && (f.motivo_rechazo || 'rechazada')}
-                      {(f.estado_revision === 'subida' || f.estado_revision === 'aceptada') && f.estado_revision}
+                      {f.estado_revision === 'cerrada' && `${t.cerrada} · ${new Date(f.fecha_cierre).toLocaleDateString(locale)}`}
+                      {f.estado_revision === 'rechazada' && (f.motivo_rechazo || t.estadoTexto.rechazada)}
+                      {(f.estado_revision === 'subida' || f.estado_revision === 'aceptada') && t.estadoTexto[f.estado_revision]}
                     </span>
                   ) : cerrando?.id === f.id ? (
                     <div className="celda-estado">
@@ -132,9 +151,9 @@ export default function TablaCuentas({
 
           {pagos.map(p => (
             <div key={p.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
-              <div role="cell" className="celda concepto">Pago{p.nota ? ` — ${p.nota}` : ''}</div>
+              <div role="cell" className="celda concepto">{t.pago}{p.nota ? ` — ${p.nota}` : ''}</div>
               <div role="cell" className="celda"><span className="vacio">—</span></div>
-              <div role="cell" className="celda">{p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : <span className="vacio">—</span>}</div>
+              <div role="cell" className="celda">{p.fecha ? new Date(p.fecha).toLocaleDateString(locale) : <span className="vacio">—</span>}</div>
               <div role="cell" className="celda col-importe importe"><span className="vacio">—</span></div>
               <div role="cell" className="celda col-importe importe"><span className="vacio">—</span></div>
               <div role="cell" className="celda col-importe importe"><span className="vacio">—</span></div>
@@ -156,7 +175,7 @@ export default function TablaCuentas({
 
           {totales && (
             <div role="row" className="fila-tabla fila-total" style={{ gridTemplateColumns: cols }}>
-              <div role="cell" className="celda">Total</div>
+              <div role="cell" className="celda">{t.total}</div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda col-importe importe">{FMT(totales.totalSinRevisar)}</div>

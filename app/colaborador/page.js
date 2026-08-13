@@ -46,22 +46,22 @@ export default function ColaboradorPage() {
     router.refresh();
   }
 
-  if (lotes === null) return <div className="contenedor"><p className="muted">Cargando...</p></div>;
+  if (lotes === null) return <div className="contenedor"><p className="muted">Loading...</p></div>;
 
   if (!loteId) {
     return (
       <div className="contenedor" style={{ paddingTop: '8vh' }}>
         <div className="tarjeta">
           <div className="fila">
-            <h1 style={{ margin: 0 }}>Hola, {nombre}</h1>
-            <button className="secundario" onClick={salir}>Salir</button>
+            <h1 style={{ margin: 0 }}>Hi, {nombre}</h1>
+            <button className="secundario" onClick={salir}>Log out</button>
           </div>
-          {lotes.length === 0 && !puedeSubirFacturasGenerales && <p className="muted">Todavía no tienes ningún lote asignado.</p>}
+          {lotes.length === 0 && !puedeSubirFacturasGenerales && <p className="muted">You don't have any project assigned yet.</p>}
           {lotes.map(l => (
             <div key={l.id} className="tarjeta fila" style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.03)' }} onClick={() => setLoteId(l.id)}>
               <div>
                 <strong>{l.evento}</strong>
-                <div className="muted">{Number(l.total_subido).toFixed(2)}€ subidas</div>
+                <div className="muted">{Number(l.total_subido).toFixed(2)}€ uploaded</div>
               </div>
             </div>
           ))}
@@ -76,24 +76,24 @@ export default function ColaboradorPage() {
       <div className="fila" style={{ marginTop: 16 }}>
         <div>
           <h1 style={{ margin: 0 }}>{lote?.evento}</h1>
-          <p className="muted" style={{ margin: 0 }}>Hola, {nombre}</p>
+          <p className="muted" style={{ margin: 0 }}>Hi, {nombre}</p>
         </div>
         <div>
-          {lotes.length > 1 && <button className="secundario" onClick={() => setLoteId(null)} style={{ marginRight: 8 }}>Cambiar lote</button>}
-          <button className="secundario" onClick={salir}>Salir</button>
+          {lotes.length > 1 && <button className="secundario" onClick={() => setLoteId(null)} style={{ marginRight: 8 }}>Switch project</button>}
+          <button className="secundario" onClick={salir}>Log out</button>
         </div>
       </div>
 
       <div className="tarjeta">
-        <strong>Datos para pedir la factura</strong>
+        <strong>Details for the invoice</strong>
         <p className="muted" style={{ marginTop: 6, marginBottom: 0 }}>
           NotOnlyLarp<br />
           G87705794<br />
           Josué Lillo 10, 1º B<br />
-          28053 Madrid
+          28053 Madrid, Spain
         </p>
         <p className="muted" style={{ marginTop: 10, marginBottom: 0 }}>
-          Sin factura a estos datos no podemos hacer el pago, por razones legales.
+          Without an invoice made out to these details we can't make the payment, for legal reasons.
         </p>
       </div>
 
@@ -110,8 +110,8 @@ export default function ColaboradorPage() {
 function SubirFacturasGenerales({ proyectoIdPorDefecto }) {
   return (
     <div className="tarjeta">
-      <strong>Subir facturas de NOL</strong>
-      <p className="muted" style={{ marginTop: 6 }}>Elige quién paga y el proyecto una vez; cada archivo lleva su propia fecha, concepto e importe.</p>
+      <strong>Upload NOL invoices</strong>
+      <p className="muted" style={{ marginTop: 6 }}>Choose who pays and the project once; each file has its own date, description and amount.</p>
       <div style={{ marginTop: 8 }}>
         <SubirFacturasNol proyectoIdPorDefecto={proyectoIdPorDefecto} />
       </div>
@@ -139,7 +139,7 @@ function InvitarColaborador({ proyectoNombre, proyectoId }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'No se pudo invitar.');
+        setError(data.error || 'Could not invite.');
         return;
       }
       setResultado(data.enlace);
@@ -152,19 +152,19 @@ function InvitarColaborador({ proyectoNombre, proyectoId }) {
 
   return (
     <div className="tarjeta">
-      <strong>Invitar a alguien a {proyectoNombre}</strong>
-      <p className="muted" style={{ marginTop: 6 }}>Le llega un correo para que elija su propia contraseña.</p>
+      <strong>Invite someone to {proyectoNombre}</strong>
+      <p className="muted" style={{ marginTop: 6 }}>They'll get an email to choose their own password.</p>
       <form onSubmit={onSubmit}>
-        <input type="text" placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} />
+        <input type="text" placeholder="Name" value={nombre} onChange={e => setNombre(e.target.value)} />
         <div style={{ height: 8 }} />
-        <input type="text" placeholder="Correo" value={usuario} onChange={e => setUsuario(e.target.value)} />
+        <input type="text" placeholder="Email" value={usuario} onChange={e => setUsuario(e.target.value)} />
         <div style={{ height: 8 }} />
-        <button type="submit" className="secundario" disabled={enviando}>{enviando ? 'Invitando...' : 'Invitar'}</button>
+        <button type="submit" className="secundario" disabled={enviando}>{enviando ? 'Inviting...' : 'Invite'}</button>
         {error && <p className="error">{error}</p>}
       </form>
       {resultado && (
         <p className="muted" style={{ marginTop: 8 }}>
-          Invitación enviada. Si el correo aún no está configurado, este es el enlace: <a href={resultado}>{resultado}</a>
+          Invitation sent. If email isn't set up yet, here's the link: <a href={resultado}>{resultado}</a>
         </p>
       )}
     </div>
