@@ -23,10 +23,16 @@ export default function ColaboradorPage() {
     setLotes(r.lotes || []);
     setPuedeInvitar(!!r.puedeInvitar);
     setPuedeSubirFacturasGenerales(!!r.puedeSubirFacturasGenerales);
-    if ((r.lotes || []).length === 1) setLoteId(r.lotes[0].id);
+    return r.lotes || [];
   }, []);
 
   useEffect(() => { cargarLotes(); }, [cargarLotes]);
+
+  // Al entrar, si ya tiene exactamente un proyecto, se abre solo; con varios
+  // o ninguno, elige ella qué ver (o sube directo sin elegir ninguno).
+  useEffect(() => {
+    if (lotes && lotes.length === 1 && loteId === null) setLoteId(lotes[0].id);
+  }, [lotes, loteId]);
 
   const cargarLote = useCallback(async () => {
     if (!loteId) return;
@@ -45,42 +51,22 @@ export default function ColaboradorPage() {
     router.refresh();
   }
 
-  if (lotes === null) return <div className="contenedor"><p className="muted">Loading...</p></div>;
-
-  if (!loteId) {
-    return (
-      <div className="contenedor" style={{ paddingTop: '8vh' }}>
-        <div className="tarjeta">
-          <div className="fila">
-            <h1 style={{ margin: 0 }}>Hi, {nombre}</h1>
-            <button className="secundario" onClick={salir}>Log out</button>
-          </div>
-          {lotes.length === 0 && !puedeSubirFacturasGenerales && <p className="muted">You don't have any project assigned yet.</p>}
-          {lotes.map(l => (
-            <div key={l.id} className="tarjeta fila" style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.03)' }} onClick={() => setLoteId(l.id)}>
-              <div>
-                <strong>{l.evento}</strong>
-                <div className="muted">{Number(l.total_subido).toFixed(2)}€ uploaded</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        {puedeSubirFacturasGenerales && (
-          <SubirFacturaColaborador puedeSubirFacturasGenerales onSubida={cargarLotes} />
-        )}
-      </div>
-    );
+  async function onSubida() {
+    await cargarLotes();
+    await cargarLote();
   }
 
+  if (lotes === null) return <div className="contenedor"><p className="muted">Loading...</p></div>;
+
   return (
-    <div className="contenedor contenedor-ancho">
-      <div className="fila" style={{ marginTop: 16 }}>
+    <div className={loteId ? 'contenedor contenedor-ancho' : 'contenedor'} style={loteId ? undefined : { paddingTop: '8vh' }}>
+      <div className="fila" style={{ marginTop: loteId ? 16 : 0, marginBottom: loteId ? 0 : 16 }}>
         <div>
-          <h1 style={{ margin: 0 }}>{lote?.evento}</h1>
-          <p className="muted" style={{ margin: 0 }}>Hi, {nombre}</p>
+          <h1 style={{ margin: 0 }}>{lote?.evento || `Hi, ${nombre}`}</h1>
+          {lote?.evento && <p className="muted" style={{ margin: 0 }}>Hi, {nombre}</p>}
         </div>
         <div>
-          {lotes.length > 1 && <button className="secundario" onClick={() => setLoteId(null)} style={{ marginRight: 8 }}>Switch project</button>}
+          {loteId && <button className="secundario" onClick={() => setLoteId(null)} style={{ marginRight: 8 }}>Switch project</button>}
           <button className="secundario" onClick={salir}>Log out</button>
         </div>
       </div>
@@ -99,15 +85,28 @@ export default function ColaboradorPage() {
       </div>
 
       <SubirFacturaColaborador
-        loteId={loteId}
         proyectoId={lote?.proyecto_id}
         puedeSubirFacturasGenerales={puedeSubirFacturasGenerales}
-        onSubida={cargarLote}
+        onSubida={onSubida}
       />
 
-      {puedeInvitar && <InvitarColaborador proyectoNombre={lote?.evento} proyectoId={lote?.proyecto_id} />}
+      {lotes.length > 0 && (
+        <div className="tarjeta">
+          <strong>Your projects</strong>
+          {lotes.map(l => (
+            <div key={l.id} className="tarjeta fila" style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.03)', marginTop: 8, marginBottom: 0 }} onClick={() => setLoteId(l.id)}>
+              <div>
+                <strong>{l.evento}</strong>
+                <div className="muted">{Number(l.total_subido).toFixed(2)}€ uploaded</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />
+      {puedeInvitar && loteId && <InvitarColaborador proyectoNombre={lote?.evento} proyectoId={lote?.proyecto_id} />}
+
+      {loteId && <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />}
     </div>
   );
 }

@@ -23,10 +23,10 @@ export async function POST(request, { params }) {
   if (!invitacion) return Response.json({ error: 'Este enlace no es válido o ya ha caducado.' }, { status: 404 });
 
   const hash = await bcrypt.hash(password, 10);
-  let colaborador, loteId;
+  let colaborador;
   try {
-    ({ colaborador, loteId } = await crearColaboradorDesdeInvitacion(
-      invitacion.nombre, invitacion.usuario, hash, invitacion.proyecto_id, invitacion.puede_subir_facturas_generales
+    ({ colaborador } = await crearColaboradorDesdeInvitacion(
+      invitacion.nombre, invitacion.usuario, hash, invitacion.puede_subir_facturas_generales
     ));
   } catch (err) {
     if (err.code === '23505') return Response.json({ error: 'Ya existe una cuenta con ese correo.' }, { status: 409 });

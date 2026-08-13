@@ -57,13 +57,13 @@ const SECCIONES_ADMIN = [
     ),
   },
   {
-    titulo: 'Colaboradores', cuando: 'Alguien va a gestionar gastos de un proyecto, o necesita subir facturas pagadas por NOL directamente.', cuerpo: (
+    titulo: 'Colaboradores', cuando: 'Alguien va a subir facturas de algún proyecto.', cuerpo: (
       <>
-        <p><strong>+ Añadir colaborador</strong> pide nombre, correo, un proyecto (opcional) y si además puede subir facturas de NOL — son dos cosas independientes, no una elección: alguien puede tener proyecto y ese permiso a la vez, o solo uno de los dos.</p>
+        <p><strong>+ Añadir colaborador</strong> pide solo nombre, correo, y si además puede subir facturas pagadas por NOL directamente — no se le asigna proyecto aquí, lo elige él mismo cada vez que sube una factura.</p>
         <div className="resumen-mini" style={{ display: 'block' }}>
-          Si el correo ya existe en el sistema, no se manda ninguna contraseña nueva — simplemente se le añade el proyecto o el permiso a su cuenta. Solo se manda invitación por correo la primera vez.
+          Si el correo ya existe en el sistema, no se manda ninguna contraseña nueva — simplemente se le actualiza el permiso. Solo se manda invitación por correo la primera vez.
         </div>
-        <p>Desde la tabla se puede cambiar su estado (activo/inactivo) y sus permisos en cualquier momento. Al tocar su nombre se entra a ver sus cuentas: qué ha subido, qué está aceptado o rechazado, y los pagos hechos.</p>
+        <p>Desde la tabla se puede cambiar su estado (activo/inactivo) y sus permisos en cualquier momento. Quien todavía no ha subido nada aparece igualmente, sin proyecto. Al tocar su nombre (si ya tiene alguno) se entra a ver sus cuentas: qué ha subido, qué está aceptado o rechazado, y los pagos hechos.</p>
       </>
     ),
   },
@@ -76,8 +76,8 @@ const SECCIONES_COLABORADORES = [
     ),
   },
   {
-    titulo: 'Si estás en más de un proyecto', cuerpo: (
-      <p>Al entrar verás la lista de proyectos en los que colaboras, con el total ya subido en cada uno. Toca el que quieras abrir. Si solo tienes uno, se abre directamente.</p>
+    titulo: 'Elegir proyecto', cuerpo: (
+      <p>No se te asigna ningún proyecto de antemano: cada vez que subes una factura, eliges a qué proyecto pertenece en el propio formulario. La primera vez que subes algo de un proyecto, se crea solo; a partir de ahí aparece en "Your projects" como acceso rápido a sus cuentas.</p>
     ),
   },
   {
@@ -96,8 +96,8 @@ const SECCIONES_COLABORADORES = [
   {
     titulo: 'Subir una factura', cuerpo: (
       <>
-        <p>Adjunta el PDF o hazle una foto desde el móvil, con su fecha, concepto e importe. Se sube a la cuenta del proyecto que tienes abierto y queda pendiente de revisión.</p>
-        <p className="muted">Si administración te ha dado el permiso de NOL, en el mismo formulario aparecen además "Quién paga" (marcado "Yo" por defecto) y "Proyecto" — para registrar una factura pagada por NOL directamente, o una tuya de otro proyecto distinto al que tienes abierto.</p>
+        <p>Adjunta el PDF o hazle una foto desde el móvil, con su fecha, concepto e importe, y elige el proyecto al que pertenece. Queda pendiente de revisión.</p>
+        <p className="muted">Si administración te ha dado el permiso de NOL, en el mismo formulario aparece además "Quién paga" (marcado "Yo" por defecto) — para registrar una factura pagada por NOL directamente en vez de por ti.</p>
       </>
     ),
   },

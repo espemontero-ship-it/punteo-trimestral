@@ -5,27 +5,28 @@ const { analizarBuffer } = require('../../../../lib/facturas.cjs');
 const { procesarFacturaSubida } = require('../../../../lib/facturaMatcher.cjs');
 const { buscarOCrearLote, subirFacturaLote, trimestreActual } = require('../../../../lib/lotes.cjs');
 
-// Mismo motor que `POST /api/facturas` (subida de facturas generales, no
-// ligadas a ningún lote), pero en una ruta propia solo para colaboradores con
-// el permiso puede_subir_facturas_generales -- así esta cuenta nunca puede
-// llegar al GET/DELETE de `/api/facturas`, que listan/borran TODAS las
-// facturas de la empresa.
+// Punto de entrada único para que un colaborador suba una factura eligiendo
+// proyecto libremente (ya no se le asigna uno fijo al alta). "Paga NOL" solo
+// está disponible con el permiso puede_subir_facturas_generales; "pago yo" lo
+// puede usar cualquier colaborador -- entra por su lote de ese proyecto (se
+// crea al vuelo si no existía, ver buscarOCrearLote).
 export const maxDuration = 60;
 
 export async function POST(request) {
   const sesion = await obtenerSesion(request);
   if (!sesion || sesion.rol !== 'colaborador') return Response.json({ error: 'No autorizado' }, { status: 403 });
 
-  const colaborador = await obtenerColaborador(sesion.colaboradorId);
-  if (!colaborador || !colaborador.puede_subir_facturas_generales) {
-    return Response.json({ error: 'No tienes permiso para subir facturas de NOL.' }, { status: 403 });
-  }
-
   const { rutaBlob, nombreOriginal, concepto, importe, fecha, proyectoId, quienPaga } = await request.json();
   if (!rutaBlob) return Response.json({ error: 'Faltan datos (rutaBlob).' }, { status: 400 });
   if (!proyectoId) return Response.json({ error: 'Falta el proyecto.' }, { status: 400 });
   if (quienPaga !== 'colaborador' && quienPaga !== 'nol') {
     return Response.json({ error: 'Falta indicar quién paga.' }, { status: 400 });
+  }
+  if (quienPaga === 'nol') {
+    const colaborador = await obtenerColaborador(sesion.colaboradorId);
+    if (!colaborador || !colaborador.puede_subir_facturas_generales) {
+      return Response.json({ error: 'No tienes permiso para subir facturas de NOL.' }, { status: 403 });
+    }
   }
 
   try {

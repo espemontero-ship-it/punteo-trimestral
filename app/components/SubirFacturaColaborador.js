@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
 
 // Un único formulario de subida para colaboradores, un archivo cada vez.
-// Quien no tiene el permiso puede_subir_facturas_generales ni ve "Quién
-// paga" ni "Proyecto" -- sube directo a su lote como siempre. Quien sí lo
-// tiene ve ambos campos, con "Yo" y el proyecto actual marcados por defecto,
-// y puede cambiarlos para registrar un gasto de NOL o de otro proyecto.
-export default function SubirFacturaColaborador({ loteId, proyectoId, puedeSubirFacturasGenerales, onSubida }) {
+// El proyecto se elige siempre (ya no se asigna uno fijo al alta) -- entra
+// por el lote de ese proyecto, creándolo al vuelo si hace falta (ver
+// buscarOCrearLote). "Quién paga" (Yo/NOL) solo aparece si el colaborador
+// tiene el permiso puede_subir_facturas_generales; si no, siempre paga él.
+export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturasGenerales, onSubida }) {
   const inputRef = useRef(null);
   const [archivo, setArchivo] = useState(null);
   const [concepto, setConcepto] = useState('');
@@ -21,16 +21,15 @@ export default function SubirFacturaColaborador({ loteId, proyectoId, puedeSubir
   const [mensaje, setMensaje] = useState(null);
 
   useEffect(() => {
-    if (puedeSubirFacturasGenerales) {
-      fetch('/api/colaborador/proyectos').then(r => r.json()).then(d => setProyectos(d.proyectos || []));
-    }
-  }, [puedeSubirFacturasGenerales]);
+    fetch('/api/colaborador/proyectos').then(r => r.json()).then(d => setProyectos(d.proyectos || []));
+  }, []);
 
   useEffect(() => { setProyectoSeleccionado(proyectoId || ''); }, [proyectoId]);
 
   async function onSubmit(e) {
     e.preventDefault();
     if (!archivo) { setMensaje('Choose a file first.'); return; }
+    if (!proyectoSeleccionado) { setMensaje('Choose a project first.'); return; }
     setSubiendo(true);
     setMensaje(null);
     try {
@@ -38,24 +37,14 @@ export default function SubirFacturaColaborador({ loteId, proyectoId, puedeSubir
         access: 'private',
         handleUploadUrl: '/api/blob-upload',
       });
-
-      let res;
-      if (puedeSubirFacturasGenerales) {
-        res = await fetch('/api/colaborador/facturas-generales', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha,
-            proyectoId: proyectoSeleccionado, quienPaga,
-          }),
-        });
-      } else {
-        res = await fetch(`/api/colaborador/lotes/${loteId}/facturas`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha }),
-        });
-      }
+      const res = await fetch('/api/colaborador/facturas-generales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha,
+          proyectoId: proyectoSeleccionado, quienPaga: puedeSubirFacturasGenerales ? quienPaga : 'colaborador',
+        }),
+      });
       const data = await res.json();
       if (!res.ok || data?.tipo === 'error') {
         setMensaje(data.error || data.detalle || 'Could not upload.');
@@ -90,6 +79,11 @@ export default function SubirFacturaColaborador({ loteId, proyectoId, puedeSubir
       <input type="number" step="0.01" placeholder="Amount" value={importe} onChange={e => setImporte(e.target.value)} />
       <div style={{ height: 8 }} />
       <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+      <div style={{ height: 8 }} />
+      <select value={proyectoSeleccionado} onChange={e => setProyectoSeleccionado(e.target.value)}>
+        <option value="">Choose project...</option>
+        {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+      </select>
 
       {puedeSubirFacturasGenerales && (
         <>
@@ -97,11 +91,6 @@ export default function SubirFacturaColaborador({ loteId, proyectoId, puedeSubir
           <select value={quienPaga} onChange={e => setQuienPaga(e.target.value)}>
             <option value="colaborador">I pay</option>
             <option value="nol">NOL pays</option>
-          </select>
-          <div style={{ height: 8 }} />
-          <select value={proyectoSeleccionado} onChange={e => setProyectoSeleccionado(e.target.value)}>
-            <option value="">Choose project...</option>
-            {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </>
       )}
