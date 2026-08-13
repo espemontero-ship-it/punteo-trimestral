@@ -270,23 +270,13 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .btn-icono { display: flex; align-items: center; gap: 6px; }
 .btn-icono .ico { font-size: 15px; line-height: 1; }
 
-/* Tarjeta de acción principal (pestaña Inicio) */
-.cta-principal {
-  background: var(--accent);
-  color: var(--accent-text);
-  border-radius: 12px;
-  padding: 22px 18px;
-  text-align: center;
-  margin-bottom: 12px;
-}
-.cta-principal p { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
-.cta-principal .sub { font-size: 12.5px; opacity: .85; margin-bottom: 14px; font-weight: 400; }
-.cta-principal button.secundario {
-  background: #fff;
-  color: var(--accent);
-  border-color: #fff;
-  font-weight: 700;
-}
+/* Acción principal de Inicio (maqueta_inicio.html, opción A, 2026-08-13):
+   sin bloque de color -- título + instrucción + botón ancho relleno de
+   acento, igual de protagonista que antes sin ser un rectángulo sólido que
+   ocupa media pantalla. */
+.inicio-subir { margin-bottom: 12px; }
+.titulo-inicio { margin: 0 0 4px; font-size: 16px; font-weight: 700; }
+.instruccion-inicio { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
 
 .resumen-mini {
   display: flex; justify-content: space-between; align-items: center;

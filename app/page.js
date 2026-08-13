@@ -337,28 +337,16 @@ export default function Home() {
       <CabeceraApp pestanaActiva={pestana} onCambiarPestana={setPestana} cerrarSesion={cerrarSesion} />
 
       {pestana === 'inicio' && (
-        <>
-          <div className="cta-principal">
-            <p>Subir factura suelta</p>
-            <div className="sub">Foto desde el móvil o PDF — se guarda y se empareja sola cuando toque.</div>
-            <SubirFactura
-              etiqueta="Subir ahora"
-              onResultado={r => { setMensajeFacturaSuelta(r.detalle); cargar(); }}
-            />
-          </div>
-          {mensajeFacturaSuelta && <p className="muted" style={{ marginTop: -6, marginBottom: 12 }}>{mensajeFacturaSuelta}</p>}
-
-          {facturas && facturas.length > 0 && (() => {
-            const sueltas = facturas.filter(f => !f.proveedor_clave);
-            const pendientes = facturas.filter(f => f.estado !== 'matcheada');
-            return (
-              <p className="muted">
-                {facturas.length} factura(s) subida(s) — {pendientes.length} sin resolver todavía
-                {sueltas.length > 0 ? ` (${sueltas.length} sin proveedor asignado aún)` : ''}.
-              </p>
-            );
-          })()}
-        </>
+        <div className="inicio-subir">
+          <p className="titulo-inicio">Subir factura suelta</p>
+          <p className="instruccion-inicio">Foto desde el móvil o PDF — se guarda y se empareja sola cuando toque.</p>
+          <SubirFactura
+            etiqueta="Subir ahora"
+            className="grande"
+            onResultado={r => { setMensajeFacturaSuelta(r.detalle); cargar(); }}
+          />
+          {mensajeFacturaSuelta && <p className="muted" style={{ marginTop: 10 }}>{mensajeFacturaSuelta}</p>}
+        </div>
       )}
 
       {pestana === 'movimientos' && (
