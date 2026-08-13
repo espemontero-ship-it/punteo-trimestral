@@ -7,6 +7,7 @@ import SubirFacturasLote from './components/SubirFacturasLote';
 import FacturasTrimestre from './components/FacturasTrimestre';
 import GestionProyectos from './components/GestionProyectos';
 import TablaColaboradores from './components/TablaColaboradores';
+import Ayuda from './components/Ayuda';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Modal } from './components/Modal';
 import CabeceraApp, { PESTANAS } from './components/CabeceraApp';
@@ -430,6 +431,10 @@ export default function Home() {
 
       {pestana === 'colaboradores' && (
         <TablaColaboradores />
+      )}
+
+      {pestana === 'ayuda' && (
+        <Ayuda />
       )}
 
       <Modal abierto={modalAbierto === 'excel'} titulo="Añadir excel del banco / paypal" onCerrar={() => setModalAbierto(null)}>

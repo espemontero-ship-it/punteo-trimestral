@@ -8,6 +8,7 @@ export const PESTANAS = [
   { id: 'facturas', etiqueta: 'Facturas' },
   { id: 'proyectos', etiqueta: 'Proyectos' },
   { id: 'colaboradores', etiqueta: 'Colaboradores' },
+  { id: 'ayuda', etiqueta: 'Ayuda' },
 ];
 
 // Cabecera compartida por la SPA de admin (app/page.js, cambia de pestaña sin
