@@ -433,10 +433,7 @@ input.campo-proveedor {
    una sola celda combinada, para que quede claro que cada control actua
    sobre todo el grupo por estar alineado bajo esa columna. */
 .fila-grupo .celda {
-  /* Más contraste que --surface-alt (demasiado sutil junto a --bg, se
-     confundía con una fila normal) -- mismo tinte índigo, un paso más
-     oscuro, a medio camino hacia --border. */
-  background: #e2e5f0; border-bottom: 1px solid var(--border);
+  background: var(--surface-alt); border-bottom: 1px solid var(--border);
   white-space: normal; align-items: flex-start;
 }
 /* Un grupo de 1 sola línea no tiene cabecera propia -- para que no se
@@ -444,7 +441,7 @@ input.campo-proveedor {
    cabecera de un grupo real. Regla real que existía, se perdió sin querer
    en un rediseño anterior (el className se seguía aplicando en el JSX pero
    ya no tenía estilo) -- restaurada 2026-08-13. */
-.inicio-grupo .celda { background: #e2e5f0; }
+.inicio-grupo .celda { background: var(--surface-alt); }
 .fila-grupo .grupo-nombre { font-weight: 700; }
 .fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .fila-grupo select.select-estado, .fila-grupo input.campo-nota { width: 100%; }
