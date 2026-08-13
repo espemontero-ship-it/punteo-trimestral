@@ -22,7 +22,7 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'No se pudo iniciar sesión');
+        setError(data.error || 'Could not log in');
         return;
       }
       router.push(data.redirect || '/');
@@ -39,7 +39,7 @@ export default function LoginPage() {
         <form onSubmit={onSubmit}>
           <input
             type="text"
-            placeholder="Usuario (solo colaboradores)"
+            placeholder="Username (collaborators only)"
             value={usuario}
             onChange={e => setUsuario(e.target.value)}
             autoComplete="username"
@@ -47,21 +47,21 @@ export default function LoginPage() {
           <div style={{ height: 12 }} />
           <input
             type="password"
-            placeholder="Contraseña"
+            placeholder="Password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             autoComplete="current-password"
           />
           <div style={{ height: 12 }} />
           <button className="grande" type="submit" disabled={enviando}>
-            {enviando ? 'Entrando...' : 'Entrar'}
+            {enviando ? 'Logging in...' : 'Log in'}
           </button>
           {error && <p className="error">{error}</p>}
           <p className="muted" style={{ marginTop: 12 }}>
-            Si eres administradora, deja el usuario en blanco y pon solo la contraseña.
+            If you're the administrator, leave the username blank and enter only the password.
           </p>
           <p className="muted" style={{ marginTop: 6 }}>
-            <a href="/recuperar">¿Olvidaste tu contraseña?</a>
+            <a href="/recuperar">Forgot your password?</a>
           </p>
         </form>
       </div>

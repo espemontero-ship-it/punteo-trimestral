@@ -14,5 +14,5 @@ export async function POST(request) {
       await enviarRecuperacion(usuario, { enlace });
     }
   }
-  return Response.json({ ok: true, mensaje: 'Si ese correo tiene una cuenta, te ha llegado un enlace para elegir una contraseña nueva.' });
+  return Response.json({ ok: true, mensaje: "If that email has an account, you've got a link to choose a new password." });
 }

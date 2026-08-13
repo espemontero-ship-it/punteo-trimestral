@@ -14,7 +14,7 @@ export default function RestablecerPage({ params }) {
     e.preventDefault();
     setError(null);
     if (password !== confirmar) {
-      setError('Las dos contraseñas no coinciden.');
+      setError("The two passwords don't match.");
       return;
     }
     setEnviando(true);
@@ -26,7 +26,7 @@ export default function RestablecerPage({ params }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'No se pudo cambiar la contraseña.');
+        setError(data.error || 'Could not change the password.');
         return;
       }
       setHecho(true);
@@ -38,14 +38,14 @@ export default function RestablecerPage({ params }) {
   return (
     <div className="contenedor" style={{ paddingTop: '20vh' }}>
       <div className="tarjeta">
-        <h1 style={{ marginTop: 0 }}>Elegir nueva contraseña</h1>
+        <h1 style={{ marginTop: 0 }}>Choose a new password</h1>
         {hecho ? (
-          <p className="muted">Contraseña cambiada. Ya puedes <a href="/login">entrar</a> con ella.</p>
+          <p className="muted">Password changed. You can now <a href="/login">log in</a> with it.</p>
         ) : (
           <form onSubmit={onSubmit}>
             <input
               type="password"
-              placeholder="Contraseña nueva"
+              placeholder="New password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               autoComplete="new-password"
@@ -53,14 +53,14 @@ export default function RestablecerPage({ params }) {
             <div style={{ height: 12 }} />
             <input
               type="password"
-              placeholder="Repite la contraseña"
+              placeholder="Repeat the password"
               value={confirmar}
               onChange={e => setConfirmar(e.target.value)}
               autoComplete="new-password"
             />
             <div style={{ height: 12 }} />
             <button className="grande" type="submit" disabled={enviando}>
-              {enviando ? 'Guardando...' : 'Guardar contraseña'}
+              {enviando ? 'Saving...' : 'Save password'}
             </button>
             {error && <p className="error">{error}</p>}
           </form>

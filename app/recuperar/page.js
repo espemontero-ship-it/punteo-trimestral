@@ -17,7 +17,7 @@ export default function RecuperarPage() {
         body: JSON.stringify({ usuario: usuario.trim() }),
       });
       const data = await res.json().catch(() => ({}));
-      setMensaje(data.mensaje || 'Si ese correo tiene una cuenta, te ha llegado un enlace.');
+      setMensaje(data.mensaje || "If that email has an account, you'll get a link.");
     } finally {
       setEnviando(false);
     }
@@ -26,26 +26,26 @@ export default function RecuperarPage() {
   return (
     <div className="contenedor" style={{ paddingTop: '20vh' }}>
       <div className="tarjeta">
-        <h1 style={{ marginTop: 0 }}>Recuperar contraseña</h1>
+        <h1 style={{ marginTop: 0 }}>Reset password</h1>
         {mensaje ? (
           <p className="muted">{mensaje}</p>
         ) : (
           <form onSubmit={onSubmit}>
             <input
               type="text"
-              placeholder="Tu correo"
+              placeholder="Your email"
               value={usuario}
               onChange={e => setUsuario(e.target.value)}
               autoComplete="username"
             />
             <div style={{ height: 12 }} />
             <button className="grande" type="submit" disabled={enviando}>
-              {enviando ? 'Enviando...' : 'Mandar enlace'}
+              {enviando ? 'Sending...' : 'Send link'}
             </button>
           </form>
         )}
         <p className="muted" style={{ marginTop: 12 }}>
-          <a href="/login">Volver a entrar</a>
+          <a href="/login">Back to login</a>
         </p>
       </div>
     </div>
