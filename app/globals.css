@@ -1,15 +1,14 @@
 :root {
-  --bg: #ffffff;
+  --bg: #f7f8fb;
   --card: #ffffff;
-  --surface-alt: #fafafa;
-  --border: #e2e2e2;
-  --text: #231f20;
-  --muted: #58595b;
-  --accent: #1d5da6;
-  --accent-soft: rgba(29, 93, 166, .08);
+  --surface-alt: #eef0f6;
+  --border: #dcdfe8;
+  --text: #1c1f2e;
+  --muted: #656b80;
+  --accent: #4e4f74;
+  --accent-soft: rgba(78, 79, 116, .09);
   --accent-text: #ffffff;
   --ok: #3f7d5c;
-  --warn: #a67c2e;
   --new: #a8402c;
   color-scheme: light;
 }
@@ -107,7 +106,6 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   font-weight: 600;
 }
 .etiqueta.fija { background: rgba(63,125,92,.12); color: var(--ok); }
-.etiqueta.mixta { background: rgba(166,124,46,.12); color: var(--warn); }
 .etiqueta.nueva { background: rgba(168,64,44,.12); color: var(--new); }
 .etiqueta.pedida { background: rgba(108,107,102,.1); color: var(--muted); }
 
@@ -384,12 +382,17 @@ input.campo-proveedor {
    lenguaje -- icono pequeño con borde, gris, sin color ni siquiera en hover
    (el azul se queda solo para sugerencias). */
 .celda.col-grupo { padding: 9px 6px; justify-content: center; }
+/* Sin cajas: ningún control de celda tiene caja permanente en reposo -- la
+   caja aparece igual para todos solo al pasar por encima o hacer foco. Lo
+   único que distingue una acción de un dato en reposo es el peso de la
+   letra, no una caja. Alcance: solo dentro de las tablas (Movimientos y
+   Facturas), el resto de botones de la app no cambia. */
 .btn-quitar, .btn-unir, .btn-editar-mini {
   width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
-  padding: 0; font-size: 12px; line-height: 1; background: var(--surface-alt);
-  border: 1px solid var(--border); border-radius: 4px; color: var(--muted); cursor: pointer;
+  padding: 0; font-size: 14px; font-weight: 700; line-height: 1; background: none;
+  border: none; color: var(--border); cursor: pointer;
 }
-.btn-quitar:hover, .btn-unir:hover, .btn-editar-mini:hover { color: var(--text); border-color: var(--text); }
+.btn-quitar:hover, .btn-unir:hover, .btn-editar-mini:hover { color: var(--muted); }
 .grupo-wrap { position: relative; }
 .panel-grupos {
   position: absolute; left: 0; top: calc(100% + 6px); z-index: 20;
@@ -441,12 +444,20 @@ input.campo-nota {
 .nota-texto { font-size: 13px; }
 
 /* Estado: siempre un desplegable editable (pendiente/pedida/resuelta); si hay
-   factura emparejada, un enlace subrayado normal debajo, sin flecha ni color nuevo */
+   factura emparejada, un enlace debajo, sin flecha ni color nuevo */
 .celda-estado { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 select.select-estado { font-size: 13px; padding: 5px 8px; border-radius: 6px; width: auto; }
-/* Enlace real: subrayado, color de texto normal -- el azul se queda
-   reservado solo para sugerencias del sistema y la pestaña activa. */
-.link-factura { color: var(--text); font-size: 12px; text-decoration: underline; }
+/* Enlace y botón dentro de celda comparten el mismo tratamiento sin cajas:
+   texto en negrita, sin subrayar, sin caja en reposo -- la caja aparece
+   igual para los dos solo al pasar por encima o hacer foco. El azul se
+   queda reservado solo para sugerencias del sistema y la pestaña activa. */
+.celda .link-factura, .celda button.secundario {
+  background: transparent; border: 1px solid transparent; color: var(--text);
+  font-weight: 600; text-decoration: none; padding: 5px 10px; border-radius: 6px; display: inline-block;
+}
+.celda .link-factura:hover, .celda button.secundario:hover {
+  background: var(--surface-alt); border-color: var(--border);
+}
 
 select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; width: auto; min-width: 90px; }
 /* Sugerencia del sistema: texto de acento en negrita, sin caja, sin
