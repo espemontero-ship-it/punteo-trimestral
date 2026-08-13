@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
 
-export default function SubirFactura({ hoja, clave, etiqueta, onResultado, className = 'secundario' }) {
+export default function SubirFactura({ hoja, clave, etiqueta, onResultado, className = 'secundario', conIcono = true }) {
   const inputRef = useRef(null);
   const [archivo, setArchivo] = useState(null);
   const [concepto, setConcepto] = useState('');
@@ -57,7 +57,7 @@ export default function SubirFactura({ hoja, clave, etiqueta, onResultado, class
       />
       {!archivo ? (
         <button type="button" className={className} onClick={() => inputRef.current?.click()}>
-          📎 {etiqueta || 'Subir factura'}
+          {conIcono && '📎 '}{etiqueta || 'Subir factura'}
         </button>
       ) : (
         <div className="form-factura-suelta">

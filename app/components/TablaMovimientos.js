@@ -519,6 +519,7 @@ export default function TablaMovimientos({
         hoja={g.hoja}
         clave={g.clave}
         etiqueta="Subir"
+        conIcono={false}
         onResultado={r => subirFacturaDesdeFila(g, r)}
       />
     );
