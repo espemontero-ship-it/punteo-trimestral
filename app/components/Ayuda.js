@@ -118,8 +118,11 @@ const SECCIONES_COLABORADORES = [
     ),
   },
   {
-    titulo: 'Facturas pagadas por NOL', cuando: 'Solo visible si administración te ha dado este permiso.', cuerpo: (
-      <p>Para gastos de la propia asociación, no de un proyecto concreto — por ejemplo material que paga NOL directamente. Se suben igual que una factura normal, en su propio apartado.</p>
+    titulo: 'Facturas de NOL o pagadas por ti', cuando: 'Solo visible si administración te ha dado este permiso.', cuerpo: (
+      <>
+        <p>Para facturas que no van por el flujo normal de tu lote: eliges una vez, para toda la tanda de archivos que subas, <strong>quién paga</strong> (NOL directamente, o tú) y a <strong>qué proyecto</strong> pertenecen. Después añades los archivos — cada uno con su propia fecha, concepto e importe.</p>
+        <p>Si eliges que pagas tú, la factura entra en tu lote de ese proyecto igual que si la hubieras subido desde ahí (si todavía no tienes lote en ese proyecto, se crea solo). Si eliges NOL, queda como gasto general de la asociación, asociado a ese proyecto.</p>
+      </>
     ),
   },
 ];
