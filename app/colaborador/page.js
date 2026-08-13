@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import SubirFacturaLote from '../components/SubirFacturaLote';
-import SubirFacturasLote from '../components/SubirFacturasLote';
+import SubirFacturasNol from '../components/SubirFacturasNol';
 import TablaCuentas from '../components/TablaCuentas';
 
 export default function ColaboradorPage() {
@@ -100,33 +100,21 @@ export default function ColaboradorPage() {
       <SubirFacturaLote loteId={loteId} onSubida={cargarLote} />
 
       {puedeInvitar && <InvitarColaborador proyectoNombre={lote?.evento} proyectoId={lote?.proyecto_id} />}
-      {puedeSubirFacturasGenerales && <SubirFacturasGenerales />}
+      {puedeSubirFacturasGenerales && <SubirFacturasGenerales proyectoIdPorDefecto={lote?.proyecto_id} />}
 
       <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />
     </div>
   );
 }
 
-function SubirFacturasGenerales() {
-  const [resumen, setResumen] = useState(null);
-
-  function onCompletado(resultados) {
-    const errores = resultados.filter(r => r.resultado?.tipo === 'error').length;
-    setResumen({ total: resultados.length, errores });
-  }
-
+function SubirFacturasGenerales({ proyectoIdPorDefecto }) {
   return (
     <div className="tarjeta">
       <strong>Subir facturas de NOL</strong>
-      <p className="muted" style={{ marginTop: 6 }}>Gastos de la propia asociación, no de un proyecto concreto.</p>
+      <p className="muted" style={{ marginTop: 6 }}>Elige quién paga y el proyecto una vez; cada archivo lleva su propia fecha, concepto e importe.</p>
       <div style={{ marginTop: 8 }}>
-        <SubirFacturasLote endpoint="/api/colaborador/facturas-generales" onCompletado={onCompletado} />
+        <SubirFacturasNol proyectoIdPorDefecto={proyectoIdPorDefecto} />
       </div>
-      {resumen && (
-        <p className="muted" style={{ marginTop: 8 }}>
-          {resumen.total - resumen.errores} factura(s) subida(s){resumen.errores > 0 ? `, ${resumen.errores} con error` : ''}.
-        </p>
-      )}
     </div>
   );
 }

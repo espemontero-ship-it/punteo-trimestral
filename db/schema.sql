@@ -100,7 +100,8 @@ CREATE TABLE IF NOT EXISTS facturas (
   importe_declarado NUMERIC(12,2),        -- importe que cuenta para los totales del lote
   estado_revision TEXT,                   -- subida | aceptada | rechazada | cerrada | borrada
   motivo_rechazo TEXT,
-  fecha_cierre DATE                       -- fecha en la que se marcó 'cerrada' (liquidada, ya no editable)
+  fecha_cierre DATE,                      -- fecha en la que se marcó 'cerrada' (liquidada, ya no editable)
+  proyecto_id BIGINT REFERENCES proyectos(id) -- solo facturas generales de NOL (sin lote) con proyecto asociado
 );
 
 -- Cada excel subido es su propia importación (no un singleton por banco) --

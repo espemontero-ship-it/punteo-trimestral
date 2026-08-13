@@ -11,7 +11,7 @@ async function cerrarSesion() {
 
 const COLS_DEVOLUCIONES = '130px 100px 1fr 1fr';
 const COLS_FACTURAS_FUTURAS = '130px 100px 160px 1fr';
-const COLS_FACTURAS_LOTE = '1fr 1fr 100px 120px';
+const COLS_FACTURAS_LOTE = '1fr 1fr 100px 90px 120px';
 
 export default function ProyectoPage({ params }) {
   const { id } = use(params);
@@ -144,15 +144,17 @@ export default function ProyectoPage({ params }) {
                 <div role="columnheader" className="celda">Colaborador</div>
                 <div role="columnheader" className="celda">Concepto</div>
                 <div role="columnheader" className="celda">Importe</div>
+                <div role="columnheader" className="celda">Paga</div>
                 <div role="columnheader" className="celda">Estado</div>
               </div>
             </div>
             <div role="rowgroup">
               {facturasLote.map(f => (
                 <div role="row" key={f.id} className="fila-tabla" style={{ gridTemplateColumns: COLS_FACTURAS_LOTE }}>
-                  <div role="cell" className="celda">{f.colaborador_nombre}</div>
+                  <div role="cell" className="celda">{f.colaborador_nombre || '—'}</div>
                   <div role="cell" className="celda muted">{f.concepto?.slice(0, 60) || '—'}</div>
                   <div role="cell" className="celda">{f.importe_declarado != null ? `${Number(f.importe_declarado).toFixed(2)}€` : '—'}</div>
+                  <div role="cell" className="celda muted">{f.pagado_por === 'nol' ? 'NOL' : 'Colaborador'}</div>
                   <div role="cell" className="celda">{f.estado_revision === 'aceptada' ? 'Aceptada' : 'Sin revisar'}</div>
                 </div>
               ))}
