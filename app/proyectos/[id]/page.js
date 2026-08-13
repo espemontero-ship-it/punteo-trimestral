@@ -74,7 +74,7 @@ export default function ProyectoPage({ params }) {
         <a href="/"><button className="secundario">Volver</button></a>
       </div>
 
-      <div className="tarjeta">
+      <div style={{ marginTop: 24 }}>
         <p style={{ fontWeight: 600, marginBottom: 4 }}>Devoluciones</p>
         <p className="muted" style={{ marginTop: 0 }}>De cualquier fecha — para el cierre de proyecto.</p>
         {devoluciones && devoluciones.length === 0 && <p className="muted">Ninguna devolución de este proyecto todavía.</p>}
@@ -105,7 +105,7 @@ export default function ProyectoPage({ params }) {
         )}
       </div>
 
-      <div className="tarjeta">
+      <div style={{ marginTop: 24 }}>
         <p style={{ fontWeight: 600, marginBottom: 4 }}>Facturas futuras sin recuperar</p>
         <p className="muted" style={{ marginTop: 0 }}>Proveedores que no emiten factura hasta que ha pasado el servicio (ej. DoYouSpain, Iberia) — mientras el proyecto siga abierto, siguen pendientes de pedir.</p>
         {facturasFuturas && facturasFuturas.length === 0 && <p className="muted">Ninguna factura futura pendiente de este proyecto.</p>}
@@ -133,7 +133,7 @@ export default function ProyectoPage({ params }) {
         )}
       </div>
 
-      <div className="tarjeta">
+      <div style={{ marginTop: 24 }}>
         <p style={{ fontWeight: 600, marginBottom: 4 }}>Facturas de colaboradores pendientes</p>
         <p className="muted" style={{ marginTop: 0 }}>De cualquier lote de este proyecto, todavía sin revisar o revisadas pero sin cerrar.</p>
         {facturasLote && facturasLote.length === 0 && <p className="muted">Ninguna factura de colaborador pendiente de este proyecto.</p>}

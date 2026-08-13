@@ -86,7 +86,7 @@ export default function TablaColaboradores() {
   }
 
   return (
-    <div className="tarjeta">
+    <div>
       <div className="fila" style={{ marginBottom: 8 }}>
         <div>
           <strong>Colaboradores</strong>

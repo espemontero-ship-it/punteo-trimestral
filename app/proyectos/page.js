@@ -2,7 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import GestionProyectos from '../components/GestionProyectos';
+import CabeceraApp from '../components/CabeceraApp';
 import { apiFetch } from '../lib/toast';
+
+async function cerrarSesion() {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
 
 export default function ProyectosPage() {
   const [proyectos, setProyectos] = useState(null);
@@ -15,12 +21,8 @@ export default function ProyectosPage() {
   useEffect(() => { cargar(); }, [cargar]);
 
   return (
-    <div className="contenedor" style={{ paddingTop: '8vh' }}>
-      <div className="fila" style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Proyectos</h1>
-        <a href="/"><button className="secundario">Volver</button></a>
-      </div>
-
+    <div className="contenedor contenedor-ancho">
+      <CabeceraApp pestanaActiva="proyectos" cerrarSesion={cerrarSesion} />
       {proyectos === null ? (
         <p className="muted">Cargando...</p>
       ) : (

@@ -30,7 +30,7 @@ export default function GestionProyectos({ proyectos, onCambio }) {
   }
 
   return (
-    <div className="tarjeta">
+    <div>
       <div className="fila" style={{ marginBottom: 8 }}>
         <div>
           <strong>Proyectos</strong>
@@ -39,11 +39,22 @@ export default function GestionProyectos({ proyectos, onCambio }) {
         <button type="button" className="secundario" onClick={() => setModalAbierto(true)}>+ Añadir proyecto</button>
       </div>
       {proyectos.length === 0 && <p className="muted">Todavía no hay ningún proyecto creado.</p>}
-      {proyectos.map(p => (
-        <div key={p.id} className="fila" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-          <a href={`/proyectos/${p.id}`} style={{ color: 'inherit' }}>{p.nombre}</a>
+      {proyectos.length > 0 && (
+        <div className="tabla-movimientos-envoltura" role="table" style={{ marginTop: 8 }}>
+          <div role="rowgroup">
+            <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: '1fr' }}>
+              <div role="columnheader" className="celda">Nombre</div>
+            </div>
+          </div>
+          <div role="rowgroup">
+            {proyectos.map(p => (
+              <div key={p.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: '1fr' }}>
+                <div role="cell" className="celda"><a href={`/proyectos/${p.id}`} style={{ color: 'inherit' }}>{p.nombre}</a></div>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
+      )}
 
       <Modal abierto={modalAbierto} titulo="Añadir proyecto" onCerrar={() => setModalAbierto(false)}>
         <form onSubmit={crear}>

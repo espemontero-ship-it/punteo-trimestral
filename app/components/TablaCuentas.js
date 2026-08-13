@@ -44,7 +44,7 @@ export default function TablaCuentas({
   const cols = '1fr 50px 100px 100px 100px 100px 100px 100px 220px';
 
   return (
-    <div className="tarjeta">
+    <div>
       <strong>Cuentas</strong>
       <div className="tabla-movimientos-envoltura" role="table" style={{ marginTop: 8 }}>
         <div role="rowgroup">
