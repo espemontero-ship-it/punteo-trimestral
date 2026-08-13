@@ -439,6 +439,12 @@ input.campo-proveedor {
   background: #e2e5f0; border-bottom: 1px solid var(--border);
   white-space: normal; align-items: flex-start;
 }
+/* Un grupo de 1 sola línea no tiene cabecera propia -- para que no se
+   confunda con una fila suelta, su única fila lleva el mismo fondo que la
+   cabecera de un grupo real. Regla real que existía, se perdió sin querer
+   en un rediseño anterior (el className se seguía aplicando en el JSX pero
+   ya no tenía estilo) -- restaurada 2026-08-13. */
+.inicio-grupo .celda { background: #e2e5f0; }
 .fila-grupo .grupo-nombre { font-weight: 700; }
 .fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .fila-grupo select.select-estado, .fila-grupo input.campo-nota { width: 100%; }
