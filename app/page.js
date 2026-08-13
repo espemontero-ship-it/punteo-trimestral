@@ -28,7 +28,7 @@ function clasificarResultado(resultado, ids, ambiguos) {
     ids.add(resultado.movimientoId);
     const opcion = {
       movimientoId: resultado.movimientoId, esCombo: true, numero: resultado.numero,
-      otraFacturaNumero: resultado.otraFacturaNumero, facturaId: resultado.facturaId, otraFacturaId: resultado.otraFacturaId,
+      otrasFacturas: resultado.otrasFacturas, facturaId: resultado.facturaId,
       facturaConcepto: resultado.facturaConcepto,
     };
     ambiguos[resultado.movimientoId] = [...(ambiguos[resultado.movimientoId] || []), opcion];

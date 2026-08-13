@@ -8,7 +8,7 @@ import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 const ETIQUETAS_TIPO = {
   match_directo: 'Emparejada',
   ambiguo: 'Varias líneas con el mismo importe',
-  combo_sugerido: 'Combinación de 2 facturas sugerida',
+  combo_sugerido: 'Combinación de facturas sugerida',
   sin_importe: 'No se reconoció ningún importe',
   sin_match: 'Importe no coincide con ninguna línea',
   sin_movimientos: 'Aún no hay movimientos con los que comparar',
@@ -225,8 +225,8 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   }
 
   async function elegirCandidato(f, opcion) {
-    const nota = opcion.esCombo ? `${opcion.numero} + ${opcion.otraFacturaNumero}` : (opcion.facturaConcepto || String(opcion.numero));
-    const facturaIds = opcion.esCombo ? [opcion.facturaId, opcion.otraFacturaId] : [opcion.facturaId];
+    const nota = opcion.esCombo ? [opcion.numero, ...opcion.otrasFacturas.map(o => o.numero)].join(' + ') : (opcion.facturaConcepto || String(opcion.numero));
+    const facturaIds = opcion.esCombo ? [opcion.facturaId, ...opcion.otrasFacturas.map(o => o.id)] : [opcion.facturaId];
     const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -358,7 +358,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       concepto: c.concepto, importe: c.importe, fecha: c.fecha,
     })) : activo?.tipo === 'combo_sugerido' ? [{
       movimientoId: activo.movimientoId, esCombo: true, numero: activo.numero,
-      otraFacturaNumero: activo.otraFacturaNumero, facturaId: f.id, otraFacturaId: activo.otraFacturaId,
+      otrasFacturas: activo.otrasFacturas, facturaId: f.id,
       facturaConcepto: activo.facturaConcepto, detalle: activo.detalle,
     }] : null;
     const bloqueada = f.estado === 'matcheada' || !!candidatos;
@@ -421,11 +421,11 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
                         </>
                       )}
                     </button>
-                    {c.esCombo && (
-                      <a className="link-factura" style={{ fontSize: 11 }} href={`/api/facturas/${c.otraFacturaId}/archivo`} target="_blank" rel="noreferrer">
-                        ver factura {c.otraFacturaNumero}
+                    {c.esCombo && c.otrasFacturas.map(o => (
+                      <a key={o.id} className="link-factura" style={{ fontSize: 11, marginRight: 8 }} href={`/api/facturas/${o.id}/archivo`} target="_blank" rel="noreferrer">
+                        ver factura {o.numero}
                       </a>
-                    )}
+                    ))}
                   </div>
                 ))}
               </div>
