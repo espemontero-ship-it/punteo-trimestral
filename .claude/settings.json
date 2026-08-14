@@ -10,16 +10,6 @@
             "shell": "bash"
           }
         ]
-      },
-      {
-        "matcher": "Artifact",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"C:\\Users\\espem\\OneDrive\\Documentos\\punteo-trimestral\\.claude\\hooks\\auditoria-obligatoria.cjs\"",
-            "shell": "bash"
-          }
-        ]
       }
     ]
   }
