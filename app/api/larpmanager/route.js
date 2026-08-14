@@ -15,7 +15,10 @@ export async function POST(request) {
     }
 
     const resultados = await emparejarIngresosConLarpManager(filas);
-    const emparejadas = resultados.filter(r => r.tipo === 'match').length;
+    // 'match_ya_resuelta' son líneas que ya estaban punteadas a mano y a las
+    // que solo les faltaba el enlace: cuentan como emparejadas igual, si no
+    // el mensaje diría que no se ha emparejado nada cuando sí se ha hecho.
+    const emparejadas = resultados.filter(r => r.tipo === 'match' || r.tipo === 'match_ya_resuelta').length;
     return Response.json({ resultados, totalFilasCsv: filas.length, emparejadas });
   } catch (err) {
     return Response.json({ error: err.message || 'No se pudo procesar el CSV.' }, { status: 500 });

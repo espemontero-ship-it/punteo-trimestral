@@ -465,8 +465,8 @@ export default function Home() {
         {mensajeLarpManager && <p className="muted" style={{ marginTop: 8 }}>{mensajeLarpManager}</p>}
       </Modal>
 
-      <Modal abierto={modalAbierto === 'larpmanager-pendientes'} titulo="Pagos de LarpManager sin emparejar" onCerrar={() => setModalAbierto(null)}>
-        <p className="muted">Pagos que LarpManager dice que existen (transferencia o añadidos a mano) pero que ninguna línea del banco ha reclamado todavía — puede ser que la transferencia no haya llegado, que el nombre no se reconozca, o que el excel del banco de esa fecha aún no esté subido.</p>
+      <Modal abierto={modalAbierto === 'larpmanager-pendientes'} titulo="Pagos de LarpManager sin emparejar" onCerrar={() => setModalAbierto(null)} ancho={760}>
+        <p className="muted">Pagos que LarpManager dice que existen (transferencia o añadidos a mano) pero que ninguna línea del banco ha reclamado todavía. La columna &quot;Por qué&quot; dice el motivo de cada uno: antes todos se veían igual, sin distinguir si la transferencia no había llegado, si el importe no cuadraba o si el nombre coincidía a medias.</p>
         {cargandoPagosSinEmparejar && <p className="muted">Cargando...</p>}
         {!cargandoPagosSinEmparejar && pagosSinEmparejar && pagosSinEmparejar.length === 0 && (
           <p className="muted">Ninguno — todos los pagos de LarpManager subidos ya están emparejados.</p>
@@ -479,6 +479,7 @@ export default function Home() {
                 <th>Evento</th>
                 <th>Importe</th>
                 <th>Fecha</th>
+                <th>Por qué</th>
               </tr>
             </thead>
             <tbody>
@@ -488,6 +489,7 @@ export default function Home() {
                   <td>{p.evento}</td>
                   <td>{Number(p.importe).toFixed(2)}€</td>
                   <td>{p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '—'}</td>
+                  <td className="muted">{p.motivoTexto || '—'}</td>
                 </tr>
               ))}
             </tbody>
