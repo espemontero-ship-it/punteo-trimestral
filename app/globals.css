@@ -103,7 +103,7 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   padding: 2px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 400;
 }
 .etiqueta.fija { background: rgba(63,125,92,.12); color: var(--ok); }
 .etiqueta.nueva { background: rgba(168,64,44,.12); color: var(--new); }
@@ -275,7 +275,7 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
    acento, igual de protagonista que antes sin ser un rectángulo sólido que
    ocupa media pantalla. */
 .inicio-subir { margin-bottom: 12px; }
-.titulo-inicio { margin: 0 0 4px; font-size: 16px; font-weight: 700; }
+.titulo-inicio { margin: 0 0 4px; font-size: 16px; font-weight: 400; }
 .instruccion-inicio { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
 
 .resumen-mini {
@@ -288,7 +288,7 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 /* Subida en lote de facturas */
 .zona-subida-lote-progreso { flex: 1; min-width: 220px; }
 .fila-progreso-lote { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; text-align: left; }
-.num-progreso-lote { font-size: 13.5px; font-weight: 600; }
+.num-progreso-lote { font-size: 13.5px; font-weight: 400; }
 .barra-filtro-lote {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
   background: var(--accent-soft); border: 1px solid var(--accent-soft); border-radius: 10px;
@@ -357,7 +357,7 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
 }
 .fila-tabla-cabecera .celda {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
-  color: var(--muted); font-weight: 700; border-bottom: 2px solid var(--border);
+  color: var(--muted); font-weight: 400; border-bottom: 2px solid var(--border);
   background: var(--surface-alt); position: sticky; top: 0; z-index: 2;
 }
 .etiqueta-orden {
@@ -381,7 +381,7 @@ input.campo-proveedor {
 .celda select:hover, .celda select:focus {
   background: var(--surface-alt); border-color: var(--border);
 }
-.celda.importe { font-weight: 600; }
+.celda.importe { font-weight: 400; }
 .celda.col-importe { justify-content: flex-end; text-align: right; }
 .vacio { color: var(--border); }
 
@@ -442,7 +442,7 @@ input.campo-proveedor {
    en un rediseño anterior (el className se seguía aplicando en el JSX pero
    ya no tenía estilo) -- restaurada 2026-08-13. */
 .inicio-grupo .celda { background: var(--surface-alt); }
-.fila-grupo .grupo-nombre { font-weight: 700; }
+.fila-grupo .grupo-nombre { font-weight: 400; }
 .fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .fila-grupo select.select-estado, .fila-grupo input.campo-nota { width: 100%; }
 .fila-grupo .chip-sugerencia { display: block; margin-bottom: 4px; }
@@ -466,7 +466,7 @@ select.select-estado { font-size: 13px; padding: 5px 8px; border-radius: 6px; wi
    queda reservado solo para sugerencias del sistema y la pestaña activa. */
 .celda .link-factura, .celda button.secundario {
   background: transparent; border: 1px solid transparent; color: var(--text);
-  font-weight: 600; text-decoration: none; padding: 5px 10px; border-radius: 6px; display: inline-block;
+  font-weight: 400; text-decoration: none; padding: 5px 10px; border-radius: 6px; display: inline-block;
 }
 .celda .link-factura:hover, .celda button.secundario:hover {
   background: var(--surface-alt); border-color: var(--border);
