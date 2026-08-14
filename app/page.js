@@ -331,6 +331,11 @@ export default function Home() {
   // reclamarla hasta que se cierre el proyecto (ver pestaña Proyectos).
   // Ignorada tampoco: es deliberadamente "no hay nada que hacer aquí".
   const pendientesMov = total - resueltas - facturaFutura - ignoradas;
+  // Avance del punteo: de lo que de verdad necesita factura (ni ignorado ni
+  // factura futura, que no dependen de nadie ahora mismo), cuánto está ya
+  // resuelto. Es la única cifra que dice si esto se acerca a poder enviarse.
+  const aPuntear = resueltas + pendientesMov;
+  const avance = aPuntear > 0 ? Math.round((resueltas / aPuntear) * 100) : 0;
 
   return (
     <div className={(pestana === 'movimientos' || pestana === 'colaboradores' || pestana === 'facturas' || pestana === 'proyectos') ? 'contenedor contenedor-ancho' : 'contenedor'}>
@@ -354,20 +359,20 @@ export default function Home() {
           <div className="bloques">
             <div className="bloque">
               <div className="btns">
-                <button type="button" className="secundario btn-icono" title="Añadir excel" onClick={() => setModalAbierto('excel')}>
-                  <span className="ico">⬆</span>Excel
+                <button type="button" className="secundario btn-icono" title="Añadir excel del banco / paypal" onClick={() => setModalAbierto('excel')}>
+                  <span className="ico">⬆</span>Excel del banco
                 </button>
-                <button type="button" className="secundario btn-icono" title="Subir LarpManager" onClick={() => setModalAbierto('larpmanager')}>
-                  <span className="ico">⬆</span>LM
+                <button type="button" className="secundario btn-icono" title="Subir pagos de LarpManager" onClick={() => setModalAbierto('larpmanager')}>
+                  <span className="ico">⬆</span>Pagos de LarpManager
                 </button>
               </div>
             </div>
             <div className="div-v" />
             <div className="bloque">
               <div className="btns">
-                <button type="button" className="secundario" onClick={verPagosSinEmparejar}>Match LM</button>
+                <button type="button" className="secundario" onClick={verPagosSinEmparejar}>Pagos sin emparejar</button>
                 <button type="button" className="secundario" onClick={verDevoluciones}>Devoluciones</button>
-                <button type="button" className="secundario" onClick={verImportaciones}>Excel</button>
+                <button type="button" className="secundario" onClick={verImportaciones}>Excels subidos</button>
               </div>
             </div>
             <div className="div-v" />
@@ -376,6 +381,14 @@ export default function Home() {
                 <button type="button" className="secundario" onClick={abrirEnvio}>Enviar a gestoría</button>
               </div>
             </div>
+            {aPuntear > 0 && (
+              <div className="bloque bloque-avance">
+                <div className="progreso"><div style={{ width: `${avance}%` }} /></div>
+                <span className="texto-avance" title="No cuentan las líneas ignoradas ni las de factura futura: no dependen de nadie ahora mismo.">
+                  {resueltas} de {aPuntear} resueltos
+                </span>
+              </div>
+            )}
           </div>
 
           {cargando && <p className="muted">Cargando...</p>}

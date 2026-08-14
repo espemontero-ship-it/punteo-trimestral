@@ -262,10 +262,16 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 }
 
 /* Fila de acciones de Movimientos: bloques separados por un divisor vertical --
-   Subir (iconos) / Revisar (botones sueltos) / Enviar a gestoría (solo). */
+   subir / revisar / enviar. Se probaron rótulos de texto encima de cada grupo
+   y se descartaron (2026-08-14): el divisor solo ya basta. */
 .bloques { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; }
 .bloque { display: flex; flex-direction: column; gap: 6px; }
 .bloque .btns { display: flex; gap: 6px; flex-wrap: wrap; }
+/* Avance del punteo, al final de la fila y pegado a la derecha: cuánto queda
+   para que esto se pueda enviar a la gestoría. */
+.bloque-avance { margin-left: auto; min-width: 170px; }
+.bloque-avance .progreso { margin: 0; }
+.texto-avance { font-size: 12px; color: var(--muted); }
 .div-v { width: 1px; align-self: stretch; background: var(--border); }
 .btn-icono { display: flex; align-items: center; gap: 6px; }
 .btn-icono .ico { font-size: 15px; line-height: 1; }
