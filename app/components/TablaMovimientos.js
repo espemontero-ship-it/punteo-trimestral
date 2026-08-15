@@ -56,10 +56,10 @@ function Celda({ col, className = '', cabecera, children, stickyLefts }) {
 // sesión). Fuera del componente principal a propósito, igual que Celda: si se
 // define dentro, React lo trata como un tipo nuevo en cada render y los
 // <input> de alrededor pierden el foco en cada tecla.
-function Sugerencia({ texto, titulo, onAplicar, onDescartar }) {
+function Sugerencia({ texto, onAplicar, onDescartar }) {
   return (
     <span className="sugerencia" role="group">
-      <span className="texto-sug" title={titulo || texto} onClick={onAplicar} style={{ cursor: 'pointer' }}>{texto}</span>
+      <span className="texto-sug" onClick={onAplicar} style={{ cursor: 'pointer' }}>{texto}</span>
       <button type="button" className="sugerencia-descartar" title="Descartar esta sugerencia" onClick={onDescartar}>✕</button>
     </span>
   );
@@ -487,13 +487,16 @@ export default function TablaMovimientos({
     if (modoDevolucion.has(m.id)) {
       return (
         <div>
-          {m.jugador_sugerido && viva(`jug:${m.id}`) && (
+          {m.jugador_sugerido && viva(`jug:${m.id}`) ? (
             <Sugerencia
               texto={m.jugador_sugerido}
-              onAplicar={() => setJugadorManual(prev => ({ ...prev, [m.id]: m.jugador_sugerido }))}
+              onAplicar={() => {
+                setJugadorManual(prev => ({ ...prev, [m.id]: m.jugador_sugerido }));
+                descartar(`jug:${m.id}`);
+              }}
               onDescartar={() => descartar(`jug:${m.id}`)}
             />
-          )}
+          ) : (
           <input
             className="campo-proveedor"
             type="text"
@@ -502,6 +505,7 @@ export default function TablaMovimientos({
             onChange={e => setJugadorManual(prev => ({ ...prev, [m.id]: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarDevolucion(m); } }}
           />
+          )}
           <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
             <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => confirmarDevolucion(m)}>
               Confirmar devolución
@@ -515,7 +519,13 @@ export default function TablaMovimientos({
     }
     const resuelta = m.estado === 'resuelta';
     if (resuelta) return <span className="nota-texto">{m.nota_final}</span>;
-    const opcionesLote = viva(`lote:${m.id}`) ? filtroLote?.ambiguos?.[m.id] : null;
+    // Una clave por candidato, no por línea: descartar una opción no puede
+    // llevarse por delante las demás, que son alternativas entre las que hay
+    // que poder seguir eligiendo. Se conserva el índice original al filtrar,
+    // porque si no las claves se recolocan y descartar una afectaría a otra.
+    const opcionesLote = (filtroLote?.ambiguos?.[m.id] || [])
+      .map((o, i) => ({ o, i }))
+      .filter(({ i }) => viva(`lote:${m.id}:${i}`));
     if (opcionesLote?.length) {
       return (
         <div className="sugerencias-lista">
@@ -523,14 +533,14 @@ export default function TablaMovimientos({
               sin pedirlo: sin ella aparecen dos opciones sin explicar por qué
               hay que elegir. */}
           <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>Varias facturas con este importe:</p>
-          {opcionesLote.map((o, i) => (
+          {opcionesLote.map(({ o, i }) => (
             <Sugerencia
               key={i}
               texto={o.esCombo
-                ? `combinar factura${o.otrasFacturas.length > 1 ? 's' : ''} ${o.otrasFacturas.map(x => x.numero).join(' + ')}`
+                ? `combinar factura${o.otrasFacturas.length > 1 ? 's' : ''} ${o.otrasFacturas.map(x => x.monto != null ? `${x.numero} (${Number(x.monto).toFixed(2)}€)` : x.numero).join(' + ')}`
                 : `factura ${o.numero}${o.facturaConcepto ? ` (${o.facturaConcepto})` : ''}`}
               onAplicar={() => elegirCandidato(o)}
-              onDescartar={() => descartar(`lote:${m.id}`)}
+              onDescartar={() => descartar(`lote:${m.id}:${i}`)}
             />
           ))}
         </div>
@@ -541,13 +551,13 @@ export default function TablaMovimientos({
     const sugerencia = g.sugerenciaNota;
     return (
       <>
-        {sugerencia && viva(`nota:${m.id}`) && (
+        {sugerencia && viva(`nota:${m.id}`) ? (
           <Sugerencia
             texto={sugerencia}
             onAplicar={() => confirmarNota(m.id, sugerencia)}
             onDescartar={() => descartar(`nota:${m.id}`)}
           />
-        )}
+        ) : (
         <input
           className="campo-nota"
           type="text"
@@ -563,6 +573,7 @@ export default function TablaMovimientos({
             if (notasManual[m.id] !== undefined && v !== (m.nota_final || '')) confirmarNota(m.id, v);
           }}
         />
+        )}
       </>
     );
   }
@@ -628,13 +639,13 @@ export default function TablaMovimientos({
     const sugerido = !m.proveedor ? m.proveedor_sugerido : null;
     return (
       <>
-        {sugerido && viva(`prov:${m.id}`) && (
+        {sugerido && viva(`prov:${m.id}`) ? (
           <Sugerencia
             texto={sugerido}
             onAplicar={() => guardarProveedor(m.id, sugerido)}
             onDescartar={() => descartar(`prov:${m.id}`)}
           />
-        )}
+        ) : (
         <input
           className="campo-proveedor"
           type="text"
@@ -647,6 +658,7 @@ export default function TablaMovimientos({
             if (proveedoresManual[m.id] !== undefined && v !== (m.proveedor || '')) guardarProveedor(m.id, v);
           }}
         />
+        )}
       </>
     );
   }
@@ -682,13 +694,11 @@ export default function TablaMovimientos({
           {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
         </select>
         {!m.proyecto_id && m.proyecto_sugerido && viva(`proy:${m.id}`) && (
-          <div style={{ marginTop: 4 }}>
-            <Sugerencia
-              texto={m.proyecto_sugerido.nombre}
-              onAplicar={() => asignarProyecto(m.id, m.proyecto_sugerido.id)}
-              onDescartar={() => descartar(`proy:${m.id}`)}
-            />
-          </div>
+          <Sugerencia
+            texto={m.proyecto_sugerido.nombre}
+            onAplicar={() => asignarProyecto(m.id, m.proyecto_sugerido.id)}
+            onDescartar={() => descartar(`proy:${m.id}`)}
+          />
         )}
       </>
     );
@@ -704,8 +714,8 @@ export default function TablaMovimientos({
     const guardado = m.datos_originales?.larpmanager;
     if (m.estado === 'resuelta') return guardado ?? <span className="vacio">—</span>;
 
-    const resultado = viva(`lm:${m.id}`) ? m.larpmanager_candidatos : null;
-    if (resultado?.tipo === 'match' && resultado.candidatos?.length) {
+    const resultado = m.larpmanager_candidatos;
+    if (resultado?.tipo === 'match' && resultado.candidatos?.length && viva(`lm:${m.id}`)) {
       const c = resultado.candidatos[0];
       return (
         <Sugerencia
@@ -716,14 +726,18 @@ export default function TablaMovimientos({
       );
     }
     if (resultado?.tipo === 'ambiguo' && resultado.candidatos?.length) {
+      // Igual que en las facturas de un lote: una clave por candidato, con el
+      // índice original conservado, para que descartar uno no quite los otros.
+      const vivos = resultado.candidatos.map((c, i) => ({ c, i })).filter(({ i }) => viva(`lm:${m.id}:${i}`));
+      if (vivos.length === 0) return guardado ?? <span className="vacio">—</span>;
       return (
         <div className="sugerencias-lista">
-          {resultado.candidatos.map((c, i) => (
+          {vivos.map(({ c, i }) => (
             <Sugerencia
               key={i}
               texto={`${c.nombreReal} — ${c.evento} (${Number(c.importe).toFixed(2)}€)`}
               onAplicar={() => resolverConLarpManager(m, c)}
-              onDescartar={() => descartar(`lm:${m.id}`)}
+              onDescartar={() => descartar(`lm:${m.id}:${i}`)}
             />
           ))}
         </div>
@@ -775,13 +789,13 @@ export default function TablaMovimientos({
         </Celda>
         <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
         <Celda col="Proveedor">
-          {sugerenciaProveedorGrupo && viva(`provg:${g.id}`) && (
+          {sugerenciaProveedorGrupo && viva(`provg:${g.id}`) ? (
             <Sugerencia
               texto={sugerenciaProveedorGrupo}
               onAplicar={() => guardarProveedorGrupo(g, sugerenciaProveedorGrupo)}
               onDescartar={() => descartar(`provg:${g.id}`)}
             />
-          )}
+          ) : (
           <input
             className="campo-proveedor"
             type="text"
@@ -791,6 +805,7 @@ export default function TablaMovimientos({
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedorGrupo(g, e.target.value); } }}
             onBlur={e => { if (proveedoresGrupo[g.id] !== undefined) guardarProveedorGrupo(g, e.target.value); }}
           />
+          )}
         </Celda>
         <Celda col="Importe">{g.importeTotal.toFixed(2)}€</Celda>
         <Celda col="Estado">
@@ -809,7 +824,6 @@ export default function TablaMovimientos({
               {g.sugerenciaNota && viva(`notag:${g.id}`) && (
                 <Sugerencia
                   texto={`${g.sugerenciaNota} · ${pendientesGrupo} línea${pendientesGrupo === 1 ? '' : 's'}`}
-                  titulo={`Aplicar "${g.sugerenciaNota}" a las ${pendientesGrupo} líneas sin resolver`}
                   onAplicar={() => confirmarNotaGrupo(g, g.sugerenciaNota)}
                   onDescartar={() => descartar(`notag:${g.id}`)}
                 />
