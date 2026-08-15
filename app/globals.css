@@ -391,33 +391,20 @@ input.campo-proveedor {
 .celda.col-importe { justify-content: flex-end; text-align: right; }
 .vacio { color: var(--border); }
 
-/* Columna Grupo: herramientas raras de fila (sacar/unir/editar), un único
-   lenguaje -- icono pequeño con borde, gris, sin color ni siquiera en hover
-   (el azul se queda solo para sugerencias). */
-.celda.col-grupo { padding: 9px 6px; justify-content: center; }
-/* Sin cajas: ningún control de celda tiene caja permanente en reposo -- la
+/* Acciones raras de fila -- hoy solo queda editar una devolución (✎). Las de
+   la columna Grupo (sacar "−" y unir "+") se retiraron el 2026-08-15: agrupar
+   y desagrupar se hace con el campo Proveedor.
+   Sin cajas: ningún control de celda tiene caja permanente en reposo -- la
    caja aparece igual para todos solo al pasar por encima o hacer foco. Lo
    único que distingue una acción de un dato en reposo es el peso de la
    letra, no una caja. Alcance: solo dentro de las tablas (Movimientos y
    Facturas), el resto de botones de la app no cambia. */
-.btn-quitar, .btn-unir, .btn-editar-mini {
+.btn-editar-mini {
   width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
   padding: 0; font-size: 14px; font-weight: 700; line-height: 1; background: none;
   border: none; color: var(--border); cursor: pointer;
 }
-.btn-quitar:hover, .btn-unir:hover, .btn-editar-mini:hover { color: var(--muted); }
-.grupo-wrap { position: relative; }
-.panel-grupos {
-  position: absolute; left: 0; top: calc(100% + 6px); z-index: 20;
-  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 6px; min-width: 190px; box-shadow: 0 8px 24px rgba(0,0,0,.1);
-}
-.panel-grupos .tit-panel { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 5px 8px 3px; }
-.panel-grupos button {
-  display: block; width: 100%; text-align: left; font-size: 13px; padding: 7px 8px;
-  background: none; border: none; color: var(--text); cursor: pointer; border-radius: 6px;
-}
-.panel-grupos button:hover { background: var(--surface-alt); }
+.btn-editar-mini:hover { color: var(--muted); }
 
 /* Arrastrar el borde derecho de una cabecera para hacer la columna mas
    estrecha o mas ancha (a demanda, no se guarda entre sesiones). La zona de

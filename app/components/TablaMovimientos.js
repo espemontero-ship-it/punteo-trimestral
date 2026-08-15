@@ -11,8 +11,15 @@ const ETIQUETAS = {
   nueva: 'nueva',
 };
 
-const COLUMNAS_BASE = ['Grupo', 'Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Factura', 'Nota', 'Proyecto'];
-const ANCHO_DEFECTO = { Grupo: 40, Fecha: 85, Concepto: 200, Banco: 85, Proveedor: 150, Importe: 80, Estado: 130, Factura: 90, Nota: 135, Proyecto: 110 };
+// La columna Grupo (los iconos "−" sacar y "+" unir) se quitó el 2026-08-15:
+// agrupar y desagrupar se hace escribiendo o borrando el Proveedor, que además
+// cruza textos distintos del banco Y bancos distintos, cosa que el "+" no
+// hacía. El backend (/api/movimientos/:id/separar y /unir, y sus funciones en
+// lib/agrupador.cjs) se deja intacto a propósito, para poder rescatar la
+// columna en un solo commit si algún día hace falta separar líneas que el
+// banco escribe idénticas.
+const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Factura', 'Nota', 'Proyecto'];
+const ANCHO_DEFECTO = { Fecha: 85, Concepto: 200, Banco: 85, Proveedor: 150, Importe: 80, Estado: 130, Factura: 90, Nota: 135, Proyecto: 110 };
 const ANCHO_EXTRA_DEFECTO = 120;
 
 // Celda vive fuera del componente a propósito: si se define dentro (como
@@ -21,7 +28,6 @@ const ANCHO_EXTRA_DEFECTO = 120;
 // pierden el foco en cada tecla. stickyLefts se pasa como prop en vez de
 // leerlo de un cierre porque Celda ya no tiene acceso al estado del componente.
 function claseCeldaTabla(col) {
-  if (col === 'Grupo') return 'col-grupo';
   if (col === 'Fecha') return 'col-fecha';
   if (col === 'Concepto') return 'col-concepto';
   if (col === 'Importe') return 'col-importe';
@@ -99,7 +105,6 @@ export default function TablaMovimientos({
   const [guardandoImporte, setGuardandoImporte] = useState(null);
   const [modoDevolucion, setModoDevolucion] = useState(new Set());
   const [jugadorManual, setJugadorManual] = useState({});
-  const [grupoAbiertoPara, setGrupoAbiertoPara] = useState(null); // movimientoId | null -- "+" abierto en esa fila
   // Sugerencias que se han descartado con la ✕. Solo mientras dure la sesión:
   // al recargar vuelven. Guardar el rechazo para siempre es otro paso, aún
   // sin decidir.
@@ -392,46 +397,6 @@ export default function TablaMovimientos({
     setGuardandoImporte(null);
   }
 
-  async function separarDeGrupo(movimientoId) {
-    const r = await apiFetch(`/api/movimientos/${movimientoId}/separar`, {
-      method: 'POST',
-    }, { mensajeOk: 'Sacado del grupo', mensajeError: 'No se pudo sacar del grupo.' });
-    if (r) onCambio();
-  }
-
-  async function unirAGrupo(movimientoId, grupoDestino) {
-    setGrupoAbiertoPara(null);
-    const r = await apiFetch(`/api/movimientos/${movimientoId}/unir`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hoja: grupoDestino.hoja, clave: grupoDestino.clave }),
-    }, { mensajeOk: 'Unido al grupo', mensajeError: 'No se pudo unir al grupo.' });
-    // Si el grupo de destino está unificado por proveedor, copiar la clave no
-    // basta: el grupo se forma por el proveedor, así que la línea recién
-    // unida se quedaría fuera. Se le pone también el proveedor.
-    if (r && grupoDestino.proveedor) {
-      await apiFetch(`/api/movimientos/${movimientoId}/proveedor`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proveedor: grupoDestino.proveedor }),
-      }, { mensajeError: 'Se unió al grupo, pero no se pudo copiar el proveedor.' });
-    }
-    if (r) onCambio();
-  }
-
-  // Grupos reales (>1 línea) por banco, para ofrecer como destino al pulsar
-  // "+" -- solo del mismo banco que la línea que se quiere unir.
-  const gruposPorHoja = useMemo(() => {
-    const mapa = {};
-    for (const g of proveedores) {
-      if (g.total <= 1) continue;
-      // Se lleva también el proveedor: si el grupo destino está unificado por
-      // proveedor, unirse a él exige copiarlo (ver unirAGrupo).
-      (mapa[g.hoja] ||= []).push({ hoja: g.hoja, clave: g.clave, proveedor: g.proveedor || null, nombre: nombreGrupoMostrado(g) });
-    }
-    return mapa;
-  }, [proveedores]);
-
   async function asignarProyecto(movimientoId, proyectoId) {
     const r = await apiFetch(`/api/movimientos/${movimientoId}/proyecto`, {
       method: 'POST',
@@ -457,12 +422,11 @@ export default function TablaMovimientos({
   // variable CSS aparte para las columnas fijas, y esos tres sitios podían
   // desincronizarse).
   const plantillaColumnas = columnasTodas.map(c => `${anchoDe(c)}px`).join(' ');
-  // Grupo, Fecha y Concepto se quedan fijas al hacer scroll horizontal --
-  // cada una necesita su propio left, calculado a partir de los anchos de
-  // las que van antes (misma fuente de verdad que la plantilla de arriba).
-  const anchoGrupo = anchoDe('Grupo');
+  // Fecha y Concepto se quedan fijas al hacer scroll horizontal -- cada una
+  // necesita su propio left, calculado a partir de los anchos de las que van
+  // antes (misma fuente de verdad que la plantilla de arriba).
   const anchoFecha = anchoDe('Fecha');
-  const stickyLefts = { Grupo: 0, Fecha: anchoGrupo, Concepto: anchoGrupo + anchoFecha };
+  const stickyLefts = { Fecha: 0, Concepto: anchoFecha };
 
   function valorEstadoSelect(m) {
     if (m.estado === 'resuelta') return 'resuelta';
@@ -663,29 +627,6 @@ export default function TablaMovimientos({
     );
   }
 
-  // Columna Grupo: "−" siempre visible en filas ya agrupadas (sacar), "+" en
-  // filas sueltas (unir a un grupo existente del mismo banco).
-  function celdaGrupo(m, g) {
-    if (g.total > 1) {
-      return <button type="button" className="btn-quitar" title="Sacar del grupo" onClick={() => separarDeGrupo(m.id)}>−</button>;
-    }
-    const destinos = gruposPorHoja[g.hoja] || [];
-    return (
-      <div className="grupo-wrap">
-        <button type="button" className="btn-unir" title="Unir a un grupo" onClick={() => setGrupoAbiertoPara(prev => (prev === m.id ? null : m.id))}>+</button>
-        {grupoAbiertoPara === m.id && (
-          <div className="panel-grupos">
-            <div className="tit-panel">Unir a un grupo</div>
-            {destinos.length === 0 && <p className="muted" style={{ margin: '4px 8px', fontSize: 12 }}>No hay ningún grupo todavía.</p>}
-            {destinos.map(d => (
-              <button key={d.clave} type="button" onClick={() => unirAGrupo(m.id, d)}>{d.nombre}</button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   function celdaProyecto(m) {
     return (
       <>
@@ -749,7 +690,6 @@ export default function TablaMovimientos({
   function filaMovimiento(m, g, esInicioGrupo) {
     return (
       <div role="row" key={m.id} className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
-        <Celda col="Grupo" stickyLefts={stickyLefts}>{celdaGrupo(m, g)}</Celda>
         <Celda col="Fecha" className="muted" stickyLefts={stickyLefts}>{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
         {/* El concepto se lee entero. Estuvo cortado a 80 caracteres desde el
             commit b2d2c79 (2026-07-27) sin que se pidiera ni se dijera en el
@@ -781,7 +721,6 @@ export default function TablaMovimientos({
     const sugerenciaProveedorGrupo = g.movimientos.find(m => m.proveedor_sugerido)?.proveedor_sugerido || null;
     return (
       <div role="row" className="fila-tabla fila-grupo" key={`g-${g.id}`} style={{ gridTemplateColumns: plantillaColumnas }}>
-        <Celda col="Grupo" stickyLefts={stickyLefts} />
         <Celda col="Fecha" stickyLefts={stickyLefts} />
         <Celda col="Concepto" stickyLefts={stickyLefts}>
           <div className="grupo-nombre">{nombreGrupoMostrado(g)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
