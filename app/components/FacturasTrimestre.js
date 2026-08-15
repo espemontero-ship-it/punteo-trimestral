@@ -11,6 +11,7 @@ const ETIQUETAS_TIPO = {
   combo_sugerido: 'Combinación de facturas sugerida',
   sin_importe: 'No se reconoció ningún importe',
   sin_match: 'Importe no coincide con ninguna línea',
+  ya_cubierta: 'Ya cubierta por otra factura',
   sin_movimientos: 'Aún no hay movimientos con los que comparar',
   imagen_sin_texto: 'Es una imagen, no se puede leer',
   error: 'Error al procesar el archivo',
@@ -433,7 +434,11 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
           return (
             <div>
               <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
-                {activo.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:'}
+                {/* Se prefiere el detalle guardado: dice el caso concreto (mismo
+                    importe, o suma de varias facturas del mismo archivo). El
+                    texto genérico queda de reserva para filas antiguas que no
+                    lo tengan. */}
+                {activo.detalle || (activo.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:')}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {candidatos.map((c, i) => (
@@ -460,6 +465,12 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
               </div>
             </div>
           );
+        }
+        // "Ya cubierta" es el único motivo donde lo que hace falta saber está
+        // en el detalle (qué factura la cubre), no en la etiqueta corta: se
+        // enseña entero, en varias líneas si hace falta.
+        if ((resultadoLocal || f).motivo_tipo === 'ya_cubierta' || resultadoLocal?.tipo === 'ya_cubierta') {
+          return <span className="muted" style={{ whiteSpace: 'normal' }}>{(resultadoLocal || f).motivo_detalle || resultadoLocal?.detalle}</span>;
         }
         return <span className="muted">{f.estado === 'matcheada' ? 'Emparejada' : (ETIQUETAS_TIPO[(resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo] || (resultadoLocal || f).motivo_detalle || 'Sin recalcular todavía')}</span>;
 
