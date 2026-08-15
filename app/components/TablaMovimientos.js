@@ -225,16 +225,34 @@ export default function TablaMovimientos({
     if (r) onCambio();
   }
 
+  // Un grupo puede abarcar varias parejas hoja+clave: pasa cuando se ha
+  // unificado por proveedor (el mismo proveedor real llega del banco con
+  // conceptos distintos, ej. "COMPRA EN ALSA INTERNET" y "REGULARIZACION
+  // COMPRA EN ALSA INTERNET"). Las acciones de grupo tienen que aplicarse a
+  // todas, o se quedarían líneas sin actualizar. Un solo aviso al final.
+  async function porCadaClave(g, url, extra, { mensajeOk, mensajeError }) {
+    const claves = g.claves?.length ? g.claves : [{ hoja: g.hoja, clave: g.clave }];
+    for (const k of claves) {
+      const r = await apiFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hoja: k.hoja, clave: k.clave, ...extra }),
+      }, { mensajeError });
+      if (!r) return false;
+    }
+    if (mensajeOk) mostrarToast(mensajeOk, 'ok');
+    return true;
+  }
+
   async function confirmarNotaGrupo(g, nota) {
     const limpia = (nota ?? '').trim();
-    const r = await apiFetch(`/api/proveedores/confirmar-grupo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hoja: g.hoja, clave: g.clave, nota: limpia }),
-    }, { mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`, mensajeError: 'No se pudo confirmar el grupo.' });
+    const ok = await porCadaClave(g, `/api/proveedores/confirmar-grupo`, { nota: limpia }, {
+      mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`,
+      mensajeError: 'No se pudo confirmar el grupo.',
+    });
     // Igual que en guardarProveedorGrupo: se limpia lo tecleado para que el
     // guardado al salir del campo no repita el mismo envío tras un Enter.
-    if (r) {
+    if (ok) {
       setNotasGrupo(prev => { const n = { ...prev }; delete n[g.id]; return n; });
       onCambio();
     }
@@ -244,21 +262,19 @@ export default function TablaMovimientos({
     if (nuevoEstado === 'resuelta') {
       // La nota es opcional: se guarda si hay algo escrito, pero no bloquea marcar el grupo como resuelto.
       const nota = (notasGrupo[g.id] ?? '').trim();
-      const r = await apiFetch(`/api/proveedores/confirmar-grupo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hoja: g.hoja, clave: g.clave, nota }),
-      }, { mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`, mensajeError: 'No se pudo confirmar el grupo.' });
-      if (r) onCambio();
+      const ok = await porCadaClave(g, `/api/proveedores/confirmar-grupo`, { nota }, {
+        mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`,
+        mensajeError: 'No se pudo confirmar el grupo.',
+      });
+      if (ok) onCambio();
       return;
     }
     if (nuevoEstado === 'pedida') {
-      const r = await apiFetch(`/api/proveedores/pendiente`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hoja: g.hoja, clave: g.clave }),
-      }, { mensajeOk: 'Marcadas como pedida, esperando al proveedor', mensajeError: 'No se pudo marcar.' });
-      if (r) onCambio();
+      const ok = await porCadaClave(g, `/api/proveedores/pendiente`, {}, {
+        mensajeOk: 'Marcadas como pedida, esperando al proveedor',
+        mensajeError: 'No se pudo marcar.',
+      });
+      if (ok) onCambio();
     }
   }
 
@@ -302,11 +318,9 @@ export default function TablaMovimientos({
   }
 
   async function guardarProveedorGrupo(g, valor) {
-    const r = await apiFetch(`/api/proveedores/proveedor-grupo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hoja: g.hoja, clave: g.clave, proveedor: (valor ?? '').trim() }),
-    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    const r = await porCadaClave(g, `/api/proveedores/proveedor-grupo`, { proveedor: (valor ?? '').trim() }, {
+      mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.',
+    });
     // Se limpia lo tecleado al guardar bien: así el guardado al salir del
     // campo (onBlur) no vuelve a mandar lo mismo justo después de un Enter,
     // que contaría dos veces en la memoria aprendida.
@@ -367,6 +381,16 @@ export default function TablaMovimientos({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hoja: grupoDestino.hoja, clave: grupoDestino.clave }),
     }, { mensajeOk: 'Unido al grupo', mensajeError: 'No se pudo unir al grupo.' });
+    // Si el grupo de destino está unificado por proveedor, copiar la clave no
+    // basta: el grupo se forma por el proveedor, así que la línea recién
+    // unida se quedaría fuera. Se le pone también el proveedor.
+    if (r && grupoDestino.proveedor) {
+      await apiFetch(`/api/movimientos/${movimientoId}/proveedor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proveedor: grupoDestino.proveedor }),
+      }, { mensajeError: 'Se unió al grupo, pero no se pudo copiar el proveedor.' });
+    }
     if (r) onCambio();
   }
 
@@ -376,7 +400,9 @@ export default function TablaMovimientos({
     const mapa = {};
     for (const g of proveedores) {
       if (g.total <= 1) continue;
-      (mapa[g.hoja] ||= []).push({ hoja: g.hoja, clave: g.clave, nombre: nombreGrupoMostrado(g) });
+      // Se lleva también el proveedor: si el grupo destino está unificado por
+      // proveedor, unirse a él exige copiarlo (ver unirAGrupo).
+      (mapa[g.hoja] ||= []).push({ hoja: g.hoja, clave: g.clave, proveedor: g.proveedor || null, nombre: nombreGrupoMostrado(g) });
     }
     return mapa;
   }, [proveedores]);
@@ -391,12 +417,10 @@ export default function TablaMovimientos({
   }
 
   async function asignarProyectoGrupo(g, proyectoId) {
-    const r = await apiFetch(`/api/proveedores/proyecto-grupo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hoja: g.hoja, clave: g.clave, proyectoId: proyectoId || null }),
-    }, { mensajeError: 'No se pudo guardar el proyecto.' });
-    if (r) onCambio();
+    const ok = await porCadaClave(g, `/api/proveedores/proyecto-grupo`, { proyectoId: proyectoId || null }, {
+      mensajeError: 'No se pudo guardar el proyecto.',
+    });
+    if (ok) onCambio();
   }
 
   const columnasVisiblesExtra = columnasExtra.filter(c => columnasExtraVisibles.has(c));
