@@ -2,7 +2,7 @@ const { confirmarDatosManual } = require('../../../../../lib/facturaMatcher.cjs'
 
 export async function POST(request, { params }) {
   const { id } = await params;
-  const { importe, fecha, concepto } = await request.json();
+  const { importe, fecha, concepto, soloGuardar } = await request.json();
 
   if (importe !== undefined && importe !== null && importe !== '') {
     const valor = Number(importe);
@@ -13,6 +13,7 @@ export async function POST(request, { params }) {
     importe: importe ? Number(importe) : null,
     fecha: fecha || null,
     concepto: concepto || null,
+    soloGuardar: !!soloGuardar,
   });
   return Response.json(resultado);
 }

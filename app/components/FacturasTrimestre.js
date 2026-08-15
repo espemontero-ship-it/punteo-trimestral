@@ -193,6 +193,33 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   // la fila se expande para elegir a mano (ver Motivo). Si no encuentra nada
   // en absoluto, se abre directamente el selector de vincular a mano -- un
   // único botón "Buscar" cubre las dos vías, sin un botón aparte para cada una.
+  // Guarda concepto/fecha/importe al salir del campo, SIN relanzar el
+  // emparejamiento -- eso se queda en el botón "Buscar", a propósito: pasar
+  // por encima de un campo no debe emparejar una factura sola. Antes estos
+  // tres campos no se guardaban de ninguna forma salvo pulsando "Buscar"
+  // (ni siquiera con Enter), así que escribir y hacer clic fuera tiraba lo
+  // escrito sin avisar.
+  async function guardarCampoFactura(f) {
+    const cambios = {};
+    const concepto = edicionConcepto[f.id];
+    if (concepto !== undefined && concepto !== (f.concepto ?? '')) cambios.concepto = concepto;
+    const fecha = edicionFecha[f.id];
+    if (fecha !== undefined && fecha !== fechaInicial(f)) cambios.fecha = fecha;
+    const importeTexto = edicionImporte[f.id];
+    if (importeTexto !== undefined && importeTexto !== importeInicial(f)) {
+      const v = importeTexto.replace(',', '.').trim();
+      const n = Number(v);
+      if (v && !isNaN(n) && n > 0) cambios.importe = n;
+    }
+    if (Object.keys(cambios).length === 0) return;
+    const r = await apiFetch(`/api/facturas/${f.id}/datos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...cambios, soloGuardar: true }),
+    }, { mensajeError: 'No se pudo guardar.' });
+    if (r) onCambio();
+  }
+
   async function buscarFila(f) {
     const importeTexto = (edicionImporte[f.id] ?? importeInicial(f)).replace(',', '.').trim();
     const importe = importeTexto ? Number(importeTexto) : null;
@@ -385,6 +412,8 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
             placeholder="Concepto"
             value={edicionConcepto[f.id] ?? f.concepto ?? ''}
             onChange={e => setEdicionConcepto(prev => ({ ...prev, [f.id]: e.target.value }))}
+            onBlur={() => guardarCampoFactura(f)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } }}
             style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
           />
         );
@@ -484,6 +513,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
             type="date"
             value={edicionFecha[f.id] ?? fechaInicial(f)}
             onChange={e => setEdicionFecha(prev => ({ ...prev, [f.id]: e.target.value }))}
+            onBlur={() => guardarCampoFactura(f)}
             style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
           />
         );
@@ -497,6 +527,8 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
             placeholder="0,00"
             value={edicionImporte[f.id] ?? importeInicial(f)}
             onChange={e => setEdicionImporte(prev => ({ ...prev, [f.id]: e.target.value }))}
+            onBlur={() => guardarCampoFactura(f)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } }}
             style={{ fontSize: 12, padding: '5px 6px', width: '100%' }}
           />
         );
