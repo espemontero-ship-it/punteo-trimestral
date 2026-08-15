@@ -157,7 +157,6 @@ export default function TablaMovimientos({
     return proveedores
       .map(g => ({
         ...g,
-        importeTotal: g.movimientos.reduce((s, m) => s + Number(m.importe), 0),
         movimientos: g.movimientos.filter(m => {
           if (soloPendientes && ['resuelta', 'ignorada', 'factura_futura'].includes(m.estado)) return false;
           if (!texto) return true;
@@ -764,7 +763,11 @@ export default function TablaMovimientos({
           />
           )}
         </Celda>
-        <Celda col="Importe">{g.importeTotal.toFixed(2)}€</Celda>
+        {/* Sin total de grupo. Sumaba SIEMPRE las líneas del grupo entero,
+            también las que "Solo pendientes" está ocultando, así que enseñaba
+            un número que no cuadraba con nada de lo que había debajo: en
+            Amazon, −617,86 € encima de tres líneas que suman −421,39 €. */}
+        <Celda col="Importe" />
         <Celda col="Estado">
           {permiteAccionesGrupo && (
             <select className="select-estado" defaultValue="" onChange={e => { if (e.target.value) cambiarEstadoGrupo(g, e.target.value); e.target.value = ''; }}>
