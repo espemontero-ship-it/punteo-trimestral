@@ -5,8 +5,8 @@
   --border: #dcdfe8;
   --text: #1c1f2e;
   --muted: #656b80;
-  --accent: #4e4f74;
-  --accent-soft: rgba(78, 79, 116, .09);
+  --accent: #3f3d8f;
+  --accent-soft: rgba(63, 61, 143, .09);
   --accent-text: #ffffff;
   --ok: #3f7d5c;
   --new: #a8402c;
@@ -479,13 +479,40 @@ select.select-estado { font-size: 13px; padding: 5px 8px; border-radius: 6px; wi
 }
 
 select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; width: auto; min-width: 90px; }
-/* Sugerencia del sistema: texto de acento en negrita, sin caja, sin
-   subrayar -- siempre "Aplicar: X", nunca en formato pregunta. */
-.chip-sugerencia {
-  font: inherit; font-size: 12px; color: var(--accent); font-weight: 600;
-  background: none; border: none; padding: 2px 0; cursor: pointer; white-space: nowrap; text-decoration: none;
+/* Sugerencia del sistema: UN SOLO elemento para todas, se llame como se
+   llame el dato (nota, proveedor, proyecto, devolución, jugador, LarpManager,
+   factura de un lote). Píldora de acento suave con la ✕ dentro, como una
+   etiqueta que se cierra: pulsar el texto la acepta, pulsar la ✕ la descarta.
+   Ya no lleva la palabra "Aplicar" -- la forma dice sola que es una propuesta.
+
+   Los valores de la píldora (fondo --accent-soft, sin borde, radio 99px,
+   padding 3px 9px) son los que tenía .chip-sugerencia hasta el commit
+   88bfdfc (2026-08-03), donde se quitaron sin pedirlo; la usuaria los eligió
+   de nuevo el 2026-08-14 viendo las alternativas.
+
+   Por qué hizo falta: hasta hoy lo ÚNICO que distinguía una sugerencia de un
+   dato escrito por la usuaria era la palabra "Aplicar". El índigo de 46c92f9
+   dejó además el acento tan cerca del color del texto normal que solo con
+   color tampoco se distinguía. Y en cuatro sitios la sugerencia se escribía
+   directamente dentro del campo de la usuaria: eso ya no pasa. */
+.sugerencia {
+  font: inherit; font-size: 12px; color: var(--accent);
+  background: var(--accent-soft); border: none;
+  border-radius: 99px; padding: 3px 9px;
+  display: inline-flex; align-items: center; gap: 4px;
+  cursor: pointer; white-space: nowrap; text-decoration: none; max-width: 100%;
 }
-.chip-sugerencia:hover { text-decoration: underline; }
+.sugerencia .texto-sug { overflow: hidden; text-overflow: ellipsis; }
+/* La ✕ vive dentro del recuadro, así que es su propio botón: si no, aceptar
+   y descartar serían el mismo clic. */
+.sugerencia-descartar {
+  font: inherit; font-size: 13px; line-height: 1; color: var(--accent);
+  background: none; border: none; padding: 0 1px; cursor: pointer; opacity: .65;
+}
+.sugerencia-descartar:hover { opacity: 1; }
+/* Varias propuestas para la misma celda (LarpManager ambiguo, facturas de un
+   lote): una debajo de otra, no en fila, que la celda es estrecha. */
+.sugerencias-lista { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 
 /* Pestaña Ayuda: interruptor admin/colaboradores + secciones de texto */
 .interruptor-ayuda { display: inline-flex; gap: 4px; background: var(--surface-alt); padding: 3px; border-radius: 999px; margin-bottom: 20px; }
