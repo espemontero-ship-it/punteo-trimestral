@@ -232,7 +232,12 @@ export default function TablaMovimientos({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hoja: g.hoja, clave: g.clave, nota: limpia }),
     }, { mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`, mensajeError: 'No se pudo confirmar el grupo.' });
-    if (r) onCambio();
+    // Igual que en guardarProveedorGrupo: se limpia lo tecleado para que el
+    // guardado al salir del campo no repita el mismo envío tras un Enter.
+    if (r) {
+      setNotasGrupo(prev => { const n = { ...prev }; delete n[g.id]; return n; });
+      onCambio();
+    }
   }
 
   async function cambiarEstadoGrupo(g, nuevoEstado) {
@@ -302,7 +307,13 @@ export default function TablaMovimientos({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hoja: g.hoja, clave: g.clave, proveedor: (valor ?? '').trim() }),
     }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
-    if (r) onCambio();
+    // Se limpia lo tecleado al guardar bien: así el guardado al salir del
+    // campo (onBlur) no vuelve a mandar lo mismo justo después de un Enter,
+    // que contaría dos veces en la memoria aprendida.
+    if (r) {
+      setProveedoresGrupo(prev => { const n = { ...prev }; delete n[g.id]; return n; });
+      onCambio();
+    }
   }
 
   async function elegirCandidato(opcion) {
@@ -470,6 +481,15 @@ export default function TablaMovimientos({
         value={valorActual}
         onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNota(m.id, e.target.value); } }}
+        // Guardar también al salir del campo: antes solo se guardaba con
+        // Enter, así que escribir y hacer clic en otro sitio tiraba lo
+        // escrito sin avisar. Solo se guarda si de verdad se ha escrito algo
+        // (notasManual definido) y es distinto de lo ya guardado -- si no,
+        // pasar por encima de una sugerencia la confirmaría sola.
+        onBlur={e => {
+          const v = e.target.value.trim();
+          if (notasManual[m.id] !== undefined && v !== (m.nota_final || '')) confirmarNota(m.id, v);
+        }}
       />
     );
   }
@@ -537,6 +557,13 @@ export default function TablaMovimientos({
         value={proveedoresManual[m.id] ?? (m.proveedor || m.proveedor_sugerido || '')}
         onChange={e => setProveedoresManual(prev => ({ ...prev, [m.id]: e.target.value }))}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedor(m.id, e.target.value); } }}
+        // Ver comentario en celdaNota: guardar al salir, pero solo lo escrito
+        // a mano y solo si cambia -- nunca la sugerencia por el mero hecho de
+        // pasar por encima del campo.
+        onBlur={e => {
+          const v = e.target.value.trim();
+          if (proveedoresManual[m.id] !== undefined && v !== (m.proveedor || '')) guardarProveedor(m.id, v);
+        }}
       />
     );
   }
@@ -659,6 +686,7 @@ export default function TablaMovimientos({
             value={proveedoresGrupo[g.id] ?? (sugerenciaProveedorGrupo || '')}
             onChange={e => setProveedoresGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedorGrupo(g, e.target.value); } }}
+            onBlur={e => { if (proveedoresGrupo[g.id] !== undefined) guardarProveedorGrupo(g, e.target.value); }}
           />
         </Celda>
         <Celda col="Importe">{g.importeTotal.toFixed(2)}€</Celda>
@@ -687,6 +715,7 @@ export default function TablaMovimientos({
                 value={notasGrupo[g.id] || ''}
                 onChange={e => setNotasGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNotaGrupo(g, e.target.value); } }}
+                onBlur={e => { if (e.target.value.trim()) confirmarNotaGrupo(g, e.target.value); }}
               />
             </>
           )}
