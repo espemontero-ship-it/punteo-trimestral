@@ -279,47 +279,21 @@ export default function Home() {
   // Junta los resultados de una subida en lote: qué líneas quedaron
   // resueltas solas, cuáles tienen varias facturas con el mismo importe
   // (para elegir en la tabla) y qué archivos no encontraron ninguna línea.
+  // Subir facturas ya no cambia lo que se ve en Movimientos: ni lo filtra, ni
+  // avisa allí de las que no encontraron línea. Eso vive en Facturas, que es
+  // donde se suben. Lo único que sigue viajando es la lista de líneas con
+  // varias facturas candidatas, para poder elegir desde la columna Nota.
   async function completarLote(resultados) {
     const ids = new Set();
     const ambiguos = {};
-    const sinEncontrar = [];
 
-    for (const { nombreArchivo, resultado } of resultados) {
+    for (const { resultado } of resultados) {
       if (['match_directo', 'ambiguo', 'combo_sugerido'].includes(resultado.tipo)) {
         clasificarResultado(resultado, ids, ambiguos);
-      } else {
-        sinEncontrar.push({ nombreArchivo, facturaId: resultado.facturaId, detalle: resultado.detalle });
       }
     }
 
-    setLote({ ids, ambiguos, sinEncontrar, total: resultados.length });
-    await cargar();
-  }
-
-  // Cuando el importe no se pudo leer del PDF, se escribe a mano y esto
-  // relanza el mismo matching automático contra los movimientos pendientes.
-  async function resolverImporteManual(facturaId, nombreArchivo, importe) {
-    const resultado = await apiFetch(`/api/facturas/${facturaId}/importe`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ importe }),
-    }, { mensajeError: 'No se pudo guardar el importe.' });
-    if (!resultado) return;
-
-    setLote(prev => {
-      if (!prev) return prev;
-      const ids = new Set(prev.ids);
-      const ambiguos = { ...prev.ambiguos };
-      const sinEncontrar = prev.sinEncontrar.filter(f => f.facturaId !== facturaId);
-
-      if (['match_directo', 'ambiguo', 'combo_sugerido'].includes(resultado.tipo)) {
-        clasificarResultado(resultado, ids, ambiguos);
-      } else {
-        sinEncontrar.push({ nombreArchivo, facturaId, detalle: resultado.detalle });
-      }
-
-      return { ...prev, ids, ambiguos, sinEncontrar };
-    });
+    setLote({ ambiguos });
     await cargar();
   }
 
@@ -403,8 +377,6 @@ export default function Home() {
               proyectos={proyectos}
               onCambio={cargar}
               filtroLote={lote}
-              onQuitarFiltro={() => setLote(null)}
-              onResolverImporteManual={resolverImporteManual}
               desde={desde}
               hasta={hasta}
               onDesdeChange={setDesde}

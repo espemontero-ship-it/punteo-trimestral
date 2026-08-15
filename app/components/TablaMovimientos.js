@@ -87,7 +87,7 @@ function nombreGrupoMostrado(g) {
 }
 
 export default function TablaMovimientos({
-  proveedores, proyectos, onCambio, filtroLote, onQuitarFiltro, onResolverImporteManual,
+  proveedores, proyectos, onCambio, filtroLote,
   desde, hasta, onDesdeChange, onHastaChange, onRecalcular, recalculando, pendientes,
 }) {
   const [busqueda, setBusqueda] = useState('');
@@ -101,8 +101,6 @@ export default function TablaMovimientos({
   const [notasGrupo, setNotasGrupo] = useState({});
   const [proveedoresGrupo, setProveedoresGrupo] = useState({});
   const [anchos, setAnchos] = useAnchosPersistidos('punteo-anchos-movimientos');
-  const [importesManual, setImportesManual] = useState({});
-  const [guardandoImporte, setGuardandoImporte] = useState(null);
   const [modoDevolucion, setModoDevolucion] = useState(new Set());
   const [jugadorManual, setJugadorManual] = useState({});
   // Sugerencias que se han descartado con la ✕. Solo mientras dure la sesión:
@@ -161,7 +159,6 @@ export default function TablaMovimientos({
         ...g,
         importeTotal: g.movimientos.reduce((s, m) => s + Number(m.importe), 0),
         movimientos: g.movimientos.filter(m => {
-          if (filtroLote) return filtroLote.ids.has(m.id);
           if (soloPendientes && ['resuelta', 'ignorada', 'factura_futura'].includes(m.estado)) return false;
           if (!texto) return true;
           const campos = [m.concepto, g.clave, g.hoja, m.nota_final, m.importe, m.fecha, ...(m.datos_originales ? Object.values(m.datos_originales) : [])];
@@ -386,15 +383,6 @@ export default function TablaMovimientos({
       body: JSON.stringify(candidato),
     }, { mensajeOk: 'Marcado', mensajeError: 'No se pudo marcar.' });
     if (r) onCambio();
-  }
-
-  async function guardarImporteManual(f) {
-    const valor = (importesManual[f.facturaId] || '').replace(',', '.').trim();
-    const importe = Number(valor);
-    if (!valor || isNaN(importe) || importe <= 0) return;
-    setGuardandoImporte(f.facturaId);
-    await onResolverImporteManual(f.facturaId, f.nombreArchivo, importe);
-    setGuardandoImporte(null);
   }
 
   async function asignarProyecto(movimientoId, proyectoId) {
@@ -722,9 +710,12 @@ export default function TablaMovimientos({
     return (
       <div role="row" className="fila-tabla fila-grupo" key={`g-${g.id}`} style={{ gridTemplateColumns: plantillaColumnas }}>
         <Celda col="Fecha" stickyLefts={stickyLefts} />
+        {/* Cada columna con lo suyo: en Concepto va lo que escribe el banco, y
+            el proveedor va en la columna Proveedor. Antes el nombre del
+            proveedor se pintaba aquí, con el campo de Proveedor vacío al
+            lado -- la misma cosa en dos sitios, y en ninguno el que le toca. */}
         <Celda col="Concepto" stickyLefts={stickyLefts}>
-          <div className="grupo-nombre">{nombreGrupoMostrado(g)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
-          <div className="meta">{g.resueltas} de {g.total} resueltas</div>
+          <div className="grupo-nombre">{nombreGrupo(g.clave)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
         </Celda>
         <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
         <Celda col="Proveedor">
@@ -739,7 +730,10 @@ export default function TablaMovimientos({
             className="campo-proveedor"
             type="text"
             placeholder=""
-            value={proveedoresGrupo[g.id] ?? ''}
+            // Enseña el proveedor que el grupo ya tiene, no un campo vacío:
+            // es donde se lee y donde se cambia o se borra (borrarlo desagrupa
+            // y olvida).
+            value={proveedoresGrupo[g.id] ?? (g.proveedor || '')}
             onChange={e => setProveedoresGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedorGrupo(g, e.target.value); } }}
             onBlur={e => { if (proveedoresGrupo[g.id] !== undefined) guardarProveedorGrupo(g, e.target.value); }}
@@ -793,49 +787,12 @@ export default function TablaMovimientos({
 
   return (
     <div>
-      {filtroLote && (
-        <div className="barra-filtro-lote">
-          <span>Mostrando {filtroLote.ids.size} línea(s) de la última subida ({filtroLote.total} archivo(s) subidos).</span>
-          <button type="button" className="secundario" onClick={onQuitarFiltro}>Ver todo el trimestre</button>
-        </div>
-      )}
-      {filtroLote?.sinEncontrar?.length > 0 && (
-        <div className="lista-sin-encontrar">
-          <p className="muted" style={{ margin: '0 0 8px' }}>{filtroLote.sinEncontrar.length} archivo(s) sin ninguna línea parecida — revisa a mano:</p>
-          {filtroLote.sinEncontrar.map((f, i) => (
-            <div key={i} className="fila-sin-encontrar">
-              <div className="fila-sin-encontrar-info">
-                <span>
-                  {f.nombreArchivo}
-                  {f.facturaId && (
-                    <a className="link-factura" style={{ marginLeft: 8 }} href={`/api/facturas/${f.facturaId}/archivo`} target="_blank" rel="noreferrer">
-                      ver archivo
-                    </a>
-                  )}
-                </span>
-                <span className="muted">{f.detalle}</span>
-              </div>
-              {f.facturaId && onResolverImporteManual && (
-                <div className="importe-manual">
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="Importe (ej. 45,00)"
-                    value={importesManual[f.facturaId] || ''}
-                    onChange={e => setImportesManual(prev => ({ ...prev, [f.facturaId]: e.target.value }))}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarImporteManual(f); } }}
-                    disabled={guardandoImporte === f.facturaId}
-                  />
-                  <button type="button" className="secundario" onClick={() => guardarImporteManual(f)} disabled={guardandoImporte === f.facturaId}>
-                    {guardandoImporte === f.facturaId ? 'Buscando...' : 'Buscar coincidencia'}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
+      {/* Subir facturas ya no cambia lo que se ve en esta tabla. Antes, subir
+          en Facturas dejaba Movimientos filtrado a las líneas de esa subida,
+          con una barra para deshacerlo, y el aviso de las que no encontraron
+          línea salía también aquí, en otra pantalla, pidiendo otra vez un
+          importe ya escrito. Todo eso vive en Facturas, que es donde se sube.
+          Aquí manda "Solo pendientes", como siempre. */}
       <div className="buscador-fila">
         <div className="grupo-tb">
           <input type="text" placeholder="Buscar en cualquier columna..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />

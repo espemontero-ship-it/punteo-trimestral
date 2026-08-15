@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { apiFetch, mostrarToast } from '../lib/toast';
 import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
+import { parseImporte } from '../../lib/numero.cjs';
 
 const ETIQUETAS_TIPO = {
   match_directo: 'Emparejada',
@@ -208,9 +209,12 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     if (fecha !== undefined && fecha !== fechaInicial(f)) cambios.fecha = fecha;
     const importeTexto = edicionImporte[f.id];
     if (importeTexto !== undefined && importeTexto !== importeInicial(f)) {
-      const v = importeTexto.replace(',', '.').trim();
-      const n = Number(v);
-      if (v && !isNaN(n) && n > 0) cambios.importe = n;
+      const n = parseImporte(importeTexto);
+      if (String(importeTexto).trim() && (isNaN(n) || n <= 0)) {
+        mostrarToast(`No entiendo el importe "${importeTexto}". Escríbelo como 2.183,18 o 2183,18.`, 'error');
+        return;
+      }
+      if (!isNaN(n) && n > 0) cambios.importe = n;
     }
     if (Object.keys(cambios).length === 0) return;
     const r = await apiFetch(`/api/facturas/${f.id}/datos`, {
@@ -222,8 +226,12 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   }
 
   async function buscarFila(f) {
-    const importeTexto = (edicionImporte[f.id] ?? importeInicial(f)).replace(',', '.').trim();
-    const importe = importeTexto ? Number(importeTexto) : null;
+    const importeTexto = String(edicionImporte[f.id] ?? importeInicial(f)).trim();
+    const importe = importeTexto ? parseImporte(importeTexto) : null;
+    if (importeTexto && (isNaN(importe) || importe <= 0)) {
+      mostrarToast(`No entiendo el importe "${importeTexto}". Escríbelo como 2.183,18 o 2183,18.`, 'error');
+      return;
+    }
     const fecha = edicionFecha[f.id] ?? fechaInicial(f) ?? null;
     const concepto = edicionConcepto[f.id] ?? f.concepto ?? null;
 
