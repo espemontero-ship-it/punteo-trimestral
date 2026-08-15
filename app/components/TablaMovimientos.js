@@ -576,12 +576,24 @@ export default function TablaMovimientos({
   // hay factura posible en una devolución).
   function celdaFactura(m, g) {
     if (m.es_devolucion) return <span className="vacio">—</span>;
-    const facturaIds = m.factura_ids || [];
-    if (facturaIds.length > 0) {
+    // El número de cada factura, no la palabra "ver": es el nombre que lleva
+    // el archivo dentro del zip que va a la gestoría, así que lo que ves en
+    // pantalla y lo que ella recibe se llaman igual. Con varias, separadas por
+    // coma y cada una abre la suya. Antes solo se podía abrir la primera, y
+    // sin saber cuál era.
+    const facturas = m.facturas || [];
+    if (facturas.length > 0) {
       return (
-        <a className="link-factura" href={`/api/facturas/${facturaIds[0]}/archivo`} target="_blank" rel="noreferrer">
-          ver
-        </a>
+        <span>
+          {facturas.map((f, i) => (
+            <Fragment key={f.id}>
+              {i > 0 && ', '}
+              <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">
+                {f.numero}
+              </a>
+            </Fragment>
+          ))}
+        </span>
       );
     }
     return (
@@ -700,7 +712,7 @@ export default function TablaMovimientos({
         <Celda col="Proveedor" className="proveedor">{celdaProveedor(m)}</Celda>
         <Celda col="Importe" className="importe num">{Number(m.importe).toFixed(2)}€</Celda>
         <Celda col="Estado">{celdaEstado(m)}</Celda>
-        <Celda col="Factura">{celdaFactura(m, g)}</Celda>
+        <Celda col="Factura" className="facturas">{celdaFactura(m, g)}</Celda>
         <Celda col="Nota">{celdaNota(m, g)}</Celda>
         <Celda col="Proyecto">{celdaProyecto(m)}</Celda>
         {columnasVisiblesExtra.map(c => (

@@ -372,6 +372,10 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
 }
 .etiqueta-orden:hover { color: var(--text); }
 .celda.concepto { white-space: normal; }
+/* Igual que Concepto: cuando una línea lleva varias facturas, los números
+   parten a la línea siguiente en vez de recortarse. Con tres caben; a partir
+   de cuatro se salían y las celdas de esta tabla cortan lo que sobra. */
+.celda.facturas { white-space: normal; }
 .celda.banco { text-transform: capitalize; }
 input.campo-proveedor {
   font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
