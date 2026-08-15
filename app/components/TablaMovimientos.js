@@ -469,8 +469,17 @@ export default function TablaMovimientos({
         </div>
       );
     }
+    // La nota de una línea resuelta también se edita. Antes se pintaba como
+    // texto plano y no había dónde escribir: para corregir o borrar una nota
+    // había que devolver la línea a pendiente, cambiarla y volver a
+    // resolverla. Mismo criterio que el desplegable de Estado, que es siempre
+    // editable a propósito para poder deshacer lo que se hizo mal.
+    //
+    // A una línea ya resuelta no se le proponen sugerencias: ya tiene su
+    // respuesta, y una píldora encima taparía la nota que hay que poder ver y
+    // corregir. Solo se le enseña su campo.
     const resuelta = m.estado === 'resuelta';
-    if (resuelta) return <span className="nota-texto">{m.nota_final}</span>;
+
     // Una clave por candidato, no por línea: descartar una opción no puede
     // llevarse por delante las demás, que son alternativas entre las que hay
     // que poder seguir eligiendo. Se conserva el índice original al filtrar,
@@ -478,7 +487,7 @@ export default function TablaMovimientos({
     const opcionesLote = (filtroLote?.ambiguos?.[m.id] || [])
       .map((o, i) => ({ o, i }))
       .filter(({ i }) => viva(`lote:${m.id}:${i}`));
-    if (opcionesLote?.length) {
+    if (!resuelta && opcionesLote?.length) {
       return (
         <div className="sugerencias-lista">
           {/* Esta frase existía y se borró en el commit 88bfdfc (2026-08-03)
@@ -503,7 +512,7 @@ export default function TablaMovimientos({
     const sugerencia = g.sugerenciaNota;
     return (
       <>
-        {sugerencia && viva(`nota:${m.id}`) ? (
+        {!resuelta && sugerencia && viva(`nota:${m.id}`) ? (
           <Sugerencia
             texto={sugerencia}
             onAplicar={() => confirmarNota(m.id, sugerencia)}
@@ -514,7 +523,10 @@ export default function TablaMovimientos({
           className="campo-nota"
           type="text"
           placeholder=""
-          value={notasManual[m.id] ?? ''}
+          // Enseña la nota que ya está guardada. Antes arrancaba en blanco
+          // siempre: no veías lo que había, así que no se podía corregir ni
+          // borrar, solo escribir encima a ciegas.
+          value={notasManual[m.id] ?? (m.nota_final || '')}
           onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNota(m.id, e.target.value); } }}
           // Guardar también al salir del campo: antes solo se guardaba con
