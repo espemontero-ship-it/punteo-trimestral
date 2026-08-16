@@ -1,6 +1,6 @@
 const { put } = require('@vercel/blob');
 const { query } = require('../../../lib/db.cjs');
-const { parsearCSV, emparejarIngresosConLarpManager, asegurarTablaPagosLarpManager } = require('../../../lib/larpmanager.cjs');
+const { parsearArchivoLarpManager, emparejarIngresosConLarpManager, asegurarTablaPagosLarpManager } = require('../../../lib/larpmanager.cjs');
 
 export const maxDuration = 60;
 
@@ -8,16 +8,16 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file');
-    if (!file) return Response.json({ error: 'Falta el archivo CSV.' }, { status: 400 });
+    if (!file) return Response.json({ error: 'Falta el archivo.' }, { status: 400 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const filas = parsearCSV(buffer);
+    const filas = await parsearArchivoLarpManager(buffer, file.name || '');
     if (filas.length === 0) {
-      return Response.json({ error: 'El CSV no tiene ninguna fila.' }, { status: 400 });
+      return Response.json({ error: 'El archivo no tiene ninguna fila.' }, { status: 400 });
     }
     const aCruzar = filas.filter(f => f.entraEnCruce).length;
     if (aCruzar === 0) {
-      return Response.json({ error: 'Ninguna fila del CSV se puede cruzar con el banco (todas son de pasarela o apuntes internos).' }, { status: 400 });
+      return Response.json({ error: 'Ninguna fila del archivo se puede cruzar con el banco (todas son de pasarela o apuntes internos).' }, { status: 400 });
     }
 
     // El archivo se guarda y la subida queda registrada, igual que la del

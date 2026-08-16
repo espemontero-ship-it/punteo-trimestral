@@ -8,6 +8,7 @@
       "columnas": {
         "fecha": ["F. CONTABLE", "FECHA CONTABLE"],
         "texto": ["CONCEPTO", "BENEFICIARIO", "OBSERVACIONES"],
+        "textoExcluir": ["IMPORTE", "SALDO", "DIVISA", "OFICINA", "CODIGO", "CÓDIGO", "F. VALOR", "FECHA VALOR"],
         "importe": ["IMPORTE"]
       }
     },
