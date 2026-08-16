@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import SubirFacturaColaborador from '../components/SubirFacturaColaborador';
 import TablaCuentas from '../components/TablaCuentas';
+import Ayuda from '../components/Ayuda';
 
 export default function ColaboradorPage() {
   const [nombre, setNombre] = useState('');
@@ -15,6 +16,10 @@ export default function ColaboradorPage() {
   const [totales, setTotales] = useState(null);
   const [puedeInvitar, setPuedeInvitar] = useState(false);
   const [puedeSubirFacturasGenerales, setPuedeSubirFacturasGenerales] = useState(false);
+  // Esta pantalla no tiene barra de pestañas, así que la ayuda se abre y se
+  // cierra desde la cabecera y ocupa el sitio del contenido, igual que haría
+  // una pestaña. Solo se le enseña la parte de colaboradores, en inglés.
+  const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const router = useRouter();
 
   const cargarLotes = useCallback(async () => {
@@ -62,14 +67,25 @@ export default function ColaboradorPage() {
     <div className={loteId ? 'contenedor contenedor-ancho' : 'contenedor'} style={loteId ? undefined : { paddingTop: '8vh' }}>
       <div className="fila" style={{ marginTop: loteId ? 16 : 0, marginBottom: loteId ? 0 : 16 }}>
         <div>
-          <h1 style={{ margin: 0 }}>{lote?.evento || `Hi, ${nombre}`}</h1>
-          {lote?.evento && <p className="muted" style={{ margin: 0 }}>Hi, {nombre}</p>}
+          <h1 style={{ margin: 0 }}>{ayudaAbierta ? 'Help' : (lote?.evento || `Hi, ${nombre}`)}</h1>
+          {!ayudaAbierta && lote?.evento && <p className="muted" style={{ margin: 0 }}>Hi, {nombre}</p>}
         </div>
         <div>
-          {loteId && <button className="secundario" onClick={() => setLoteId(null)} style={{ marginRight: 8 }}>Switch project</button>}
-          <button className="secundario" onClick={salir}>Log out</button>
+          {ayudaAbierta ? (
+            <button className="secundario" onClick={() => setAyudaAbierta(false)}>Back</button>
+          ) : (
+            <>
+              <button className="secundario" onClick={() => setAyudaAbierta(true)} style={{ marginRight: 8 }}>Help</button>
+              {loteId && <button className="secundario" onClick={() => setLoteId(null)} style={{ marginRight: 8 }}>Switch project</button>}
+              <button className="secundario" onClick={salir}>Log out</button>
+            </>
+          )}
         </div>
       </div>
+
+      {ayudaAbierta && <Ayuda soloColaboradores />}
+      {!ayudaAbierta && (
+      <>
 
       <div className="tarjeta">
         <strong>Details for the invoice</strong>
@@ -107,6 +123,8 @@ export default function ColaboradorPage() {
       {puedeInvitar && loteId && <InvitarColaborador proyectoNombre={lote?.evento} proyectoId={lote?.proyecto_id} />}
 
       {loteId && <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />}
+      </>
+      )}
     </div>
   );
 }
