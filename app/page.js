@@ -486,7 +486,7 @@ export default function Home() {
       </Modal>
 
       <Modal abierto={modalAbierto === 'larpmanager-pendientes'} titulo="Pagos de LarpManager sin emparejar" onCerrar={() => setModalAbierto(null)} ancho={940}>
-        <p className="muted">Pagos que LarpManager dice que existen (transferencia o añadidos a mano) pero que ninguna línea del banco ha reclamado todavía. La columna &quot;Por qué&quot; dice el motivo de cada uno: antes todos se veían igual, sin distinguir si la transferencia no había llegado, si el importe no cuadraba o si el nombre coincidía a medias.</p>
+        <p className="muted">Pagos que LarpManager da por hechos y que no tienen su ingreso en el banco. Al abrir esta ventana se cruzan otra vez, así que lo que ves aquí es lo que hace falta mirar a mano. La columna &quot;Por qué&quot; dice qué le pasa a cada uno, y &quot;Vincular&quot; sirve para señalar tú la línea del banco cuando sabes cuál es.</p>
         {cargandoPagosSinEmparejar && <p className="muted">Cargando...</p>}
         {!cargandoPagosSinEmparejar && pagosSinEmparejar && pagosSinEmparejar.length === 0 && (
           <p className="muted">Ninguno — todos los pagos de LarpManager subidos ya están emparejados.</p>
@@ -528,8 +528,13 @@ export default function Home() {
                             Si ninguna cuadra, se enseñan todas directamente:
                             un desplegable vacío parecería roto. */}
                         {(() => {
-                          const cuadran = candidatosPago.filter(c => c.mismoImporte);
-                          const resto = candidatosPago.filter(c => !c.mismoImporte);
+                          // Se abre con las que llevan su nombre y las de su
+                          // importe: son las que la columna "Por qué" acaba de
+                          // nombrar. Antes solo miraba el importe, así que en
+                          // los casos de "coincide parte del nombre" la lista
+                          // no tenía nada que ver con lo que se le había dicho.
+                          const cuadran = candidatosPago.filter(c => c.suNombre || c.mismoImporte);
+                          const resto = candidatosPago.filter(c => !c.suNombre && !c.mismoImporte);
                           const mostrarTodas = verTodosCandidatos || cuadran.length === 0;
                           const lista = mostrarTodas ? candidatosPago : cuadran;
                           return (
@@ -542,14 +547,14 @@ export default function Home() {
                                 <option value="">Elige línea del banco...</option>
                                 {lista.map(c => (
                                   <option key={c.id} value={c.id}>
-                                    {c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : 'sin fecha'} · {c.importe.toFixed(2)}€ · {c.concepto?.slice(0, 45)}
+                                    {c.suNombre ? '★ ' : ''}{c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : 'sin fecha'} · {c.importe.toFixed(2)}€ · {c.concepto}
                                   </option>
                                 ))}
                               </select>
                               <p className="muted" style={{ margin: '4px 0 0', fontSize: 11 }}>
                                 {mostrarTodas
-                                  ? (cuadran.length === 0 ? 'Ninguna línea cuadra de importe — están todas.' : `Todos los ingresos (${candidatosPago.length}).`)
-                                  : `${cuadran.length} de ${candidatosPago.length} cuadran de importe.`}
+                                  ? (cuadran.length === 0 ? "Ninguna lleva su nombre ni su importe — están todas." : `Todos los ingresos (${candidatosPago.length}).`)
+                                  : `${cuadran.length} de ${candidatosPago.length} llevan su nombre o su importe. Las marcadas con ★ llevan su nombre.`}
                                 {!mostrarTodas && resto.length > 0 && (
                                   <>
                                     {' '}
