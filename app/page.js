@@ -547,14 +547,14 @@ export default function Home() {
                                 <option value="">Elige línea del banco...</option>
                                 {lista.map(c => (
                                   <option key={c.id} value={c.id}>
-                                    {c.suNombre ? '★ ' : ''}{c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : 'sin fecha'} · {c.importe.toFixed(2)}€ · {c.concepto}
+                                    {c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : 'sin fecha'} · {c.importe.toFixed(2)}€ · {c.concepto}
                                   </option>
                                 ))}
                               </select>
                               <p className="muted" style={{ margin: '4px 0 0', fontSize: 11 }}>
                                 {mostrarTodas
                                   ? (cuadran.length === 0 ? "Ninguna lleva su nombre ni su importe — están todas." : `Todos los ingresos (${candidatosPago.length}).`)
-                                  : `${cuadran.length} de ${candidatosPago.length} llevan su nombre o su importe. Las marcadas con ★ llevan su nombre.`}
+                                  : `${cuadran.length} de ${candidatosPago.length} llevan su nombre o su importe.`}
                                 {!mostrarTodas && resto.length > 0 && (
                                   <>
                                     {' '}
