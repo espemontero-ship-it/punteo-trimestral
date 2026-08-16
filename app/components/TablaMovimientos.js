@@ -595,6 +595,14 @@ export default function TablaMovimientos({
         </span>
       );
     }
+    // A una línea ya cerrada no se le ofrece subir factura: si está resuelta
+    // sin ninguna, es que no lleva (stripe y los tickets son ingresos; banco,
+    // dgm e impuestos no emiten factura), y si está ignorada es que no hay
+    // nada que hacer con ella. Comprobado contra producción: las 42 líneas de
+    // ese tipo están todas resueltas y ninguna tiene factura.
+    // Las que SÍ esperan una -- pendiente, pedida y factura futura -- siguen
+    // con su botón, que es justo donde hace falta.
+    if (m.estado === 'resuelta' || m.estado === 'ignorada') return null;
     return (
       <SubirFactura
         hoja={g.hoja}
@@ -778,10 +786,18 @@ export default function TablaMovimientos({
           )}
         </Celda>
         <Celda col="Factura" />
+        {/* La nota del grupo se escribe siempre, aunque no queden líneas
+            pendientes: si no, en cuanto el grupo estaba entero resuelto
+            desaparecía el campo y no había forma de corregir ni borrar su
+            nota. Mismo problema que tenía la nota de una línea suelta.
+            Escribirla la aplica a TODAS las líneas del grupo, resueltas
+            incluidas -- que es justo lo que hace falta para corregir. La
+            sugerencia, en cambio, solo se ofrece si queda algo por resolver:
+            proponer sobre un grupo ya cerrado no tiene sentido. */}
         <Celda col="Nota">
-          {permiteAccionesGrupo && (
+          {
             <>
-              {g.sugerenciaNota && viva(`notag:${g.id}`) && (
+              {permiteAccionesGrupo && g.sugerenciaNota && viva(`notag:${g.id}`) && (
                 <Sugerencia
                   texto={`${g.sugerenciaNota} · ${pendientesGrupo} línea${pendientesGrupo === 1 ? '' : 's'}`}
                   onAplicar={() => confirmarNotaGrupo(g, g.sugerenciaNota)}
@@ -795,10 +811,12 @@ export default function TablaMovimientos({
                 value={notasGrupo[g.id] || ''}
                 onChange={e => setNotasGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNotaGrupo(g, e.target.value); } }}
-                onBlur={e => { if (e.target.value.trim()) confirmarNotaGrupo(g, e.target.value); }}
+                // Guarda también al vaciarlo: antes solo si quedaba texto, así
+                // que borrar la nota de un grupo entero era imposible.
+                onBlur={e => { if (notasGrupo[g.id] !== undefined) confirmarNotaGrupo(g, e.target.value); }}
               />
             </>
-          )}
+          }
         </Celda>
         <Celda col="Proyecto">
           <select className="select-proyecto" defaultValue="" onChange={e => { asignarProyectoGrupo(g, e.target.value === '__quitar__' ? '' : e.target.value); e.target.value = ''; }}>
