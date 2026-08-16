@@ -6,6 +6,7 @@ export const PESTANAS = [
   { id: 'inicio', etiqueta: 'Inicio' },
   { id: 'movimientos', etiqueta: 'Movimientos' },
   { id: 'facturas', etiqueta: 'Facturas' },
+  { id: 'larpmanager', etiqueta: 'LarpManager' },
   { id: 'proyectos', etiqueta: 'Proyectos' },
   { id: 'colaboradores', etiqueta: 'Colaboradores' },
   { id: 'ayuda', etiqueta: 'Ayuda' },

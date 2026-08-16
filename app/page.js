@@ -7,6 +7,7 @@ import SubirFacturasLote from './components/SubirFacturasLote';
 import FacturasTrimestre from './components/FacturasTrimestre';
 import GestionProyectos from './components/GestionProyectos';
 import TablaColaboradores from './components/TablaColaboradores';
+import PagosLarpManager from './components/PagosLarpManager';
 import Ayuda from './components/Ayuda';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Modal } from './components/Modal';
@@ -54,18 +55,14 @@ export default function Home() {
     return PESTANAS.some(p => p.id === tab) ? tab : 'inicio';
   });
   const [lote, setLote] = useState(null);
-  const [modalAbierto, setModalAbierto] = useState(null); // 'excel' | 'larpmanager' | 'larpmanager-pendientes' | 'devoluciones' | 'importaciones' | 'envio' | null
+  const [modalAbierto, setModalAbierto] = useState(null); // 'excel' | 'larpmanager' | 'devoluciones' | 'importaciones' | 'envio' | null
   const [recalculando, setRecalculando] = useState(false);
   const [subiendoLarpManager, setSubiendoLarpManager] = useState(false);
   const [mensajeLarpManager, setMensajeLarpManager] = useState(null);
-  const [pagosSinEmparejar, setPagosSinEmparejar] = useState(null);
   const [cargandoPagosSinEmparejar, setCargandoPagosSinEmparejar] = useState(false);
   // OPCIÓN 1: vincular un pago a mano desde la lista de sin emparejar.
-  const [vinculandoPago, setVinculandoPago] = useState(null);   // id del pago abierto
-  const [candidatosPago, setCandidatosPago] = useState(null);   // líneas entre las que elegir
   const [lineaElegida, setLineaElegida] = useState('');
   const [guardandoVinculo, setGuardandoVinculo] = useState(false);
-  const [verTodosCandidatos, setVerTodosCandidatos] = useState(false);
   const [importaciones, setImportaciones] = useState(null);
   const [cargandoImportaciones, setCargandoImportaciones] = useState(false);
   const [devoluciones, setDevoluciones] = useState(null);
@@ -178,56 +175,8 @@ export default function Home() {
     }
   }
 
-  // Al revés que el cruce normal (banco -> LarpManager): aquí se pregunta
-  // "¿qué pagos dice LarpManager que existen que ningún movimiento del banco
-  // ha reclamado todavía?" -- el hueco que antes no se podía ver. Se pide
-  // cada vez que se abre (no se guarda en estado aparte) para que siempre
-  // refleje lo último confirmado en la tabla.
-  async function verPagosSinEmparejar() {
-    setModalAbierto('larpmanager-pendientes');
-    setCargandoPagosSinEmparejar(true);
-    const data = await apiFetch('/api/larpmanager-sin-emparejar', undefined, {
-      mensajeError: 'No se pudo obtener la lista de pagos sin emparejar.',
-    });
-    setPagosSinEmparejar((data && data.pagos) || []);
-    setCargandoPagosSinEmparejar(false);
-  }
 
-  // OPCIÓN 1 -- vincular a mano desde esta misma lista, igual que ya se hace
-  // en Facturas cuando una factura no encuentra su línea ("Elige línea del
-  // banco..."). Hace falta porque hay pagos que el cruce no puede resolver
-  // nunca: si el banco no escribe el nombre en el concepto, no hay nada que
-  // comparar.
-  async function abrirVinculoPago(pago) {
-    setVinculandoPago(pago.id);
-    setCandidatosPago(null);
-    setLineaElegida('');
-    // Cada pago empieza otra vez por las que cuadran de importe: si se
-    // quedara desplegado de la fila anterior, se vuelve al problema.
-    setVerTodosCandidatos(false);
-    const data = await apiFetch(`/api/larpmanager-pagos/${pago.id}/candidatos`, undefined, {
-      mensajeError: 'No se pudieron cargar las líneas del banco.',
-    });
-    setCandidatosPago((data && data.candidatos) || []);
-  }
 
-  async function vincularPago(pago) {
-    if (!lineaElegida) return;
-    setGuardandoVinculo(true);
-    const r = await apiFetch(`/api/larpmanager-pagos/${pago.id}/vincular`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ movimientoId: lineaElegida }),
-    }, { mensajeOk: 'Vinculado', mensajeError: 'No se pudo vincular.' });
-    setGuardandoVinculo(false);
-    if (r) {
-      setVinculandoPago(null);
-      setCandidatosPago(null);
-      setLineaElegida('');
-      await verPagosSinEmparejar();
-      await cargar();
-    }
-  }
 
   // Revisión de las devoluciones pendientes de enviar -- también se incluyen
   // como pestaña propia en el excel del próximo envío a gestoría.
@@ -360,7 +309,7 @@ export default function Home() {
   const avance = aPuntear > 0 ? Math.round((resueltas / aPuntear) * 100) : 0;
 
   return (
-    <div className={(pestana === 'movimientos' || pestana === 'colaboradores' || pestana === 'facturas' || pestana === 'proyectos') ? 'contenedor contenedor-ancho' : 'contenedor'}>
+    <div className={(pestana === 'movimientos' || pestana === 'colaboradores' || pestana === 'facturas' || pestana === 'proyectos' || pestana === 'larpmanager') ? 'contenedor contenedor-ancho' : 'contenedor'}>
       <CabeceraApp pestanaActiva={pestana} onCambiarPestana={setPestana} cerrarSesion={cerrarSesion} />
 
       {pestana === 'inicio' && (
@@ -384,15 +333,11 @@ export default function Home() {
                 <button type="button" className="secundario btn-icono" title="Añadir excel del banco / paypal" onClick={() => setModalAbierto('excel')}>
                   <span className="ico">⬆</span>Excel del banco
                 </button>
-                <button type="button" className="secundario btn-icono" title="Subir pagos de LarpManager" onClick={() => setModalAbierto('larpmanager')}>
-                  <span className="ico">⬆</span>Pagos de LarpManager
-                </button>
               </div>
             </div>
             <div className="div-v" />
             <div className="bloque">
               <div className="btns">
-                <button type="button" className="secundario" onClick={verPagosSinEmparejar}>Pagos sin emparejar</button>
                 <button type="button" className="secundario" onClick={verDevoluciones}>Devoluciones</button>
                 <button type="button" className="secundario" onClick={verImportaciones}>Archivos subidos</button>
               </div>
@@ -446,6 +391,10 @@ export default function Home() {
         </>
       )}
 
+      {pestana === 'larpmanager' && (
+        <PagosLarpManager onAbrirSubida={() => setModalAbierto('larpmanager')} onCambio={cargar} />
+      )}
+
       {pestana === 'proyectos' && (
         <GestionProyectos proyectos={proyectos} onCambio={cargar} />
       )}
@@ -485,103 +434,6 @@ export default function Home() {
         {mensajeLarpManager && <p className="muted" style={{ marginTop: 8 }}>{mensajeLarpManager}</p>}
       </Modal>
 
-      <Modal abierto={modalAbierto === 'larpmanager-pendientes'} titulo="Pagos de LarpManager sin emparejar" onCerrar={() => setModalAbierto(null)} ancho={940}>
-        <p className="muted">Pagos que LarpManager da por hechos y que no tienen su ingreso en el banco. Al abrir esta ventana se cruzan otra vez, así que lo que ves aquí es lo que hace falta mirar a mano. La columna &quot;Por qué&quot; dice qué le pasa a cada uno, y &quot;Vincular&quot; sirve para señalar tú la línea del banco cuando sabes cuál es.</p>
-        {cargandoPagosSinEmparejar && <p className="muted">Cargando...</p>}
-        {!cargandoPagosSinEmparejar && pagosSinEmparejar && pagosSinEmparejar.length === 0 && (
-          <p className="muted">Ninguno — todos los pagos de LarpManager subidos ya están emparejados.</p>
-        )}
-        {!cargandoPagosSinEmparejar && pagosSinEmparejar && pagosSinEmparejar.length > 0 && (
-          <table style={{ width: '100%', fontSize: 13 }}>
-            <thead>
-              <tr style={{ textAlign: 'left' }}>
-                <th>Nombre</th>
-                <th>Evento</th>
-                <th>Importe</th>
-                <th>Fecha</th>
-                <th>Por qué</th>
-                <th>Vincular</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagosSinEmparejar.map(p => (
-                <tr key={p.id}>
-                  <td>{p.nombre_real}</td>
-                  <td>{p.evento}</td>
-                  <td>{Number(p.importe).toFixed(2)}€</td>
-                  <td>{p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '—'}</td>
-                  <td className="muted">{p.motivoTexto || '—'}</td>
-                  <td>
-                    {vinculandoPago !== p.id ? (
-                      <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => abrirVinculoPago(p)}>
-                        Vincular
-                      </button>
-                    ) : candidatosPago === null ? (
-                      <span className="muted">Cargando...</span>
-                    ) : (
-                      <div>
-                        {/* El importe es lo único que de verdad desambigua:
-                            con el caso real deja 1 línea de 16. Así que el
-                            desplegable abre SOLO con las que cuadran, y las
-                            demás están detrás de un clic. Buscar entre 16
-                            conceptos de banco a ojo era lo que no funcionaba.
-                            Si ninguna cuadra, se enseñan todas directamente:
-                            un desplegable vacío parecería roto. */}
-                        {(() => {
-                          // Se abre con las que llevan su nombre y las de su
-                          // importe: son las que la columna "Por qué" acaba de
-                          // nombrar. Antes solo miraba el importe, así que en
-                          // los casos de "coincide parte del nombre" la lista
-                          // no tenía nada que ver con lo que se le había dicho.
-                          const cuadran = candidatosPago.filter(c => c.suNombre || c.mismoImporte);
-                          const resto = candidatosPago.filter(c => !c.suNombre && !c.mismoImporte);
-                          const mostrarTodas = verTodosCandidatos || cuadran.length === 0;
-                          const lista = mostrarTodas ? candidatosPago : cuadran;
-                          return (
-                            <>
-                              <select
-                                value={lineaElegida}
-                                onChange={e => setLineaElegida(e.target.value)}
-                                style={{ fontSize: 11.5, padding: '4px 6px', width: '100%' }}
-                              >
-                                <option value="">Elige línea del banco...</option>
-                                {lista.map(c => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : 'sin fecha'} · {c.importe.toFixed(2)}€ · {c.concepto}
-                                  </option>
-                                ))}
-                              </select>
-                              <p className="muted" style={{ margin: '4px 0 0', fontSize: 11 }}>
-                                {mostrarTodas
-                                  ? (cuadran.length === 0 ? "Ninguna lleva su nombre ni su importe — están todas." : `Todos los ingresos (${candidatosPago.length}).`)
-                                  : `${cuadran.length} de ${candidatosPago.length} llevan su nombre o su importe.`}
-                                {!mostrarTodas && resto.length > 0 && (
-                                  <>
-                                    {' '}
-                                    <a href="#" onClick={e => { e.preventDefault(); setVerTodosCandidatos(true); }}>Ver todos</a>
-                                  </>
-                                )}
-                              </p>
-                            </>
-                          );
-                        })()}
-                        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={!lineaElegida || guardandoVinculo} onClick={() => vincularPago(p)}>
-                            {guardandoVinculo ? '...' : 'Vincular'}
-                          </button>
-                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => { setVinculandoPago(null); setCandidatosPago(null); setLineaElegida(''); }}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Modal>
 
       <Modal abierto={modalAbierto === 'devoluciones'} titulo="Devoluciones sin enviar" onCerrar={() => setModalAbierto(null)}>
         <p className="muted">Se incluyen como pestaña propia ("Devoluciones") en el excel del próximo envío a gestoría.</p>
