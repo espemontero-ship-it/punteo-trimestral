@@ -4,6 +4,7 @@ import { useState, useMemo, Fragment } from 'react';
 import { apiFetch, mostrarToast } from '../lib/toast';
 import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 import SubirFactura from './SubirFactura';
+import { ConfirmDialog } from './ConfirmDialog';
 
 const ETIQUETAS = {
   fija: 'fija',
@@ -110,6 +111,23 @@ export default function TablaMovimientos({
   // otra vez.
   const [descartadas, setDescartadas] = useState(new Set());
   const viva = k => !descartadas.has(k);
+  // Deshacer el vínculo de un pago de LarpManager con esta línea. Vincular se
+  // hace solo desde "Pagos sin emparejar" (ahí es donde se ve el problema);
+  // aquí solo se puede quitar, igual que la devolución se corrige con su ✎
+  // desde la fila en la que se está viendo.
+  const [confirmarDesvincular, setConfirmarDesvincular] = useState(null); // { pago, movimiento }
+  const [desvinculando, setDesvinculando] = useState(false);
+
+  async function desvincularLm() {
+    if (!confirmarDesvincular) return;
+    setDesvinculando(true);
+    const r = await apiFetch(`/api/larpmanager-pagos/${confirmarDesvincular.pago.id}/desvincular`, {
+      method: 'POST',
+    }, { mensajeOk: 'Desvinculado', mensajeError: 'No se pudo desvincular.' });
+    setDesvinculando(false);
+    setConfirmarDesvincular(null);
+    if (r) onCambio();
+  }
 
   // Descarte local, sin guardar. Lo usan las sugerencias de LarpManager, que
   // son candidatos concretos de un pago y no una regla del tipo de movimiento.
@@ -703,9 +721,31 @@ export default function TablaMovimientos({
   // estado que solo viva en el navegador -- si dependiera de eso, el botón
   // desaparecería al recargar la página o volver más tarde, aunque el cruce
   // ya estuviera hecho, y habría que subir el mismo CSV otra vez para nada.
+  // El ✎ para deshacer un vínculo, solo en las líneas que tienen uno. Mismo
+  // icono pequeño sin caja que el de editar una devolución: es una corrección
+  // puntual, no algo que se haga a diario.
+  function editarVinculoLm(m) {
+    const pagos = m.pagos_larpmanager || [];
+    if (pagos.length === 0) return null;
+    return pagos.map(p => (
+      <button
+        key={p.id}
+        type="button"
+        className="btn-editar-mini"
+        title={`Quitar el vínculo con ${p.nombre}`}
+        onClick={() => setConfirmarDesvincular({ pago: p, movimiento: m })}
+      >✎</button>
+    ));
+  }
+
   function celdaLarpManager(m) {
     const guardado = m.datos_originales?.larpmanager;
-    if (m.estado === 'resuelta') return guardado ?? <span className="vacio">—</span>;
+    // Una línea ya resuelta no lleva sugerencias, pero sí puede necesitar el
+    // enlace a mano: de hecho es el caso más común, porque las transferencias
+    // se puntean antes de subir el CSV.
+    if (m.estado === 'resuelta') {
+      return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}</>;
+    }
 
     const resultado = m.larpmanager_candidatos;
     if (resultado?.tipo === 'match' && resultado.candidatos?.length && viva(`lm:${m.id}`)) {
@@ -722,7 +762,7 @@ export default function TablaMovimientos({
       // Igual que en las facturas de un lote: una clave por candidato, con el
       // índice original conservado, para que descartar uno no quite los otros.
       const vivos = resultado.candidatos.map((c, i) => ({ c, i })).filter(({ i }) => viva(`lm:${m.id}:${i}`));
-      if (vivos.length === 0) return guardado ?? <span className="vacio">—</span>;
+      if (vivos.length === 0) return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}</>;
       return (
         <div className="sugerencias-lista">
           {vivos.map(({ c, i }) => (
@@ -736,7 +776,9 @@ export default function TablaMovimientos({
         </div>
       );
     }
-    return guardado ?? <span className="vacio">—</span>;
+    // Aquí cae el caso que motivó todo esto: el cruce no encontró nada
+    // ("no encontrada") porque el banco no escribió el nombre en el concepto.
+    return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}</>;
   }
 
   function filaMovimiento(m, g, esInicioGrupo) {
@@ -956,6 +998,18 @@ export default function TablaMovimientos({
               ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        abierto={!!confirmarDesvincular}
+        titulo="¿Quitar este vínculo?"
+        mensaje={confirmarDesvincular
+          ? `El pago de ${confirmarDesvincular.pago.nombre} (${Number(confirmarDesvincular.pago.importe).toFixed(2)}€) vuelve a "Pagos sin emparejar" y esta línea deja de decir de quién es. La línea NO cambia de estado: si está resuelta, sigue resuelta — cámbialo en Estado si hace falta.`
+          : ''}
+        textoConfirmar={desvinculando ? 'Quitando...' : 'Quitar'}
+        peligroso
+        onConfirmar={desvincularLm}
+        onCancelar={() => setConfirmarDesvincular(null)}
+      />
     </div>
   );
 }

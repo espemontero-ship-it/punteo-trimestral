@@ -74,9 +74,17 @@ const SECCIONES_ADMIN = [
           </li>
           <li>
             <strong>Pagos sin emparejar</strong> — pagos que LarpManager dice que existen y que ninguna línea del banco ha
-            reclamado. La columna <strong>Por qué</strong> dice el motivo de cada uno: si la transferencia no ha llegado,
-            si el importe no cuadra, o si el nombre coincide a medias. <em>Que un pago esté aquí no significa que falte
-            dinero</em> — muchas veces solo falta el enlace.
+            reclamado. Solo salen los que <em>tenían</em> que cruzarse: los de pasarela y los apuntes internos no
+            aparecen, porque nunca van a tener una línea propia. La columna <strong>Por qué</strong> dice el motivo de
+            cada uno: si la transferencia no ha llegado, si el importe no cuadra, o si el nombre coincide a medias.
+            <em> Que un pago esté aquí no significa que falte dinero</em> — muchas veces solo falta el enlace.
+            <br />
+            La columna <strong>Vincular</strong> es para eso último: hay pagos que la app no puede emparejar sola por
+            mucho que se insista, porque el banco no siempre escribe el nombre en el concepto (&quot;ABONO POR
+            TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS&quot; y nada más). Al pulsarlo se abre un desplegable con las
+            líneas <strong>del mismo importe</strong>, que es lo que de verdad desambigua; si ninguna cuadra, o si
+            quieres mirar el resto, hay un &quot;Ver todos&quot;. No salen las marcadas como Stripe, que son
+            liquidaciones de la pasarela y nunca son la transferencia de una persona.
           </li>
           <li>
             <strong>Devoluciones</strong> — las que todavía no se han mandado. Van como pestaña propia en el excel del
@@ -196,6 +204,25 @@ const SECCIONES_ADMIN = [
         <p>
           Si hay una nota aprendida para el grupo, la píldora dice cuántas líneas cerraría de golpe
           (<em>ticket · 5 líneas</em>).
+        </p>
+
+        <h4>La columna de LarpManager</h4>
+        <p>
+          Sale de cruzar el CSV contra las líneas de ingreso. Puede decirte cuatro cosas: el nombre y el evento de quien
+          pagó, <em>&quot;N coincidencias posibles&quot;</em> cuando hay varias personas que encajan,
+          <em> &quot;el importe no cuadra&quot;</em>, o <em>&quot;no encontrada&quot;</em>.
+        </p>
+        <div className="resumen-mini" style={{ display: 'block' }}>
+          <strong>&quot;El importe no cuadra&quot; no se resuelve desde aquí.</strong> Significa que el nombre sí aparece
+          en el banco pero por otra cantidad — normalmente porque el dato de LarpManager está mal. La app no te lo
+          propone a propósito: taparlo aquí dejaría la línea cerrada con el pago equivocado. Se arregla en LarpManager
+          y se vuelve a subir el CSV.
+        </div>
+        <p>
+          Cuando una línea ya tiene su pago, aparece un <strong>✎</strong> al lado para <strong>quitar el vínculo</strong>
+          si te has equivocado. El pago vuelve a &quot;Pagos sin emparejar&quot; y la línea deja de decir de quién es —
+          pero <em>no cambia de estado</em>: si estaba resuelta sigue resuelta, y eso se cambia a mano en Estado. Vincular
+          se hace solo desde &quot;Pagos sin emparejar&quot;; aquí únicamente se deshace.
         </p>
 
         <h4>Devoluciones</h4>

@@ -60,6 +60,12 @@ export default function Home() {
   const [mensajeLarpManager, setMensajeLarpManager] = useState(null);
   const [pagosSinEmparejar, setPagosSinEmparejar] = useState(null);
   const [cargandoPagosSinEmparejar, setCargandoPagosSinEmparejar] = useState(false);
+  // OPCIÓN 1: vincular un pago a mano desde la lista de sin emparejar.
+  const [vinculandoPago, setVinculandoPago] = useState(null);   // id del pago abierto
+  const [candidatosPago, setCandidatosPago] = useState(null);   // líneas entre las que elegir
+  const [lineaElegida, setLineaElegida] = useState('');
+  const [guardandoVinculo, setGuardandoVinculo] = useState(false);
+  const [verTodosCandidatos, setVerTodosCandidatos] = useState(false);
   const [importaciones, setImportaciones] = useState(null);
   const [cargandoImportaciones, setCargandoImportaciones] = useState(false);
   const [devoluciones, setDevoluciones] = useState(null);
@@ -185,6 +191,42 @@ export default function Home() {
     });
     setPagosSinEmparejar((data && data.pagos) || []);
     setCargandoPagosSinEmparejar(false);
+  }
+
+  // OPCIÓN 1 -- vincular a mano desde esta misma lista, igual que ya se hace
+  // en Facturas cuando una factura no encuentra su línea ("Elige línea del
+  // banco..."). Hace falta porque hay pagos que el cruce no puede resolver
+  // nunca: si el banco no escribe el nombre en el concepto, no hay nada que
+  // comparar.
+  async function abrirVinculoPago(pago) {
+    setVinculandoPago(pago.id);
+    setCandidatosPago(null);
+    setLineaElegida('');
+    // Cada pago empieza otra vez por las que cuadran de importe: si se
+    // quedara desplegado de la fila anterior, se vuelve al problema.
+    setVerTodosCandidatos(false);
+    const data = await apiFetch(`/api/larpmanager-pagos/${pago.id}/candidatos`, undefined, {
+      mensajeError: 'No se pudieron cargar las líneas del banco.',
+    });
+    setCandidatosPago((data && data.candidatos) || []);
+  }
+
+  async function vincularPago(pago) {
+    if (!lineaElegida) return;
+    setGuardandoVinculo(true);
+    const r = await apiFetch(`/api/larpmanager-pagos/${pago.id}/vincular`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movimientoId: lineaElegida }),
+    }, { mensajeOk: 'Vinculado', mensajeError: 'No se pudo vincular.' });
+    setGuardandoVinculo(false);
+    if (r) {
+      setVinculandoPago(null);
+      setCandidatosPago(null);
+      setLineaElegida('');
+      await verPagosSinEmparejar();
+      await cargar();
+    }
   }
 
   // Revisión de las devoluciones pendientes de enviar -- también se incluyen
@@ -443,7 +485,7 @@ export default function Home() {
         {mensajeLarpManager && <p className="muted" style={{ marginTop: 8 }}>{mensajeLarpManager}</p>}
       </Modal>
 
-      <Modal abierto={modalAbierto === 'larpmanager-pendientes'} titulo="Pagos de LarpManager sin emparejar" onCerrar={() => setModalAbierto(null)} ancho={760}>
+      <Modal abierto={modalAbierto === 'larpmanager-pendientes'} titulo="Pagos de LarpManager sin emparejar" onCerrar={() => setModalAbierto(null)} ancho={940}>
         <p className="muted">Pagos que LarpManager dice que existen (transferencia o añadidos a mano) pero que ninguna línea del banco ha reclamado todavía. La columna &quot;Por qué&quot; dice el motivo de cada uno: antes todos se veían igual, sin distinguir si la transferencia no había llegado, si el importe no cuadraba o si el nombre coincidía a medias.</p>
         {cargandoPagosSinEmparejar && <p className="muted">Cargando...</p>}
         {!cargandoPagosSinEmparejar && pagosSinEmparejar && pagosSinEmparejar.length === 0 && (
@@ -458,6 +500,7 @@ export default function Home() {
                 <th>Importe</th>
                 <th>Fecha</th>
                 <th>Por qué</th>
+                <th>Vincular</th>
               </tr>
             </thead>
             <tbody>
@@ -468,6 +511,66 @@ export default function Home() {
                   <td>{Number(p.importe).toFixed(2)}€</td>
                   <td>{p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '—'}</td>
                   <td className="muted">{p.motivoTexto || '—'}</td>
+                  <td>
+                    {vinculandoPago !== p.id ? (
+                      <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => abrirVinculoPago(p)}>
+                        Vincular
+                      </button>
+                    ) : candidatosPago === null ? (
+                      <span className="muted">Cargando...</span>
+                    ) : (
+                      <div>
+                        {/* El importe es lo único que de verdad desambigua:
+                            con el caso real deja 1 línea de 16. Así que el
+                            desplegable abre SOLO con las que cuadran, y las
+                            demás están detrás de un clic. Buscar entre 16
+                            conceptos de banco a ojo era lo que no funcionaba.
+                            Si ninguna cuadra, se enseñan todas directamente:
+                            un desplegable vacío parecería roto. */}
+                        {(() => {
+                          const cuadran = candidatosPago.filter(c => c.mismoImporte);
+                          const resto = candidatosPago.filter(c => !c.mismoImporte);
+                          const mostrarTodas = verTodosCandidatos || cuadran.length === 0;
+                          const lista = mostrarTodas ? candidatosPago : cuadran;
+                          return (
+                            <>
+                              <select
+                                value={lineaElegida}
+                                onChange={e => setLineaElegida(e.target.value)}
+                                style={{ fontSize: 11.5, padding: '4px 6px', width: '100%' }}
+                              >
+                                <option value="">Elige línea del banco...</option>
+                                {lista.map(c => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : 'sin fecha'} · {c.importe.toFixed(2)}€ · {c.concepto?.slice(0, 45)}
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="muted" style={{ margin: '4px 0 0', fontSize: 11 }}>
+                                {mostrarTodas
+                                  ? (cuadran.length === 0 ? 'Ninguna línea cuadra de importe — están todas.' : `Todos los ingresos (${candidatosPago.length}).`)
+                                  : `${cuadran.length} de ${candidatosPago.length} cuadran de importe.`}
+                                {!mostrarTodas && resto.length > 0 && (
+                                  <>
+                                    {' '}
+                                    <a href="#" onClick={e => { e.preventDefault(); setVerTodosCandidatos(true); }}>Ver todos</a>
+                                  </>
+                                )}
+                              </p>
+                            </>
+                          );
+                        })()}
+                        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={!lineaElegida || guardandoVinculo} onClick={() => vincularPago(p)}>
+                            {guardandoVinculo ? '...' : 'Vincular'}
+                          </button>
+                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => { setVinculandoPago(null); setCandidatosPago(null); setLineaElegida(''); }}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
