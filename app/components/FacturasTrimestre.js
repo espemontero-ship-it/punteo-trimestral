@@ -261,7 +261,9 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   }
 
   async function elegirCandidato(f, opcion) {
-    const nota = opcion.esCombo ? [opcion.numero, ...opcion.otrasFacturas.map(o => o.numero)].join(' + ') : (opcion.facturaConcepto || String(opcion.numero));
+    // La nota es solo el concepto de la factura. Los números viven en la
+    // columna Factura, que es su sitio -- también los de una combinación.
+    const nota = opcion.facturaConcepto || '';
     const facturaIds = opcion.esCombo ? [opcion.facturaId, ...opcion.otrasFacturas.map(o => o.id)] : [opcion.facturaId];
     const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
       method: 'POST',
@@ -289,7 +291,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     const r = await apiFetch(`/api/movimientos/${movimientoId}/confirmar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nota: f.concepto || String(f.numero), facturaIds: [f.id] }),
+      body: JSON.stringify({ nota: f.concepto || '', facturaIds: [f.id] }),
     }, { mensajeOk: 'Vinculada', mensajeError: 'No se pudo vincular.' });
     setVinculando(prev => { const next = new Set(prev); next.delete(f.id); return next; });
     if (r) {

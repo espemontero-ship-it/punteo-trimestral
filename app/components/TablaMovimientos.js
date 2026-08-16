@@ -157,6 +157,10 @@ export default function TablaMovimientos({
     return proveedores
       .map(g => ({
         ...g,
+        // Las líneas del grupo SIN filtrar. La cabecera necesita mirar el
+        // grupo entero -- por ejemplo, para saber si todas sus líneas tienen
+        // la misma nota -- y no solo lo que "Solo pendientes" deja ver.
+        movimientosTodos: g.movimientos,
         movimientos: g.movimientos.filter(m => {
           if (soloPendientes && ['resuelta', 'ignorada', 'factura_futura'].includes(m.estado)) return false;
           if (!texto) return true;
@@ -357,7 +361,9 @@ export default function TablaMovimientos({
   }
 
   async function elegirCandidato(opcion) {
-    const nota = opcion.esCombo ? [opcion.numero, ...opcion.otrasFacturas.map(o => o.numero)].join(' + ') : (opcion.facturaConcepto || String(opcion.numero));
+    // La nota es solo el concepto de la factura. Los números viven en la
+    // columna Factura, que es su sitio -- también los de una combinación.
+    const nota = opcion.facturaConcepto || '';
     const facturaIds = opcion.esCombo ? [opcion.facturaId, ...opcion.otrasFacturas.map(o => o.id)] : [opcion.facturaId];
     const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
       method: 'POST',
@@ -427,7 +433,10 @@ export default function TablaMovimientos({
   // el jugador es la referencia que de verdad se manda a gestoría (igual que
   // la Nota de cualquier otra línea), así que comparten celda.
   function celdaNota(m, g) {
-    if (m.es_devolucion) {
+    // El modo edición va ANTES que "es una devolución". Al revés, el botón ✎
+    // no podía funcionar: activaba el modo, pero la pantalla volvía a entrar
+    // por la rama de arriba y seguía enseñando el texto de siempre.
+    if (!modoDevolucion.has(m.id) && m.es_devolucion) {
       return (
         <>
           <span>Devolución — {m.jugador_larpmanager || <span className="vacio">sin jugador</span>}</span>
@@ -438,7 +447,10 @@ export default function TablaMovimientos({
     if (modoDevolucion.has(m.id)) {
       return (
         <div>
-          {m.jugador_sugerido && viva(`jug:${m.id}`) ? (
+          {/* La sugerencia solo tiene sentido al marcar una devolución nueva.
+              Si ya lo es y la estás editando, lo que hace falta es ver el
+              jugador que tiene puesto para corregirlo. */}
+          {!m.es_devolucion && m.jugador_sugerido && viva(`jug:${m.id}`) ? (
             <Sugerencia
               texto={m.jugador_sugerido}
               onAplicar={() => {
@@ -452,7 +464,9 @@ export default function TablaMovimientos({
             className="campo-proveedor"
             type="text"
             placeholder="Jugador en LarpManager..."
-            value={jugadorManual[m.id] ?? ''}
+            // Al editar una devolución ya marcada, enseña el jugador guardado:
+            // editar sin ver lo que hay no es editar.
+            value={jugadorManual[m.id] ?? (m.jugador_larpmanager || '')}
             onChange={e => setJugadorManual(prev => ({ ...prev, [m.id]: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarDevolucion(m); } }}
           />
@@ -737,6 +751,12 @@ export default function TablaMovimientos({
     if (g.total <= 1) return null;
     const pendientesGrupo = g.total - g.resueltas;
     const permiteAccionesGrupo = pendientesGrupo > 0;
+    // La nota que comparten TODAS las líneas del grupo, si es que comparten
+    // una. Si cada línea tiene la suya, el campo se queda vacío: no hay una
+    // nota del grupo que enseñar. Sin esto el campo salía siempre en blanco y
+    // no había nada que borrar, así que vaciarlo no hacía nada.
+    const notasDelGrupo = new Set((g.movimientosTodos || g.movimientos).map(m => m.nota_final || ''));
+    const notaComunGrupo = notasDelGrupo.size === 1 ? [...notasDelGrupo][0] : '';
     const sugerenciaProveedorGrupo = g.movimientos.find(m => m.proveedor_sugerido)?.proveedor_sugerido || null;
     return (
       <div role="row" className="fila-tabla fila-grupo" key={`g-${g.id}`} style={{ gridTemplateColumns: plantillaColumnas }}>
@@ -808,7 +828,7 @@ export default function TablaMovimientos({
                 className="campo-nota"
                 type="text"
                 placeholder=""
-                value={notasGrupo[g.id] || ''}
+                value={notasGrupo[g.id] ?? notaComunGrupo}
                 onChange={e => setNotasGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNotaGrupo(g, e.target.value); } }}
                 // Guarda también al vaciarlo: antes solo si quedaba texto, así
