@@ -67,26 +67,6 @@ const SECCIONES_ADMIN = [
             Volver a subir el mismo excel no borra nada de lo que ya hayas resuelto: fusiona.
           </li>
           <li>
-            <strong>Pagos de LarpManager</strong> — el CSV de pagos. Se guarda entero, pero contra el banco solo se cruzan
-            las transferencias y las filas sin método de pago, que son las que acaban llegando a la cuenta. Las de
-            pasarela (Stripe, Redsys) y los apuntes internos (larpmoney, larpmanager) se guardan pero no se cruzan,
-            porque ese dinero no aparece en el banco línea a línea.
-          </li>
-          <li>
-            <strong>Pagos sin emparejar</strong> — pagos que LarpManager dice que existen y que ninguna línea del banco ha
-            reclamado. Solo salen los que <em>tenían</em> que cruzarse: los de pasarela y los apuntes internos no
-            aparecen, porque nunca van a tener una línea propia. La columna <strong>Por qué</strong> dice el motivo de
-            cada uno: si la transferencia no ha llegado, si el importe no cuadra, o si el nombre coincide a medias.
-            <em> Que un pago esté aquí no significa que falte dinero</em> — muchas veces solo falta el enlace.
-            <br />
-            La columna <strong>Vincular</strong> es para eso último: hay pagos que la app no puede emparejar sola por
-            mucho que se insista, porque el banco no siempre escribe el nombre en el concepto (&quot;ABONO POR
-            TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS&quot; y nada más). Al pulsarlo se abre un desplegable con las
-            líneas <strong>del mismo importe</strong>, que es lo que de verdad desambigua; si ninguna cuadra, o si
-            quieres mirar el resto, hay un &quot;Ver todos&quot;. No salen las marcadas como Stripe, que son
-            liquidaciones de la pasarela y nunca son la transferencia de una persona.
-          </li>
-          <li>
             <strong>Devoluciones</strong> — las que todavía no se han mandado. Van como pestaña propia en el excel del
             próximo envío.
           </li>
@@ -220,9 +200,9 @@ const SECCIONES_ADMIN = [
         </div>
         <p>
           Cuando una línea ya tiene su pago, aparece un <strong>✎</strong> al lado para <strong>quitar el vínculo</strong>
-          si te has equivocado. El pago vuelve a &quot;Pagos sin emparejar&quot; y la línea deja de decir de quién es —
-          pero <em>no cambia de estado</em>: si estaba resuelta sigue resuelta, y eso se cambia a mano en Estado. Vincular
-          se hace solo desde &quot;Pagos sin emparejar&quot;; aquí únicamente se deshace.
+          si te has equivocado. El pago vuelve a la pestaña LarpManager y la línea deja de decir de quién es — pero
+          <em> no cambia de estado</em>: si estaba resuelta sigue resuelta, y eso se cambia a mano en Estado. Vincular se
+          hace desde la pestaña <strong>LarpManager</strong>; aquí únicamente se deshace.
         </p>
 
         <h4>Devoluciones</h4>
@@ -308,6 +288,72 @@ const SECCIONES_ADMIN = [
         <p>
           Abajo del todo se pueden marcar varias con la casilla y usar <strong>Borrar seleccionadas</strong>. Si alguna
           estaba emparejada, el aviso te dice cuántas y que su línea del banco volverá a quedar pendiente.
+        </p>
+      </>
+    ),
+  },
+
+  {
+    titulo: 'LarpManager',
+    cuando: 'Para comprobar que el dinero que LarpManager da por cobrado ha llegado de verdad al banco.',
+    cuerpo: (
+      <>
+        <p>
+          Una fila por cada pago que LarpManager da por hecho y que <strong>no tiene su ingreso en el banco</strong>.
+          Al entrar se cruza otra vez, así que lo que ves es lo que queda por mirar a mano, no una predicción.
+        </p>
+
+        <h4>Los dos botones</h4>
+        <ul>
+          <li>
+            <strong>Subir pagos de LarpManager</strong> — el export de pagos, en `.csv` o en `.xlsx`. Se guarda entero,
+            pero contra el banco solo se cruzan las transferencias y las filas sin método de pago, que son las que
+            acaban llegando a la cuenta. Las de pasarela (Stripe, Redsys) y los apuntes internos (larpmoney,
+            larpmanager) se guardan pero no se cruzan: ese dinero no aparece en el banco línea a línea. Subir el mismo
+            archivo dos veces no duplica nada.
+          </li>
+          <li>
+            <strong>Recalcular</strong> — vuelve a cruzar sin salir y volver a entrar. Sirve sobre todo justo después
+            de subir un excel del banco con líneas nuevas.
+          </li>
+        </ul>
+
+        <h4>Qué te puede decir el &quot;Por qué&quot;</h4>
+        <TablaEstados filas={[
+          ['Le corresponde…', 'Ya tiene su línea decidida y se cierra sola. Si sigue aquí es que acabas de entrar; al recalcular desaparece.'],
+          ['El importe no cuadra', 'El apellido sí aparece en el banco pero por otra cantidad. Normalmente el dato de LarpManager está mal: se arregla allí y se vuelve a subir.'],
+          ['Parte del nombre', 'Coincide el nombre de pila pero no el apellido. Puede ser otra persona: hay que mirarlo.'],
+          ['No aparece', 'Ni rastro de ese nombre en el banco. O la transferencia no ha llegado, o falta subir el extracto de esas fechas.'],
+          ['Sin línea libre', 'Hay líneas suyas por ese importe, pero ya justifican otros pagos suyos. O falta esta transferencia, o sobra uno de esos pagos.'],
+        ]} />
+
+        <h4>Vincular a mano, y que aprenda</h4>
+        <p>
+          Hay pagos que la app no va a emparejar sola por mucho que se insista, porque el banco escribe el nombre de
+          otra forma. El caso real: donde LarpManager pone <em>Matthias Greßer</em>, el banco escribe
+          <em> Greer Matthias Rola</em> — se come la ß en vez de convertirla en ss, así que el apellido no coincide
+          nunca.
+        </p>
+        <p>
+          Para eso está <strong>Vincular</strong>: se abre un desplegable con las líneas que llevan su nombre o su
+          importe, que son las que la columna &quot;Por qué&quot; acaba de nombrar; detrás de &quot;Ver todas&quot;
+          están el resto. No salen las marcadas como Stripe, que son liquidaciones de la pasarela y nunca son la
+          transferencia de una persona.
+        </p>
+        <div className="resumen-mini" style={{ display: 'block' }}>
+          <strong>Se vincula una vez y ya está.</strong> Al hacerlo, la app aprende cómo llama el banco a esa persona
+          y lo aplica al resto de sus pagos. Con Greßer: vinculas uno de sus cuatro y los otros tres se cierran solos.
+        </div>
+        <p className="muted">
+          Lo aprendido no se puede ver ni borrar desde la aplicación. Si aprende algo mal, se queda.
+        </p>
+
+        <h4>La regla que no se rompe</h4>
+        <p>
+          <strong>Un movimiento del banco justifica un solo pago, y un pago una sola línea.</strong> Cuando varios
+          encajan, decide la <strong>fecha más cercana</strong> — da igual antes o después, porque el desfase entre que
+          se registra el pago y el banco lo apunta va en las dos direcciones. Así dos cuotas de 150 € de la misma
+          persona no se cierran las dos contra el mismo ingreso.
         </p>
       </>
     ),
