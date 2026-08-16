@@ -103,12 +103,31 @@ export default function TablaMovimientos({
   const [anchos, setAnchos] = useAnchosPersistidos('punteo-anchos-movimientos');
   const [modoDevolucion, setModoDevolucion] = useState(new Set());
   const [jugadorManual, setJugadorManual] = useState({});
-  // Sugerencias que se han descartado con la ✕. Solo mientras dure la sesión:
-  // al recargar vuelven. Guardar el rechazo para siempre es otro paso, aún
-  // sin decidir.
+  // Sugerencias descartadas con la ✕. El Set solo sirve para que desaparezca
+  // al instante sin esperar al servidor: el rechazo de verdad se guarda, y
+  // vale para todas las líneas de ese tipo de movimiento. Antes solo vivía
+  // aquí, y al recargar --por ejemplo al volver de una subida-- salían todas
+  // otra vez.
   const [descartadas, setDescartadas] = useState(new Set());
-  const descartar = k => setDescartadas(prev => new Set(prev).add(k));
   const viva = k => !descartadas.has(k);
+
+  // Descarte local, sin guardar. Lo usan las sugerencias de LarpManager, que
+  // son candidatos concretos de un pago y no una regla del tipo de movimiento.
+  const descartar = k => setDescartadas(prev => new Set(prev).add(k));
+
+  // Descarte de verdad: desaparece y no vuelve. `clavesDe` es el par
+  // hoja+clave al que aplica -- de una línea, o de todas las del grupo.
+  async function rechazar(k, clavesDe, tipo, valor) {
+    setDescartadas(prev => new Set(prev).add(k));
+    for (const { hoja, clave } of clavesDe) {
+      await apiFetch('/api/sugerencias/rechazar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hoja, clave, tipo, valor: valor ?? '' }),
+      }, { mensajeError: 'No se pudo guardar el rechazo.' });
+    }
+    onCambio();
+  }
 
   function anchoDe(col) {
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? ANCHO_EXTRA_DEFECTO;
@@ -457,7 +476,7 @@ export default function TablaMovimientos({
                 setJugadorManual(prev => ({ ...prev, [m.id]: m.jugador_sugerido }));
                 descartar(`jug:${m.id}`);
               }}
-              onDescartar={() => descartar(`jug:${m.id}`)}
+              onDescartar={() => rechazar(`jug:${m.id}`, [{ hoja: m.hoja, clave: m.clave }], 'jugador', m.jugador_sugerido)}
             />
           ) : (
           <input
@@ -529,7 +548,7 @@ export default function TablaMovimientos({
           <Sugerencia
             texto={sugerencia}
             onAplicar={() => confirmarNota(m.id, sugerencia)}
-            onDescartar={() => descartar(`nota:${m.id}`)}
+            onDescartar={() => rechazar(`nota:${m.id}`, (g.claves?.length ? g.claves : [{ hoja: g.hoja, clave: g.clave }]), 'nota', sugerencia)}
           />
         ) : (
         <input
@@ -578,7 +597,7 @@ export default function TablaMovimientos({
           <Sugerencia
             texto="devolución"
             onAplicar={() => cambiarEstado(m, 'devolucion')}
-            onDescartar={() => descartar(`devo:${m.id}`)}
+            onDescartar={() => rechazar(`devo:${m.id}`, [{ hoja: m.hoja, clave: m.clave }], 'devolucion', '')}
           />
         )}
       </div>
@@ -640,7 +659,7 @@ export default function TablaMovimientos({
           <Sugerencia
             texto={sugerido}
             onAplicar={() => guardarProveedor(m.id, sugerido)}
-            onDescartar={() => descartar(`prov:${m.id}`)}
+            onDescartar={() => rechazar(`prov:${m.id}`, [{ hoja: m.hoja, clave: m.clave }], 'proveedor', sugerido)}
           />
         ) : (
         <input
@@ -671,7 +690,7 @@ export default function TablaMovimientos({
           <Sugerencia
             texto={m.proyecto_sugerido.nombre}
             onAplicar={() => asignarProyecto(m.id, m.proyecto_sugerido.id)}
-            onDescartar={() => descartar(`proy:${m.id}`)}
+            onDescartar={() => rechazar(`proy:${m.id}`, [{ hoja: m.hoja, clave: m.clave }], 'proyecto', m.proyecto_sugerido.nombre)}
           />
         )}
       </>
@@ -774,7 +793,7 @@ export default function TablaMovimientos({
             <Sugerencia
               texto={sugerenciaProveedorGrupo}
               onAplicar={() => guardarProveedorGrupo(g, sugerenciaProveedorGrupo)}
-              onDescartar={() => descartar(`provg:${g.id}`)}
+              onDescartar={() => rechazar(`provg:${g.id}`, (g.claves?.length ? g.claves : [{ hoja: g.hoja, clave: g.clave }]), 'proveedor', sugerenciaProveedorGrupo)}
             />
           ) : (
           <input
@@ -821,7 +840,7 @@ export default function TablaMovimientos({
                 <Sugerencia
                   texto={`${g.sugerenciaNota} · ${pendientesGrupo} línea${pendientesGrupo === 1 ? '' : 's'}`}
                   onAplicar={() => confirmarNotaGrupo(g, g.sugerenciaNota)}
-                  onDescartar={() => descartar(`notag:${g.id}`)}
+                  onDescartar={() => rechazar(`notag:${g.id}`, (g.claves?.length ? g.claves : [{ hoja: g.hoja, clave: g.clave }]), 'nota', g.sugerenciaNota)}
                 />
               )}
               <input
