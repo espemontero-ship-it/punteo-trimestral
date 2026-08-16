@@ -157,7 +157,13 @@ export default function Home() {
         mensajeError: 'No se pudo procesar el CSV de LarpManager.',
       });
       if (data) {
-        setMensajeLarpManager(`${data.emparejadas} de ${data.resultados.length} ingreso(s) emparejados con LarpManager.`);
+        // Se dice también cuántas filas se guardaron sin cruzar, para que no
+        // parezca que se han perdido: están todas, se pueden revisar después.
+        setMensajeLarpManager(
+          `${data.emparejadas} de ${data.resultados.length} ingreso(s) emparejados. ` +
+          `Del CSV se han guardado ${data.totalFilasCsv} filas: ${data.filasCruzadas} se cruzan con el banco ` +
+          `y ${data.filasGuardadasSinCruzar} no (pasarelas de pago y apuntes internos).`
+        );
         await cargar();
       }
     } finally {
@@ -346,7 +352,7 @@ export default function Home() {
               <div className="btns">
                 <button type="button" className="secundario" onClick={verPagosSinEmparejar}>Pagos sin emparejar</button>
                 <button type="button" className="secundario" onClick={verDevoluciones}>Devoluciones</button>
-                <button type="button" className="secundario" onClick={verImportaciones}>Excels subidos</button>
+                <button type="button" className="secundario" onClick={verImportaciones}>Archivos subidos</button>
               </div>
             </div>
             <div className="div-v" />
@@ -428,7 +434,7 @@ export default function Home() {
       </Modal>
 
       <Modal abierto={modalAbierto === 'larpmanager'} titulo="Subir pagos de LarpManager" onCerrar={() => setModalAbierto(null)}>
-        <p className="muted">Sube el CSV de pagos que exportas de LarpManager — solo se usan las filas por transferencia (Wire); el resto se ignora. Cruza por nombre contra los ingresos sin resolver.</p>
+        <p className="muted">Sube el CSV de pagos que exportas de LarpManager. Se guarda entero y queda registrado en &quot;Archivos subidos&quot;. Contra el banco se cruzan las transferencias y las filas sin método de pago, que son las que acaban llegando a la cuenta; las de pasarela (Stripe, Redsys) y los apuntes internos (larpmoney, larpmanager) se guardan pero no se cruzan.</p>
         <form onSubmit={subirLarpManager}>
           <input type="file" name="file" accept=".csv" />
           <div style={{ height: 12 }} />
@@ -501,32 +507,40 @@ export default function Home() {
         )}
       </Modal>
 
-      <Modal abierto={modalAbierto === 'importaciones'} titulo="Excels subidos" onCerrar={() => setModalAbierto(null)}>
-        <p className="muted">Cada subida es independiente — borrar una no afecta a las demás, aunque sean del mismo banco.</p>
+      <Modal abierto={modalAbierto === 'importaciones'} titulo="Archivos subidos" onCerrar={() => setModalAbierto(null)} ancho={720}>
+        <p className="muted">Los excels del banco y los CSV de LarpManager. Cada subida es independiente — borrar una no afecta a las demás.</p>
         {cargandoImportaciones && <p className="muted">Cargando...</p>}
         {!cargandoImportaciones && importaciones && importaciones.length === 0 && (
-          <p className="muted">Todavía no se ha subido ningún excel de banco.</p>
+          <p className="muted">Todavía no se ha subido ningún archivo.</p>
         )}
         {!cargandoImportaciones && importaciones && importaciones.length > 0 && (
           <table style={{ width: '100%', fontSize: 13 }}>
             <thead>
               <tr style={{ textAlign: 'left' }}>
-                <th>Banco</th>
+                <th>Tipo</th>
+                <th>Origen</th>
                 <th>Archivo</th>
                 <th>Subido</th>
-                <th>Movimientos</th>
-                <th>Resueltos</th>
+                {/* Sin cabecera: las dos clases de archivo traen cosas
+                    distintas --el excel del banco trae movimientos que se
+                    resuelven, el CSV de LarpManager trae pagos que se
+                    emparejan-- y la propia celda ya dice de qué habla
+                    ("75 pagos · 21 emparejados"). Cualquier título común
+                    saldría forzado. */}
+                <th></th>
+                <th></th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {importaciones.map(imp => (
                 <tr key={imp.id}>
-                  <td>{imp.hoja}</td>
+                  <td>{imp.origen === 'larpmanager' ? 'LarpManager' : 'Banco'}</td>
+                  <td className="muted">{imp.origen === 'larpmanager' ? '—' : imp.hoja}</td>
                   <td className="muted">{imp.nombreArchivo || '—'}</td>
                   <td className="muted">{imp.creadoEn ? new Date(imp.creadoEn).toLocaleDateString('es-ES') : '—'}</td>
-                  <td>{imp.total}</td>
-                  <td>{imp.resueltas}</td>
+                  <td>{imp.total} {imp.origen === 'larpmanager' ? 'pagos' : 'movimientos'}</td>
+                  <td>{imp.resueltas} {imp.origen === 'larpmanager' ? 'emparejados' : 'resueltos'}</td>
                   <td>
                     <button type="button" className="secundario" disabled={borrandoImportacion} onClick={() => setConfirmarBorrarImportacion(imp)}>
                       Borrar
@@ -541,11 +555,20 @@ export default function Home() {
 
       <ConfirmDialog
         abierto={!!confirmarBorrarImportacion}
-        titulo={`¿Borrar este excel de ${confirmarBorrarImportacion?.hoja}?`}
+        titulo={confirmarBorrarImportacion?.origen === 'larpmanager'
+          ? '¿Borrar este CSV de LarpManager?'
+          : `¿Borrar este excel de ${confirmarBorrarImportacion?.hoja}?`}
         mensaje={
-          confirmarBorrarImportacion?.resueltas > 0
-            ? `Se borrarán los ${confirmarBorrarImportacion.total} movimientos de esta subida — ${confirmarBorrarImportacion.resueltas} de ellos ya están resueltos y se perderán sus notas/facturas emparejadas. No se puede deshacer.`
-            : `Se borrarán los ${confirmarBorrarImportacion?.total} movimientos de esta subida. No se puede deshacer.`
+          confirmarBorrarImportacion?.origen === 'larpmanager'
+            // Borrar un CSV no toca las líneas del banco: siguen resueltas y
+            // con su nota. Solo se pierde la comprobación de que ese pago
+            // llegó, y se recupera volviendo a subir el CSV.
+            ? (confirmarBorrarImportacion?.resueltas > 0
+              ? `Se borrarán los ${confirmarBorrarImportacion.total} pagos de esta subida — ${confirmarBorrarImportacion.resueltas} de ellos están emparejados con una línea del banco y perderán ese enlace. Las líneas del banco no se tocan: siguen resueltas y con su nota. Se recupera volviendo a subir el CSV.`
+              : `Se borrarán los ${confirmarBorrarImportacion?.total} pagos de esta subida. Las líneas del banco no se tocan.`)
+            : (confirmarBorrarImportacion?.resueltas > 0
+              ? `Se borrarán los ${confirmarBorrarImportacion.total} movimientos de esta subida — ${confirmarBorrarImportacion.resueltas} de ellos ya están resueltos y se perderán sus notas/facturas emparejadas. No se puede deshacer.`
+              : `Se borrarán los ${confirmarBorrarImportacion?.total} movimientos de esta subida. No se puede deshacer.`)
         }
         textoConfirmar="Borrar"
         peligroso
