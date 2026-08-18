@@ -63,9 +63,9 @@ function Celda({ col, className = '', cabecera, children, stickyLefts }) {
 // sesión). Fuera del componente principal a propósito, igual que Celda: si se
 // define dentro, React lo trata como un tipo nuevo en cada render y los
 // <input> de alrededor pierden el foco en cada tecla.
-function Sugerencia({ texto, onAplicar, onDescartar }) {
+function Sugerencia({ texto, titulo, onAplicar, onDescartar }) {
   return (
-    <span className="sugerencia" role="group">
+    <span className="sugerencia" role="group" title={titulo}>
       <span className="texto-sug" onClick={onAplicar} style={{ cursor: 'pointer' }}>{texto}</span>
       <button type="button" className="sugerencia-descartar" title="Descartar esta sugerencia" onClick={onDescartar}>✕</button>
     </span>
@@ -257,6 +257,21 @@ export default function TablaMovimientos({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nota }),
+    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    if (r) onCambio();
+  }
+
+  // Aceptar una combinación de facturas desde Movimientos. Manda lo mismo que
+  // la pestaña Facturas (ver elegirCandidato en FacturasTrimestre.js): la
+  // línea, todas las facturas del combo y el concepto de la primera como
+  // nota. Si esa factura no tiene concepto, la nota va vacía -- confirmar no
+  // la exige, y la columna Nota de esta misma fila sigue siendo editable.
+  async function aplicarComboFacturas(m, combo) {
+    const facturaIds = [combo.facturaId, ...(combo.otras || []).map(o => o.id)];
+    const r = await apiFetch(`/api/movimientos/${m.id}/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nota: combo.concepto || '', facturaIds }),
     }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
     if (r) onCambio();
   }
@@ -654,14 +669,34 @@ export default function TablaMovimientos({
     // Las que SÍ esperan una -- pendiente, pedida y factura futura -- siguen
     // con su botón, que es justo donde hace falta.
     if (m.estado === 'resuelta' || m.estado === 'ignorada') return null;
+    // Combinaciones de facturas que explican el importe de esta línea. La
+    // sugerencia existía desde antes pero solo se veía en la pestaña
+    // Facturas: aquí la línea parecía no tener nada, aunque sus dos facturas
+    // ya estuvieran subidas. Aceptarla hace exactamente lo mismo que aceptarla
+    // allí -- el mismo endpoint, con las mismas facturas y la misma nota.
+    const combos = (m.combos_factura || []).filter((c, i) => viva(`combo:${m.id}:${i}`));
     return (
-      <SubirFactura
-        hoja={g.hoja}
-        clave={g.clave}
-        etiqueta="Subir"
-        conIcono={false}
-        onResultado={r => subirFacturaDesdeFila(g, r)}
-      />
+      <div className="celda-estado">
+        {combos.map((c, i) => {
+          const numeros = [c.numero, ...(c.otras || []).map(o => o.numero)].join(' + ');
+          return (
+            <Sugerencia
+              key={c.facturaId}
+              texto={`facturas ${numeros}`}
+              titulo={c.detalle || ''}
+              onAplicar={() => aplicarComboFacturas(m, c)}
+              onDescartar={() => setDescartadas(prev => new Set(prev).add(`combo:${m.id}:${i}`))}
+            />
+          );
+        })}
+        <SubirFactura
+          hoja={g.hoja}
+          clave={g.clave}
+          etiqueta="Subir"
+          conIcono={false}
+          onResultado={r => subirFacturaDesdeFila(g, r)}
+        />
+      </div>
     );
   }
 
