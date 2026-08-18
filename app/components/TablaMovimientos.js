@@ -19,6 +19,9 @@ const ETIQUETAS = {
 // lib/agrupador.cjs) se deja intacto a propósito, para poder rescatar la
 // columna en un solo commit si algún día hace falta separar líneas que el
 // banco escribe idénticas.
+// Mismas palabras que el desplegable de la pestaña LarpManager.
+const ETIQUETA_ESTADO_PAGO = { pendiente: 'pendiente', resuelta: 'resuelto', ignorada: 'ignorar' };
+
 const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Factura', 'Nota', 'Proyecto'];
 const ANCHO_DEFECTO = { Fecha: 85, Concepto: 200, Banco: 85, Proveedor: 150, Importe: 80, Estado: 130, Factura: 90, Nota: 135, Proyecto: 110 };
 const ANCHO_EXTRA_DEFECTO = 120;
@@ -870,9 +873,13 @@ export default function TablaMovimientos({
   }
 
   function panelVincularLm(m) {
-    const plantilla = '240px 170px 90px 100px 110px';
+    const plantilla = '230px 160px 90px 95px 100px 110px';
+    // El panel ocupa el ancho de la TABLA, no el de la ventana: Movimientos se
+    // desplaza en horizontal, y sin esto abrirlo mirando las columnas de la
+    // derecha lo dejaba fuera de vista, a la izquierda.
+    const estilo = { width: columnasTodas.reduce((total, c) => total + anchoDe(c), 0) };
     if (!candidatosLm) {
-      return <div className="panel-fila"><span className="muted">Cargando...</span></div>;
+      return <div className="panel-fila" style={estilo}><span className="muted">Cargando...</span></div>;
     }
     const q = busquedaLm.trim().toLowerCase();
     const destacados = candidatosLm.filter(c => c.suNombre || c.mismoImporte);
@@ -890,7 +897,7 @@ export default function TablaMovimientos({
     }
 
     return (
-      <div className="panel-fila">
+      <div className="panel-fila" style={estilo}>
         <p className="panel-titulo">Qué pago de LarpManager es este ingreso</p>
         {/* El buscador no está en el panel equivalente de la pestaña
             LarpManager porque allí se elige entre unas decenas de
@@ -911,6 +918,7 @@ export default function TablaMovimientos({
             <Celda cabecera>Evento</Celda>
             <Celda cabecera>Importe</Celda>
             <Celda cabecera>Fecha</Celda>
+            <Celda cabecera>Estado</Celda>
             <Celda cabecera> </Celda>
           </div>
           {lista.slice(0, 60).map(c => (
@@ -919,10 +927,16 @@ export default function TablaMovimientos({
               <Celda><span className="muted">{c.evento || '—'}</span></Celda>
               <Celda>{c.importe.toFixed(2)}€</Celda>
               <Celda><span className="muted">{c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : '—'}</span></Celda>
+              <Celda><span className="muted">{ETIQUETA_ESTADO_PAGO[c.estado] || c.estado}</span></Celda>
+              {/* Los que no están pendientes se ven, pero no se pueden
+                  enlazar: ya los contestaste. Sin botón, no con un botón
+                  apagado, para que no invite a pulsarlo. */}
               <Celda>
-                <button type="button" className="secundario" disabled={guardandoLm} onClick={() => vincularPagoLm(m, c.id)}>
-                  {guardandoLm ? '...' : 'Es este'}
-                </button>
+                {c.estado === 'pendiente' ? (
+                  <button type="button" className="secundario" disabled={guardandoLm} onClick={() => vincularPagoLm(m, c.id)}>
+                    {guardandoLm ? '...' : 'Es este'}
+                  </button>
+                ) : <span className="vacio">—</span>}
               </Celda>
             </div>
           ))}
