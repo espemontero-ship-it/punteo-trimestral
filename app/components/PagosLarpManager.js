@@ -187,16 +187,22 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     if (col === 'Fecha') return <span className="muted">{dia(p.fecha)}</span>;
     if (col === 'Por qué') return <span className="muted">{p.motivoTexto || '—'}</span>;
     if (col === 'Estado') {
+      // Un pago con línea del banco está resuelto porque lo dice el dinero,
+      // no porque nadie lo haya elegido: para cambiarlo hay que quitarle el
+      // vínculo antes, y eso se hace desde la columna LarpManager de
+      // Movimientos.
       return (
         <select
           className="select-estado"
           value={p.estado || 'pendiente'}
+          disabled={!!p.movimiento_id}
           onChange={e => cambiarEstado(p, e.target.value)}
         >
           {ESTADOS.map(([valor, etiqueta]) => <option key={valor} value={valor}>{etiqueta}</option>)}
         </select>
       );
     }
+    if (p.movimiento_id) return <span className="vacio">—</span>;
     return (
       <button type="button" className="secundario" onClick={() => abrirPanel(p)}>
         {abierto === p.id ? 'Cerrar' : 'Vincular'}
@@ -305,11 +311,11 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
       </div>
 
       <p className="muted">
-        Pagos que LarpManager da por hechos y que no tienen su ingreso en el banco. Al entrar aquí se cruzan otra vez,
-        así que esto es lo que hace falta mirar a mano. &quot;Por qué&quot; dice qué le pasa a cada uno, y
-        &quot;Vincular&quot; abre la línea del banco para señalarla tú cuando sabes cuál es — la app aprende de esa vez
-        y aplica lo aprendido al resto de pagos de esa persona. Si un pago no espera ningún ingreso, ponlo en
-        &quot;ignorar&quot; y deja de aparecer.
+        Los pagos que LarpManager da por hechos, y si su ingreso está o no en el banco. Al entrar aquí se cruzan otra
+        vez, así que lo que se ve es de ahora mismo. &quot;Por qué&quot; dice qué le pasa a cada uno, y
+        &quot;Vincular&quot; abre las líneas del banco para señalarla tú cuando sabes cuál es — la app aprende de esa
+        vez y aplica lo aprendido al resto de pagos de esa persona. Si un pago no espera ningún ingreso, ponlo en
+        &quot;ignorar&quot;. Quitando &quot;Solo pendientes&quot; salen también los que ya tienen su línea.
       </p>
 
       <div className="buscador-fila">
@@ -336,7 +342,9 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
           )}
         </div>
         <span className="pend" style={{ marginLeft: 'auto' }}>
-          {visibles.length} {soloPendientes ? 'sin emparejar' : 'en total'}
+          {soloPendientes
+            ? `${visibles.length} sin emparejar`
+            : `${visibles.length} pagos · ${(pagos || []).filter(p => p.movimiento_id).length} con su línea del banco`}
         </span>
       </div>
 
