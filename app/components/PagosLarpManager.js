@@ -8,8 +8,11 @@ import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 // plantilla de anchos que se aplica a la cabecera y a cada fila, así que es
 // imposible que se desalineen. Ver PROYECTO.md, "Toda lista de datos con
 // columnas es una tabla de verdad".
-const COLUMNAS = ['Nombre', 'Evento', 'Importe', 'Fecha', 'Por qué', 'Estado', 'Vincular'];
-const ANCHO_DEFECTO = { Nombre: 200, Evento: 150, Importe: 90, Fecha: 95, 'Por qué': 430, Estado: 110, Vincular: 130 };
+const COLUMNAS = ['Nombre', 'Evento', 'Importe', 'Fecha', 'Línea del banco', 'Por qué', 'Estado', 'Vincular'];
+const ANCHO_DEFECTO = {
+  Nombre: 200, Evento: 150, Importe: 90, Fecha: 95,
+  'Línea del banco': 340, 'Por qué': 380, Estado: 110, Vincular: 130,
+};
 
 // Los mismos tres de Movimientos. Se guardan con el vocabulario de esa tabla
 // ('resuelta'/'ignorada') para no tener dos nombres para lo mismo, y se
@@ -32,6 +35,15 @@ function Celda({ className = '', cabecera, children, style }) {
 
 const eur = n => `${Number(n).toFixed(2)}€`;
 const dia = f => (f ? new Date(f).toLocaleDateString('es-ES') : '—');
+
+// Con qué línea del banco ha quedado este pago. Va en columna propia --y no
+// solo dentro de la frase de "Por qué"-- para poder ordenar, buscar y repasar
+// de un vistazo a qué se está enlazando cada cosa: un vínculo equivocado
+// (dos nombres que el banco escribe parecido) no se ve de ninguna otra forma.
+function lineaTexto(p) {
+  if (!p.movimiento_id) return '';
+  return `${dia(p.movimiento_fecha)} · ${eur(p.movimiento_importe)} · ${p.movimiento_concepto || ''}`;
+}
 
 export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
   const [pagos, setPagos] = useState(null);
@@ -105,6 +117,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     if (col === 'Evento') return p.evento || '';
     if (col === 'Importe') return Number(p.importe);
     if (col === 'Fecha') return p.fecha || '';
+    if (col === 'Línea del banco') return lineaTexto(p);
     if (col === 'Por qué') return p.motivoTexto || '';
     if (col === 'Estado') return p.estado || 'pendiente';
     return '';
@@ -185,6 +198,10 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     if (col === 'Evento') return <span className="muted">{p.evento || '—'}</span>;
     if (col === 'Importe') return <span className="num">{eur(p.importe)}</span>;
     if (col === 'Fecha') return <span className="muted">{dia(p.fecha)}</span>;
+    if (col === 'Línea del banco') {
+      const t = lineaTexto(p);
+      return t ? t : <span className="vacio">—</span>;
+    }
     if (col === 'Por qué') return <span className="muted">{p.motivoTexto || '—'}</span>;
     if (col === 'Estado') {
       // Un pago con línea del banco está resuelto porque lo dice el dinero,
@@ -375,7 +392,9 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
               <Fragment key={p.id}>
                 <div role="row" className="fila-tabla" style={{ gridTemplateColumns: plantillaColumnas }}>
                   {columnasMostradas.map(c => (
-                    <Celda key={c} className={c === 'Por qué' ? 'envuelve' : ''}>{contenido(c, p)}</Celda>
+                    <Celda key={c} className={c === 'Por qué' || c === 'Línea del banco' ? 'envuelve' : ''}>
+                      {contenido(c, p)}
+                    </Celda>
                   ))}
                 </div>
                 {abierto === p.id && panel(p)}
