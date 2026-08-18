@@ -168,6 +168,15 @@ const SECCIONES_ADMIN = [
           Las de LarpManager son la excepción: son candidatos de un pago concreto, no una regla, así que su ✕ solo dura
           hasta que recargues.
         </p>
+        <h4>Combinaciones de facturas</h4>
+        <p>
+          En la columna <strong>Factura</strong> de una línea pendiente puede salir una sugerencia tipo
+          <strong> facturas 17 + 16</strong>: son dos facturas ya subidas cuyos importes suman el de esa línea, el caso
+          típico de un pago que trae dos tickets. Aceptarla adjunta las dos y deja la línea resuelta — exactamente lo
+          mismo que aceptarla desde la pestaña Facturas, donde sale la explicación con los importes de cada una. Su ✕
+          también es para siempre, y va por esas facturas concretas: rechazar &quot;17 + 16&quot; no rechaza otras
+          combinaciones futuras.
+        </p>
 
         <h4>Los grupos</h4>
         <p>
@@ -299,9 +308,15 @@ const SECCIONES_ADMIN = [
     cuerpo: (
       <>
         <p>
-          Una fila por cada pago que LarpManager da por hecho y que <strong>no tiene su ingreso en el banco</strong>.
-          Al entrar se cruza otra vez, así que lo que ves es lo que queda por mirar a mano, no una predicción.
+          Una fila por cada pago que LarpManager da por hecho, y si su ingreso está o no en el banco. Al entrar se
+          cruza otra vez, así que lo que ves es de ahora mismo.
         </p>
+        <div className="resumen-mini" style={{ display: 'block' }}>
+          <strong>La app propone, tú validas. Nunca enlaza sola.</strong> Cada pago sin movimiento enseña su propuesta
+          como una píldora en la columna <strong>Movimiento</strong>: pulsas el texto y queda enlazado, pulsas la ✕ y
+          se descarta. Lo hace así porque un acierto falso, cerrado en silencio, deja un ingreso dado por cobrado sin
+          haberlo cobrado.
+        </div>
 
         <h4>Los dos botones</h4>
         <ul>
@@ -318,42 +333,83 @@ const SECCIONES_ADMIN = [
           </li>
         </ul>
 
+        <h4>Las dos clases de propuesta</h4>
+        <p>
+          <strong>Firme</strong>, en índigo: mismo apellido y mismo importe. <strong>Con dudas</strong>, en ámbar: la
+          app ha encontrado algo que podría ser, pero no lo tiene claro — o el banco escribe solo parte del nombre, o
+          el importe no cuadra. Las dos se aceptan con el mismo clic, y por eso se distinguen a simple vista: el ámbar
+          quiere decir <em>míralo antes de darle</em>. Es el único sitio de la aplicación donde hay un color que no
+          sea el de acento.
+        </p>
+        <p>
+          La <strong>✕ es para siempre</strong>: queda guardado que ese movimiento no es de esa persona y no se vuelve
+          a proponer. Y como el reparto sigue buscando, al rechazar una sale la siguiente — o ese movimiento pasa a
+          proponérsele a otro pago que lo estuviera esperando.
+        </p>
+
         <h4>Qué te puede decir el &quot;Por qué&quot;</h4>
         <TablaEstados filas={[
-          ['Le corresponde…', 'Ya tiene su línea decidida y se cierra sola. Si sigue aquí es que acabas de entrar; al recalcular desaparece.'],
-          ['El importe no cuadra', 'El apellido sí aparece en el banco pero por otra cantidad. Normalmente el dato de LarpManager está mal: se arregla allí y se vuelve a subir.'],
-          ['Parte del nombre', 'Coincide el nombre de pila pero no el apellido. Puede ser otra persona: hay que mirarlo.'],
-          ['No aparece', 'Ni rastro de ese nombre en el banco. O la transferencia no ha llegado, o falta subir el extracto de esas fechas.'],
-          ['Sin línea libre', 'Hay líneas suyas por ese importe, pero ya justifican otros pagos suyos. O falta esta transferencia, o sobra uno de esos pagos.'],
+          ['Le corresponde…', 'Encaja el apellido y el importe. Es la propuesta firme, la de color índigo.'],
+          ['El importe no cuadra', 'El apellido sí aparece en el banco pero por otra cantidad. Normalmente el dato de LarpManager está mal: se arregla allí y se vuelve a subir. Aun así te propone el más cercano, en ámbar.'],
+          ['Parte del nombre', 'Coincide el nombre de pila pero no el apellido, porque el banco lo corta (Van den Esschert llega como "Van Den Ess"). Te propone el más cercano, en ámbar.'],
+          ['No aparece', 'Ni rastro de ese nombre en el banco. O la transferencia no ha llegado, o falta subir el extracto de esas fechas. Aquí no hay nada que proponer.'],
+          ['Sin línea libre', 'Hay movimientos suyos por ese importe, pero ya los justifican otros pagos suyos. Tampoco hay propuesta: no queda ninguno libre.'],
+          ['Emparejado con…', 'Ya tiene su movimiento. Estos solo salen al quitar "Solo pendientes".'],
         ]} />
+
+        <h4>El estado de cada pago</h4>
+        <p>
+          Igual que en Movimientos: <strong>pendiente</strong> (falta su ingreso), <strong>resuelto</strong> (lo pone
+          la app al enlazarlo, y lo puedes poner tú cuando el pago es bueno pero no va a tener movimiento) e
+          <strong> ignorar</strong> (de este no esperes nada: anulado, metido por error). La casilla
+          <strong> Solo pendientes</strong> esconde los otros dos, y quitándola vuelven para poder deshacerlos.
+        </p>
+        <p className="muted">
+          Poner un pago en <em>ignorar</em> es lo que antes obligaba a borrar el archivo entero y subir uno recortado.
+          La fila se queda guardada, así que volver a subir el mismo export no la resucita.
+        </p>
 
         <h4>Vincular a mano, y que aprenda</h4>
         <p>
-          Hay pagos que la app no va a emparejar sola por mucho que se insista, porque el banco escribe el nombre de
-          otra forma. El caso real: donde LarpManager pone <em>Matthias Greßer</em>, el banco escribe
-          <em> Greer Matthias Rola</em> — se come la ß en vez de convertirla en ss, así que el apellido no coincide
-          nunca.
+          Cuando ninguna propuesta vale, <strong>Vincular</strong> abre un panel debajo de la fila, a todo el ancho.
+          Trae dos cosas: <strong>todos los pagos de esa persona</strong> con el movimiento que le tocó a cada uno
+          —incluidos los que nunca pasan por el banco, como larpmoney— y la lista de <strong>movimientos</strong> entre
+          los que elegir, con el concepto entero. Primero los que llevan su nombre o su importe; detrás de
+          &quot;Ver todas&quot;, el resto. No salen los marcados como Stripe, que son liquidaciones de la pasarela.
         </p>
         <p>
-          Para eso está <strong>Vincular</strong>: se abre un desplegable con las líneas que llevan su nombre o su
-          importe, que son las que la columna &quot;Por qué&quot; acaba de nombrar; detrás de &quot;Ver todas&quot;
-          están el resto. No salen las marcadas como Stripe, que son liquidaciones de la pasarela y nunca son la
-          transferencia de una persona.
+          El histórico está ahí porque es lo único que permite decidir: ver que tiene cuatro pagos, que tres cuadraron
+          y que este falta, o que ese dinero entró por larpmoney y no va a estar nunca en el banco.
         </p>
         <div className="resumen-mini" style={{ display: 'block' }}>
-          <strong>Se vincula una vez y ya está.</strong> Al hacerlo, la app aprende cómo llama el banco a esa persona
-          y lo aplica al resto de sus pagos. Con Greßer: vinculas uno de sus cuatro y los otros tres se cierran solos.
+          <strong>Se valida una vez y ya está.</strong> Al aceptar, la app aprende cómo llama el banco a esa persona y
+          lo aplica al resto de sus pagos. El caso real: donde LarpManager pone <em>Matthias Greßer</em>, el banco
+          escribe <em>Greer Matthias Rola</em> — se come la ß en vez de convertirla en ss. Aceptas uno y los demás
+          encajan solos.
         </div>
+        <p>
+          Aprende <strong>solo las palabras pegadas a su nombre</strong> dentro del texto del movimiento, nunca el
+          papeleo de alrededor. De <em>ANTON VIEJO ALONSO Registration fee 2 ticket 2027</em> se queda con
+          <em> VIEJO</em>, no con <em>Registration</em> ni con <em>2027</em>. Y no aprende tratamientos (Miss, Mrs),
+          ni el nombre de otro jugador, ni nombres de evento, ni referencias.
+        </p>
         <p className="muted">
-          Lo aprendido no se puede ver ni borrar desde la aplicación. Si aprende algo mal, se queda.
+          Solo aprende cuando lo aceptas tú, nunca por su cuenta. Y lo aprendido no se puede ver ni borrar desde la
+          aplicación: si aprende algo mal, se queda.
         </p>
 
         <h4>La regla que no se rompe</h4>
         <p>
-          <strong>Un movimiento del banco justifica un solo pago, y un pago una sola línea.</strong> Cuando varios
+          <strong>Un movimiento del banco justifica un solo pago, y un pago un solo movimiento.</strong> Cuando varios
           encajan, decide la <strong>fecha más cercana</strong> — da igual antes o después, porque el desfase entre que
           se registra el pago y el banco lo apunta va en las dos direcciones. Así dos cuotas de 150 € de la misma
-          persona no se cierran las dos contra el mismo ingreso.
+          persona no se cierran las dos contra el mismo ingreso. Y tampoco se te propone nunca un movimiento que ya
+          esté propuesto a otro pago.
+        </p>
+        <p className="muted">
+          El apellido tiene que aparecer como <strong>palabra entera</strong>. Buscar trozos de texto cerraba el pago
+          de <em>Alon</em> contra un ingreso de <em>Alonso</em>: el dinero de uno quedaba dado por cobrado con el
+          ingreso del otro.
         </p>
       </>
     ),
