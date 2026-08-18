@@ -7,6 +7,14 @@
   --muted: #656b80;
   --accent: #3f3d8f;
   --accent-soft: rgba(63, 61, 143, .09);
+  /* Ámbar: ÚNICA excepción a "solo el color de acento", decidida por la
+     usuaria el 2026-08-18 y anotada en PROYECTO.md. Marca una propuesta del
+     sistema de la que el propio sistema duda (LarpManager: el banco solo
+     escribe parte del nombre, o el importe no cuadra). Se puede aceptar de un
+     clic igual que las demás, así que tenía que distinguirse de una firme sin
+     lugar a error. No se usa para nada más. */
+  --dudosa: #7a5800;
+  --dudosa-soft: rgba(191, 138, 0, .15);
   --accent-text: #ffffff;
   --ok: #3f7d5c;
   --new: #a8402c;
@@ -530,6 +538,10 @@ select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; 
   background: none; border: none; padding: 0 1px; cursor: pointer; opacity: .65;
 }
 .sugerencia-descartar:hover { opacity: 1; }
+/* La misma píldora, en ámbar, cuando el sistema propone algo de lo que no
+   está seguro. Ver --dudosa arriba para por qué existe este color. */
+.sugerencia.dudosa { background: var(--dudosa-soft); color: var(--dudosa); }
+.sugerencia.dudosa .sugerencia-descartar { color: var(--dudosa); }
 /* Varias propuestas para la misma celda (LarpManager ambiguo, facturas de un
    lote): una debajo de otra, no en fila, que la celda es estrecha. */
 .sugerencias-lista { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }

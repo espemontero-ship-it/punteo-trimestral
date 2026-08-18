@@ -26,9 +26,9 @@ const ESTADOS = [
 // La misma forma de sugerencia que en Movimientos (ver TablaMovimientos.js y
 // la Guía de diseño): una sola píldora para todos los tipos, el texto acepta
 // y la ✕ rechaza.
-function Sugerencia({ texto, onAplicar, onDescartar }) {
+function Sugerencia({ texto, dudosa, onAplicar, onDescartar }) {
   return (
-    <span className="sugerencia" role="group">
+    <span className={`sugerencia${dudosa ? ' dudosa' : ''}`} role="group">
       <span className="texto-sug" onClick={onAplicar} style={{ cursor: 'pointer' }}>{texto}</span>
       <button type="button" className="sugerencia-descartar" title="Descartar esta sugerencia" onClick={onDescartar}>✕</button>
     </span>
@@ -234,6 +234,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
         return (
           <Sugerencia
             texto={`${dia(s.fecha)} · ${eur(s.importe)} · ${s.concepto}`}
+            dudosa={s.dudosa}
             onAplicar={() => vincular(p, s.movimientoId)}
             onDescartar={() => rechazar(p, s.movimientoId)}
           />
