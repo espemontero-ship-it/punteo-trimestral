@@ -893,7 +893,9 @@ export default function TablaMovimientos({
       pie = <>{destacados.length} de {candidatosLm.length} llevan su nombre o su importe.{' '}
         <a href="#" onClick={e => { e.preventDefault(); setVerTodosLm(true); }}>Ver todos</a></>;
     } else {
-      pie = `Los ${candidatosLm.length} pagos pendientes.`;
+      // "Sin movimiento", no "pendientes": la lista incluye los ignorados y
+      // los dados por buenos a mano, que se ven aunque no se puedan enlazar.
+      pie = `Los ${candidatosLm.length} pagos sin movimiento.`;
     }
 
     return (
