@@ -8,10 +8,10 @@ import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 // plantilla de anchos que se aplica a la cabecera y a cada fila, así que es
 // imposible que se desalineen. Ver PROYECTO.md, "Toda lista de datos con
 // columnas es una tabla de verdad".
-const COLUMNAS = ['Nombre', 'Evento', 'Importe', 'Fecha', 'Línea del banco', 'Por qué', 'Estado', 'Vincular'];
+const COLUMNAS = ['Nombre', 'Evento', 'Importe', 'Fecha', 'Movimiento', 'Por qué', 'Estado', 'Vincular'];
 const ANCHO_DEFECTO = {
   Nombre: 200, Evento: 150, Importe: 90, Fecha: 95,
-  'Línea del banco': 340, 'Por qué': 380, Estado: 110, Vincular: 130,
+  'Movimiento': 340, 'Por qué': 380, Estado: 110, Vincular: 130,
 };
 
 // Los mismos tres de Movimientos. Se guardan con el vocabulario de esa tabla
@@ -36,7 +36,7 @@ function Celda({ className = '', cabecera, children, style }) {
 const eur = n => `${Number(n).toFixed(2)}€`;
 const dia = f => (f ? new Date(f).toLocaleDateString('es-ES') : '—');
 
-// Con qué línea del banco ha quedado este pago. Va en columna propia --y no
+// Con qué movimiento ha quedado este pago. Va en columna propia --y no
 // solo dentro de la frase de "Por qué"-- para poder ordenar, buscar y repasar
 // de un vistazo a qué se está enlazando cada cosa: un vínculo equivocado
 // (dos nombres que el banco escribe parecido) no se ve de ninguna otra forma.
@@ -117,7 +117,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     if (col === 'Evento') return p.evento || '';
     if (col === 'Importe') return Number(p.importe);
     if (col === 'Fecha') return p.fecha || '';
-    if (col === 'Línea del banco') return lineaTexto(p);
+    if (col === 'Movimiento') return lineaTexto(p);
     if (col === 'Por qué') return p.motivoTexto || '';
     if (col === 'Estado') return p.estado || 'pendiente';
     return '';
@@ -151,7 +151,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     setDetalle(null);
     setVerTodas(false);
     const data = await apiFetch(`/api/larpmanager-pagos/${p.id}/candidatos`, undefined, {
-      mensajeError: 'No se pudieron cargar las líneas del banco.',
+      mensajeError: 'No se pudieron cargar los movimientos.',
     });
     setDetalle(data ? { candidatos: data.candidatos || [], historial: data.historial || [] } : { candidatos: [], historial: [] });
   }
@@ -184,7 +184,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
       body: JSON.stringify({ estado }),
     }, { mensajeError: 'No se pudo cambiar el estado.' });
     // Se recarga entero, no solo esa fila: sacar un pago del cruce libera la
-    // línea del banco que tenía cogida, y eso cambia el "Por qué" de los
+    // movimiento que tenía cogido, y eso cambia el "Por qué" de los
     // demás pagos de esa persona.
     if (r) await cargar();
   }
@@ -198,13 +198,13 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     if (col === 'Evento') return <span className="muted">{p.evento || '—'}</span>;
     if (col === 'Importe') return <span className="num">{eur(p.importe)}</span>;
     if (col === 'Fecha') return <span className="muted">{dia(p.fecha)}</span>;
-    if (col === 'Línea del banco') {
+    if (col === 'Movimiento') {
       const t = lineaTexto(p);
       return t ? t : <span className="vacio">—</span>;
     }
     if (col === 'Por qué') return <span className="muted">{p.motivoTexto || '—'}</span>;
     if (col === 'Estado') {
-      // Un pago con línea del banco está resuelto porque lo dice el dinero,
+      // Un pago con movimiento está resuelto porque lo dice el dinero,
       // no porque nadie lo haya elegido: para cambiarlo hay que quitarle el
       // vínculo antes, y eso se hace desde la columna LarpManager de
       // Movimientos.
@@ -248,7 +248,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
               <Celda cabecera>Fecha</Celda>
               <Celda cabecera>Evento</Celda>
               <Celda cabecera>Importe</Celda>
-              <Celda cabecera>Línea del banco</Celda>
+              <Celda cabecera>Movimiento</Celda>
             </div>
             {historial.map(h => (
               <div
@@ -271,7 +271,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
         </div>
 
         <div className="panel-bloque">
-          <p className="panel-titulo">Elige la línea del banco</p>
+          <p className="panel-titulo">Elige el movimiento</p>
           <p className="muted" style={{ margin: '0 0 4px', fontSize: 12 }}>
             {todas
               ? (suyas.length === 0
@@ -330,7 +330,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
       <p className="muted">
         Los pagos que LarpManager da por hechos, y si su ingreso está o no en el banco. Al entrar aquí se cruzan otra
         vez, así que lo que se ve es de ahora mismo. &quot;Por qué&quot; dice qué le pasa a cada uno, y
-        &quot;Vincular&quot; abre las líneas del banco para señalarla tú cuando sabes cuál es — la app aprende de esa
+        &quot;Vincular&quot; abre los movimientos para señalarlo tú cuando sabes cuál es — la app aprende de esa
         vez y aplica lo aprendido al resto de pagos de esa persona. Si un pago no espera ningún ingreso, ponlo en
         &quot;ignorar&quot;. Quitando &quot;Solo pendientes&quot; salen también los que ya tienen su línea.
       </p>
@@ -361,13 +361,13 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
         <span className="pend" style={{ marginLeft: 'auto' }}>
           {soloPendientes
             ? `${visibles.length} sin emparejar`
-            : `${visibles.length} pagos · ${(pagos || []).filter(p => p.movimiento_id).length} con su línea del banco`}
+            : `${visibles.length} pagos · ${(pagos || []).filter(p => p.movimiento_id).length} con su movimiento`}
         </span>
       </div>
 
       {cargando && <p className="muted">Cruzando...</p>}
       {!cargando && pagos && pagos.length === 0 && (
-        <p className="muted">Ninguno — todos los pagos de LarpManager tienen su línea del banco.</p>
+        <p className="muted">Ninguno — todos los pagos de LarpManager tienen su movimiento.</p>
       )}
       {!cargando && visibles.length === 0 && pagos && pagos.length > 0 && (
         <p className="muted">Nada que coincida con este filtro.</p>
@@ -392,7 +392,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
               <Fragment key={p.id}>
                 <div role="row" className="fila-tabla" style={{ gridTemplateColumns: plantillaColumnas }}>
                   {columnasMostradas.map(c => (
-                    <Celda key={c} className={c === 'Por qué' || c === 'Línea del banco' ? 'envuelve' : ''}>
+                    <Celda key={c} className={c === 'Por qué' || c === 'Movimiento' ? 'envuelve' : ''}>
                       {contenido(c, p)}
                     </Celda>
                   ))}
