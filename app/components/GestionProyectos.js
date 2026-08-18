@@ -34,7 +34,7 @@ export default function GestionProyectos({ proyectos, onCambio }) {
       <div className="fila" style={{ marginBottom: 8 }}>
         <div>
           <strong>Proyectos</strong>
-          <p className="muted" style={{ margin: '4px 0 0' }}>Lista fija reutilizada entre trimestres — al puntear una línea del banco, se puede asignar a uno de estos.</p>
+          <p className="muted" style={{ margin: '4px 0 0' }}>Lista fija reutilizada entre trimestres — al puntear un movimiento, se puede asignar a uno de estos.</p>
         </div>
         <button type="button" className="secundario" onClick={() => setModalAbierto(true)}>+ Añadir proyecto</button>
       </div>
@@ -68,7 +68,7 @@ export default function GestionProyectos({ proyectos, onCambio }) {
             />
           </div>
           <p className="dialogo-cuerpo" style={{ marginBottom: 14 }}>
-            Se reutiliza entre trimestres — al puntear una línea del banco, se podrá asignar a este proyecto.
+            Se reutiliza entre trimestres — al puntear un movimiento, se podrá asignar a este proyecto.
           </p>
           <button type="submit" className="secundario" style={{ width: '100%' }} disabled={creando}>
             {creando ? 'Creando...' : 'Crear'}

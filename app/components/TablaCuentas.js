@@ -216,7 +216,7 @@ function VincularPago({ movimientos, facturasAceptadas, onVincular }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
       <select style={{ fontSize: 11.5, padding: '4px 6px' }} value={movimientoId} onChange={e => setMovimientoId(e.target.value)}>
-        <option value="">Elige línea del banco...</option>
+        <option value="">Elige movimiento...</option>
         {(movimientos || []).map(m => (
           <option key={m.id} value={m.id}>
             {m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''} · {Number(m.importe).toFixed(2)}€ · {m.concepto?.slice(0, 30)}

@@ -524,8 +524,8 @@ export default function Home() {
             // con su nota. Solo se pierde la comprobación de que ese pago
             // llegó, y se recupera volviendo a subir el CSV.
             ? (confirmarBorrarImportacion?.resueltas > 0
-              ? `Se borrarán los ${confirmarBorrarImportacion.total} pagos de esta subida — ${confirmarBorrarImportacion.resueltas} de ellos están emparejados con una línea del banco y perderán ese enlace. Las líneas del banco no se tocan: siguen resueltas y con su nota. Se recupera volviendo a subir el CSV.`
-              : `Se borrarán los ${confirmarBorrarImportacion?.total} pagos de esta subida. Las líneas del banco no se tocan.`)
+              ? `Se borrarán los ${confirmarBorrarImportacion.total} pagos de esta subida — ${confirmarBorrarImportacion.resueltas} de ellos están emparejados con un movimiento y perderán ese enlace. Los movimientos no se tocan: siguen resueltos y con su nota. Se recupera volviendo a subir el CSV.`
+              : `Se borrarán los ${confirmarBorrarImportacion?.total} pagos de esta subida. Los movimientos no se tocan.`)
             : (confirmarBorrarImportacion?.resueltas > 0
               ? `Se borrarán los ${confirmarBorrarImportacion.total} movimientos de esta subida — ${confirmarBorrarImportacion.resueltas} de ellos ya están resueltos y se perderán sus notas/facturas emparejadas. No se puede deshacer.`
               : `Se borrarán los ${confirmarBorrarImportacion?.total} movimientos de esta subida. No se puede deshacer.`)

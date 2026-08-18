@@ -77,7 +77,7 @@ export default function LotePage({ params }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ movimientoId: Number(movimientoId), facturaIds }),
-    }, { mensajeOk: 'Pago vinculado a la línea del banco', mensajeError: 'No se pudo vincular.' });
+    }, { mensajeOk: 'Pago vinculado al movimiento', mensajeError: 'No se pudo vincular.' });
     if (r) cargar();
   }
 

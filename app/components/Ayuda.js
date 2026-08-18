@@ -41,7 +41,7 @@ const SECCIONES_ADMIN = [
           arregla después desde Facturas, donde esos mismos campos se pueden escribir a mano.
         </p>
         <p>
-          No hay que decir a qué línea del banco pertenece. La factura se guarda y se empareja sola cuando aparezca su
+          No hay que decir a qué movimiento pertenece. La factura se guarda y se empareja sola cuando aparezca su
           línea — puede ser hoy o puede ser cuando subas el excel del banco dentro de dos meses.
         </p>
       </>
@@ -50,11 +50,11 @@ const SECCIONES_ADMIN = [
 
   {
     titulo: 'Movimientos',
-    cuando: 'El trabajo de verdad: dejar cada línea del banco explicada, para poder mandarlo a la gestoría.',
+    cuando: 'El trabajo de verdad: dejar cada movimiento explicado, para poder mandarlo a la gestoría.',
     cuerpo: (
       <>
         <p>
-          Una fila por cada línea del banco. El objetivo es que ninguna quede sin explicar — o tiene su factura, o dice
+          Una fila por cada movimiento del banco. El objetivo es que ninguno quede sin explicar — o tiene su factura, o dice
           por qué no la lleva.
         </p>
 
@@ -74,7 +74,7 @@ const SECCIONES_ADMIN = [
             <strong>Archivos subidos</strong> — todo lo que has subido, excels del banco y CSV de LarpManager, con su fecha
             y cuánto trajo cada uno. Desde aquí se borra una subida entera si te equivocaste de archivo. Borrar un excel
             del banco se lleva sus movimientos y lo que hubieras resuelto en ellos; borrar un CSV de LarpManager
-            <strong> no toca las líneas del banco</strong>, solo se lleva sus pagos, y se recupera volviendo a subirlo.
+            <strong> no toca los movimientos</strong>, solo se lleva sus pagos, y se recupera volviendo a subirlo.
             El aviso antes de borrar te dice exactamente cuánto se pierde.
           </li>
           <li>
@@ -110,7 +110,7 @@ const SECCIONES_ADMIN = [
           <li><strong>Fecha</strong> y <strong>Concepto</strong> — lo que escribe el banco, tal cual. Se quedan fijas al desplazarse a lo ancho.</li>
           <li><strong>Banco</strong> — de qué extracto viene la línea.</li>
           <li><strong>Proveedor</strong> — quién cobró. <em>Es el campo que agrupa</em>: dos líneas con el mismo proveedor se juntan aunque el banco las escriba distinto y aunque sean de bancos distintos. Borrarlo desagrupa la línea y además hace que la app olvide lo que había aprendido de ahí.</li>
-          <li><strong>Importe</strong> — el de la línea del banco.</li>
+          <li><strong>Importe</strong> — el del movimiento.</li>
           <li><strong>Estado</strong> — ver la tabla de abajo.</li>
           <li><strong>Factura</strong> — el número de cada factura vinculada, no la palabra &quot;ver&quot;. Es el mismo nombre que lleva el archivo dentro del zip de la gestoría, y cada número abre el suyo. Si no hay ninguna y la línea sigue esperando factura, aquí sale el botón <strong>Subir</strong>.</li>
           <li><strong>Nota</strong> — ver más abajo, tiene su propio apartado.</li>
@@ -253,14 +253,14 @@ const SECCIONES_ADMIN = [
           <li><strong>Fecha</strong>, <strong>Concepto</strong> e <strong>Importe</strong> — lo que la app leyó del archivo, y se pueden corregir a mano mientras la factura no esté emparejada. El importe se escribe como se escribe aquí: 2.183,18 se entiende bien.</li>
           <li><strong>Nombre</strong> — el archivo; el enlace lo abre. Un ⚠ al lado significa que hay otro archivo subido con ese mismo nombre.</li>
           <li><strong>Subida</strong> y <strong>Subido por</strong> — cuándo y quién.</li>
-          <li><strong>Vincular</strong> — el botón <strong>Buscar</strong> vuelve a intentar el cruce solo de esa factura. Si no hay manera, se elige la línea a mano en <strong>Elige línea del banco...</strong> y se pulsa <strong>Vincular</strong>.</li>
+          <li><strong>Vincular</strong> — el botón <strong>Buscar</strong> vuelve a intentar el cruce solo de esa factura. Si no hay manera, se elige a mano en <strong>Elige movimiento...</strong> y se pulsa <strong>Vincular</strong>.</li>
           <li><strong>Motivo</strong> — por qué no está emparejada. Es la columna que dice qué hacer.</li>
-          <li><strong>Movimiento</strong> — la línea del banco con la que quedó emparejada.</li>
+          <li><strong>Movimiento</strong> — el movimiento con el que quedó emparejada.</li>
         </ul>
 
         <h4>Qué te puede decir el Motivo</h4>
         <TablaEstados filas={[
-          ['Emparejada', 'Tiene su línea del banco. No hay nada que hacer.'],
+          ['Emparejada', 'Tiene su movimiento. No hay nada que hacer.'],
           ['Varias líneas con el mismo importe', 'Hay más de una candidata y la app no elige por ti: salen los botones con fecha, importe y concepto de cada una para que elijas.'],
           ['Combinación de facturas sugerida', 'Varias facturas suman el importe de una línea (típico de un PDF con dos facturas dentro). Se propone, nunca se aplica sola.'],
           ['Ya cubierta por otra factura', 'Ese gasto ya tiene su justificante. No falta nada.'],
@@ -287,7 +287,7 @@ const SECCIONES_ADMIN = [
         </ul>
         <p>
           Abajo del todo se pueden marcar varias con la casilla y usar <strong>Borrar seleccionadas</strong>. Si alguna
-          estaba emparejada, el aviso te dice cuántas y que su línea del banco volverá a quedar pendiente.
+          estaba emparejada, el aviso te dice cuántas y que su movimiento volverá a quedar pendiente.
         </p>
       </>
     ),

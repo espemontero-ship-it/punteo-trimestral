@@ -500,7 +500,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
               onChange={e => setMovimientoElegido(prev => ({ ...prev, [f.id]: e.target.value }))}
               style={{ fontSize: 11.5, padding: '4px 6px', width: '100%' }}
             >
-              <option value="">Elige línea del banco...</option>
+              <option value="">Elige movimiento...</option>
               {movimientosPendientes.map(m => (
                 <option key={m.id} value={m.id}>
                   {m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''} · {Number(m.importe).toFixed(2)}€ · {m.concepto?.slice(0, 40)}
@@ -660,7 +660,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         titulo={`¿Borrar ${seleccionadas.size} factura(s)?`}
         mensaje={
           seleccionadasEmparejadas > 0
-            ? `⚠ ${seleccionadasEmparejadas} de las seleccionadas están emparejadas con una línea del banco — esa línea volverá a quedar pendiente. No se puede deshacer.`
+            ? `⚠ ${seleccionadasEmparejadas} de las seleccionadas están emparejadas con un movimiento — ese movimiento volverá a quedar pendiente. No se puede deshacer.`
             : 'No se puede deshacer.'
         }
         textoConfirmar="Borrar"
