@@ -116,6 +116,13 @@ export default function TablaMovimientos({
   // aquí solo se puede quitar, igual que la devolución se corrige con su ✎
   // desde la fila en la que se está viendo.
   const [confirmarDesvincular, setConfirmarDesvincular] = useState(null); // { pago, movimiento }
+  // Enlazar un pago de LarpManager desde esta pantalla: qué fila está abierta,
+  // con qué pagos candidatos, y el filtro por nombre.
+  const [vinculandoLm, setVinculandoLm] = useState(null);
+  const [candidatosLm, setCandidatosLm] = useState(null);
+  const [busquedaLm, setBusquedaLm] = useState('');
+  const [verTodosLm, setVerTodosLm] = useState(false);
+  const [guardandoLm, setGuardandoLm] = useState(false);
   const [desvinculando, setDesvinculando] = useState(false);
 
   async function desvincularLm() {
@@ -779,7 +786,7 @@ export default function TablaMovimientos({
     // enlace a mano: de hecho es el caso más común, porque las transferencias
     // se puntean antes de subir el CSV.
     if (m.estado === 'resuelta') {
-      return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}</>;
+      return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}{botonVincularLm(m)}</>;
     }
 
     const resultado = m.larpmanager_candidatos;
@@ -797,7 +804,7 @@ export default function TablaMovimientos({
       // Igual que en las facturas de un lote: una clave por candidato, con el
       // índice original conservado, para que descartar uno no quite los otros.
       const vivos = resultado.candidatos.map((c, i) => ({ c, i })).filter(({ i }) => viva(`lm:${m.id}:${i}`));
-      if (vivos.length === 0) return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}</>;
+      if (vivos.length === 0) return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}{botonVincularLm(m)}</>;
       return (
         <div className="sugerencias-lista">
           {vivos.map(({ c, i }) => (
@@ -813,12 +820,137 @@ export default function TablaMovimientos({
     }
     // Aquí cae el caso que motivó todo esto: el cruce no encontró nada
     // ("no encontrada") porque el banco no escribió el nombre en el concepto.
-    return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}</>;
+    return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}{botonVincularLm(m)}</>;
+  }
+
+  // Enlazar desde este lado. Antes solo se podía deshacer: si el cruce no
+  // encontraba el pago --porque el banco describe la transferencia como
+  // "Registration fee 2 of Calum", sin apellido-- había que irse a la pestaña
+  // LarpManager y buscar el pago allí para enlazarlo al revés.
+  //
+  // Sale en cualquier ingreso sin pago, TAMBIÉN si la línea ya está resuelta:
+  // ese es el caso normal, porque las transferencias se puntean antes de
+  // subir el export de LarpManager.
+  function botonVincularLm(m) {
+    if (Number(m.importe) <= 0) return null;
+    if ((m.pagos_larpmanager || []).length > 0) return null;
+    return (
+      <button type="button" className="secundario" onClick={() => abrirVincularLm(m)}>
+        {vinculandoLm === m.id ? 'Cerrar' : 'Vincular'}
+      </button>
+    );
+  }
+
+  async function abrirVincularLm(m) {
+    if (vinculandoLm === m.id) { cerrarVincularLm(); return; }
+    setVinculandoLm(m.id);
+    setCandidatosLm(null);
+    setBusquedaLm('');
+    setVerTodosLm(false);
+    const data = await apiFetch(`/api/movimientos/${m.id}/larpmanager-candidatos`, undefined, {
+      mensajeError: 'No se pudieron cargar los pagos.',
+    });
+    setCandidatosLm((data && data.candidatos) || []);
+  }
+
+  function cerrarVincularLm() {
+    setVinculandoLm(null);
+    setCandidatosLm(null);
+  }
+
+  async function vincularPagoLm(m, pagoId) {
+    setGuardandoLm(true);
+    const r = await apiFetch(`/api/larpmanager-pagos/${pagoId}/vincular`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movimientoId: m.id }),
+    }, { mensajeOk: 'Vinculado', mensajeError: 'No se pudo vincular.' });
+    setGuardandoLm(false);
+    if (r) { cerrarVincularLm(); onCambio(); }
+  }
+
+  function panelVincularLm(m) {
+    const plantilla = '240px 170px 90px 100px 110px';
+    if (!candidatosLm) {
+      return <div className="panel-fila"><span className="muted">Cargando...</span></div>;
+    }
+    const q = busquedaLm.trim().toLowerCase();
+    const destacados = candidatosLm.filter(c => c.suNombre || c.mismoImporte);
+    let lista = candidatosLm;
+    let pie;
+    if (q) {
+      lista = candidatosLm.filter(c => `${c.nombreReal} ${c.evento || ''}`.toLowerCase().includes(q));
+      pie = `${lista.length} de ${candidatosLm.length} con ese texto.`;
+    } else if (!verTodosLm && destacados.length > 0) {
+      lista = destacados;
+      pie = <>{destacados.length} de {candidatosLm.length} llevan su nombre o su importe.{' '}
+        <a href="#" onClick={e => { e.preventDefault(); setVerTodosLm(true); }}>Ver todos</a></>;
+    } else {
+      pie = `Los ${candidatosLm.length} pagos pendientes.`;
+    }
+
+    return (
+      <div className="panel-fila">
+        <p className="panel-titulo">Qué pago de LarpManager es este ingreso</p>
+        {/* El buscador no está en el panel equivalente de la pestaña
+            LarpManager porque allí se elige entre unas decenas de
+            movimientos; aquí son cientos de pagos, y el concepto del banco
+            muchas veces no trae el apellido con el que buscarlos. */}
+        <div className="buscador-fila" style={{ marginBottom: 6 }}>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o evento..."
+            value={busquedaLm}
+            onChange={e => setBusquedaLm(e.target.value)}
+          />
+          <span className="pend">{pie}</span>
+        </div>
+        <div className="tabla-movimientos-envoltura" role="table">
+          <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: plantilla }}>
+            <Celda cabecera>Nombre</Celda>
+            <Celda cabecera>Evento</Celda>
+            <Celda cabecera>Importe</Celda>
+            <Celda cabecera>Fecha</Celda>
+            <Celda cabecera> </Celda>
+          </div>
+          {lista.slice(0, 60).map(c => (
+            <div role="row" key={c.id} className="fila-tabla" style={{ gridTemplateColumns: plantilla }}>
+              <Celda>{c.nombreReal}</Celda>
+              <Celda><span className="muted">{c.evento || '—'}</span></Celda>
+              <Celda>{c.importe.toFixed(2)}€</Celda>
+              <Celda><span className="muted">{c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : '—'}</span></Celda>
+              <Celda>
+                <button type="button" className="secundario" disabled={guardandoLm} onClick={() => vincularPagoLm(m, c.id)}>
+                  {guardandoLm ? '...' : 'Es este'}
+                </button>
+              </Celda>
+            </div>
+          ))}
+        </div>
+        {lista.length > 60 && (
+          <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
+            Se enseñan los 60 primeros. Escribe en el buscador para acotar.
+          </p>
+        )}
+        <div style={{ marginTop: 12 }}>
+          <button type="button" className="secundario" onClick={cerrarVincularLm}>Cancelar</button>
+        </div>
+      </div>
+    );
   }
 
   function filaMovimiento(m, g, esInicioGrupo) {
     return (
-      <div role="row" key={m.id} className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
+      <Fragment key={m.id}>
+        {filaMovimientoSola(m, g, esInicioGrupo)}
+        {vinculandoLm === m.id && panelVincularLm(m)}
+      </Fragment>
+    );
+  }
+
+  function filaMovimientoSola(m, g, esInicioGrupo) {
+    return (
+      <div role="row" className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
         <Celda col="Fecha" className="muted" stickyLefts={stickyLefts}>{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
         {/* El concepto se lee entero. Estuvo cortado a 80 caracteres desde el
             commit b2d2c79 (2026-07-27) sin que se pidiera ni se dijera en el
