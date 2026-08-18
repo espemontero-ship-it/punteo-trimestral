@@ -509,14 +509,20 @@ select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; 
    dejó además el acento tan cerca del color del texto normal que solo con
    color tampoco se distinguía. Y en cuatro sitios la sugerencia se escribía
    directamente dentro del campo de la usuaria: eso ya no pasa. */
+/* El texto sigue abajo, no se corta. Antes era nowrap + ellipsis, y con eso
+   una sugerencia larga --el concepto de un movimiento del banco pasa de 100
+   caracteres-- se quedaba en "ABONO POR TRANSFERENCIA A SU FAVOR RECI...",
+   que es justo la parte que no distingue una línea de otra. El radio baja de
+   99px a 12px por lo mismo: en una píldora de tres líneas, el radio de
+   cápsula deja los lados como dos medias lunas. En las de una línea (nota,
+   proveedor, proyecto) no cambia nada a la vista. */
 .sugerencia {
   font: inherit; font-size: 12px; color: var(--accent);
   background: var(--accent-soft); border: none;
-  border-radius: 99px; padding: 3px 9px;
-  display: inline-flex; align-items: center; gap: 4px;
-  cursor: pointer; white-space: nowrap; text-decoration: none; max-width: 100%;
+  border-radius: 12px; padding: 3px 9px;
+  display: inline-flex; align-items: flex-start; gap: 4px;
+  cursor: pointer; white-space: normal; text-decoration: none; max-width: 100%;
 }
-.sugerencia .texto-sug { overflow: hidden; text-overflow: ellipsis; }
 /* La ✕ vive dentro del recuadro, así que es su propio botón: si no, aceptar
    y descartar serían el mismo clic. */
 .sugerencia-descartar {

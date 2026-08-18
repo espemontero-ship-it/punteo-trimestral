@@ -72,10 +72,6 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
   const [detalle, setDetalle] = useState(null);             // { candidatos, historial } | null
   const [verTodas, setVerTodas] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  // Sugerencias rechazadas con la ✕. Solo mientras dure la sesión: rechazar
-  // no es una respuesta guardada, es "ahora no me la enseñes".
-  const [descartadas, setDescartadas] = useState(new Set());
-  const viva = id => !descartadas.has(id);
 
   // Entrar en la página ya cruza: el endpoint reparte y escribe los enlaces
   // antes de devolver la lista, así que lo que se ve aquí es lo que queda por
@@ -193,6 +189,19 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     }
   }
 
+  // La ✕: se guarda que ese movimiento NO es de esta persona, para siempre.
+  // Se recarga porque el reparto sigue buscando: al descartar uno, el hueco
+  // lo puede ocupar la siguiente propuesta, tanto para este pago como para
+  // otro que tuviera ese movimiento cogido.
+  async function rechazar(p, movimientoId) {
+    const r = await apiFetch(`/api/larpmanager-pagos/${p.id}/rechazar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movimientoId }),
+    }, { mensajeError: 'No se pudo guardar el rechazo.' });
+    if (r) await cargar();
+  }
+
   async function cambiarEstado(p, estado) {
     const r = await apiFetch(`/api/larpmanager-pagos/${p.id}/estado`, {
       method: 'POST',
@@ -220,13 +229,13 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
       // La propuesta del cruce se enseña como sugerencia, igual que el
       // proveedor o el proyecto en Movimientos: la app propone y tú aceptas.
       // Antes se escribía sola, y un acierto falso se cerraba en silencio.
-      if (p.sugerencia && viva(p.id)) {
+      if (p.sugerencia) {
         const s = p.sugerencia;
         return (
           <Sugerencia
             texto={`${dia(s.fecha)} · ${eur(s.importe)} · ${s.concepto}`}
             onAplicar={() => vincular(p, s.movimientoId)}
-            onDescartar={() => setDescartadas(prev => new Set(prev).add(p.id))}
+            onDescartar={() => rechazar(p, s.movimientoId)}
           />
         );
       }

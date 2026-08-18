@@ -63,9 +63,9 @@ function Celda({ col, className = '', cabecera, children, stickyLefts }) {
 // sesión). Fuera del componente principal a propósito, igual que Celda: si se
 // define dentro, React lo trata como un tipo nuevo en cada render y los
 // <input> de alrededor pierden el foco en cada tecla.
-function Sugerencia({ texto, titulo, onAplicar, onDescartar }) {
+function Sugerencia({ texto, onAplicar, onDescartar }) {
   return (
-    <span className="sugerencia" role="group" title={titulo}>
+    <span className="sugerencia" role="group">
       <span className="texto-sug" onClick={onAplicar} style={{ cursor: 'pointer' }}>{texto}</span>
       <button type="button" className="sugerencia-descartar" title="Descartar esta sugerencia" onClick={onDescartar}>✕</button>
     </span>
@@ -679,13 +679,13 @@ export default function TablaMovimientos({
       <div className="celda-estado">
         {combos.map((c, i) => {
           const numeros = [c.numero, ...(c.otras || []).map(o => o.numero)].join(' + ');
+          const ids = [c.facturaId, ...(c.otras || []).map(o => o.id)].join(',');
           return (
             <Sugerencia
               key={c.facturaId}
               texto={`facturas ${numeros}`}
-              titulo={c.detalle || ''}
               onAplicar={() => aplicarComboFacturas(m, c)}
-              onDescartar={() => setDescartadas(prev => new Set(prev).add(`combo:${m.id}:${i}`))}
+              onDescartar={() => rechazar(`combo:${m.id}:${i}`, [{ hoja: m.hoja, clave: m.clave }], 'combo', ids)}
             />
           );
         })}
