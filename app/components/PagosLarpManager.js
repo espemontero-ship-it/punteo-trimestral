@@ -23,6 +23,18 @@ const ESTADOS = [
   ['ignorada', 'ignorar'],
 ];
 
+// La misma forma de sugerencia que en Movimientos (ver TablaMovimientos.js y
+// la Guía de diseño): una sola píldora para todos los tipos, el texto acepta
+// y la ✕ rechaza.
+function Sugerencia({ texto, onAplicar, onDescartar }) {
+  return (
+    <span className="sugerencia" role="group">
+      <span className="texto-sug" onClick={onAplicar} style={{ cursor: 'pointer' }}>{texto}</span>
+      <button type="button" className="sugerencia-descartar" title="Descartar esta sugerencia" onClick={onDescartar}>✕</button>
+    </span>
+  );
+}
+
 // Fuera del componente a propósito: si se define dentro, React la trata como
 // un tipo nuevo en cada render y los <select> de dentro pierden el foco.
 function Celda({ className = '', cabecera, children, style }) {
@@ -60,6 +72,10 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
   const [detalle, setDetalle] = useState(null);             // { candidatos, historial } | null
   const [verTodas, setVerTodas] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  // Sugerencias rechazadas con la ✕. Solo mientras dure la sesión: rechazar
+  // no es una respuesta guardada, es "ahora no me la enseñes".
+  const [descartadas, setDescartadas] = useState(new Set());
+  const viva = id => !descartadas.has(id);
 
   // Entrar en la página ya cruza: el endpoint reparte y escribe los enlaces
   // antes de devolver la lista, así que lo que se ve aquí es lo que queda por
@@ -200,7 +216,21 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     if (col === 'Fecha') return <span className="muted">{dia(p.fecha)}</span>;
     if (col === 'Movimiento') {
       const t = lineaTexto(p);
-      return t ? t : <span className="vacio">—</span>;
+      if (t) return t;
+      // La propuesta del cruce se enseña como sugerencia, igual que el
+      // proveedor o el proyecto en Movimientos: la app propone y tú aceptas.
+      // Antes se escribía sola, y un acierto falso se cerraba en silencio.
+      if (p.sugerencia && viva(p.id)) {
+        const s = p.sugerencia;
+        return (
+          <Sugerencia
+            texto={`${dia(s.fecha)} · ${eur(s.importe)} · ${s.concepto}`}
+            onAplicar={() => vincular(p, s.movimientoId)}
+            onDescartar={() => setDescartadas(prev => new Set(prev).add(p.id))}
+          />
+        );
+      }
+      return <span className="vacio">—</span>;
     }
     if (col === 'Por qué') return <span className="muted">{p.motivoTexto || '—'}</span>;
     if (col === 'Estado') {
