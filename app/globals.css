@@ -425,6 +425,29 @@ input.campo-proveedor {
    se calculan en JS, en linea, junto a la plantilla de anchos de arriba). */
 .celda.col-concepto { box-shadow: 3px 0 6px -3px rgba(0,0,0,.12); }
 
+/* Panel de una fila abierta (LarpManager: vincular a mano). Ocupa TODO el
+   ancho de la tabla, no el de su columna -- antes las lineas del banco se
+   elegian en un <select> dentro de una celda de 230px y el navegador cortaba
+   el concepto justo ahi, que es la parte por la que se reconoce la linea.
+   Fondo --surface-alt, el mismo de la cabecera de un grupo, para que se lea
+   como algo que cuelga de la fila de arriba y no como una tabla suelta. */
+.panel-fila { background: var(--surface-alt); border-bottom: 1px solid var(--border); padding: 16px; }
+.panel-fila .tabla-movimientos-envoltura { margin-top: 0; }
+/* Las celdas de dentro van en blanco: sobre el gris del panel, el gris de
+   fondo normal de una celda no se distingue. */
+.panel-fila .fila-tabla .celda { background: var(--card); }
+.panel-titulo {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin: 0 0 4px;
+}
+.panel-bloque + .panel-bloque { margin-top: 24px; }
+/* Concepto y linea del banco: el texto entero, partido en varias lineas. El
+   resto de la app corta con ellipsis, pero aqui el texto ES el dato con el
+   que se decide. */
+.celda.envuelve { white-space: normal; align-items: flex-start; }
+/* El pago desde el que se abrio el panel, dentro de su propio historial. */
+.fila-tabla.fila-esta .celda { font-weight: 700; }
+
 /* Fila de cabecera de grupo (proveedor) — solo para grupos de mas de 1 linea.
    Usa las mismas columnas que las filas normales (Estado, Nota...), en vez de
    una sola celda combinada, para que quede claro que cada control actua
