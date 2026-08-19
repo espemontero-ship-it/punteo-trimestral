@@ -469,7 +469,15 @@ export default function TablaMovimientos({
   }
 
   const columnasVisiblesExtra = columnasExtra.filter(c => columnasExtraVisibles.has(c));
-  const columnasTodas = [...COLUMNAS_BASE, ...columnasVisiblesExtra];
+  // LarpManager va pegada a Concepto, no al final. Son las dos cosas que hay
+  // que leer juntas para decidir de quién es un ingreso, y estaban en los
+  // extremos opuestos de la fila: leías el concepto a la izquierda y tenías
+  // que irte al otro lado del desplazamiento para elegir.
+  const lmVisible = columnasVisiblesExtra.includes('larpmanager');
+  const otrosExtra = columnasVisiblesExtra.filter(c => c !== 'larpmanager');
+  const columnasTodas = COLUMNAS_BASE
+    .flatMap(c => (c === 'Concepto' && lmVisible ? [c, 'larpmanager'] : [c]))
+    .concat(otrosExtra);
   // Única fuente de verdad para el ancho de columnas: la misma plantilla se
   // aplica a la cabecera y a cada fila via grid-template-columns, así que es
   // estructuralmente imposible que una fila quede desalineada de otra (antes,
@@ -973,6 +981,10 @@ export default function TablaMovimientos({
             mensaje del commit: cualquier concepto más largo se veía truncado
             y no había forma de leerlo desde la tabla. */}
         <Celda col="Concepto" className="concepto" stickyLefts={stickyLefts}>{m.concepto}</Celda>
+        {/* "envuelve": el texto parte de línea en vez de recortarse con puntos
+            suspensivos, igual que Concepto. Aquí caben un nombre largo, el ✎ y
+            el botón, y recortando no se leía ninguno de los tres. */}
+        {lmVisible && <Celda col="larpmanager" className="envuelve">{celdaLarpManager(m)}</Celda>}
         <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
         <Celda col="Proveedor" className="proveedor">{celdaProveedor(m)}</Celda>
         <Celda col="Importe" className="importe num">{Number(m.importe).toFixed(2)}€</Celda>
@@ -980,9 +992,9 @@ export default function TablaMovimientos({
         <Celda col="Factura" className="facturas">{celdaFactura(m, g)}</Celda>
         <Celda col="Nota">{celdaNota(m, g)}</Celda>
         <Celda col="Proyecto">{celdaProyecto(m)}</Celda>
-        {columnasVisiblesExtra.map(c => (
-          <Celda key={c} col={c} className={c === 'larpmanager' ? '' : 'muted'}>
-            {c === 'larpmanager' ? celdaLarpManager(m) : (m.datos_originales?.[c] ?? <span className="vacio">—</span>)}
+        {otrosExtra.map(c => (
+          <Celda key={c} col={c} className="muted">
+            {m.datos_originales?.[c] ?? <span className="vacio">—</span>}
           </Celda>
         ))}
       </div>

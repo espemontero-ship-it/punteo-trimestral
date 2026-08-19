@@ -11,7 +11,7 @@ import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 const COLUMNAS = ['Nombre', 'Evento', 'Importe', 'Fecha', 'Movimiento', 'Por qué', 'Estado', 'Vincular'];
 const ANCHO_DEFECTO = {
   Nombre: 200, Evento: 150, Importe: 90, Fecha: 95,
-  'Movimiento': 340, 'Por qué': 380, Estado: 110, Vincular: 130,
+  'Movimiento': 340, 'Por qué': 200, Estado: 110, Vincular: 130,
 };
 
 // Los mismos tres de Movimientos. Se guardan con el vocabulario de esa tabla
