@@ -1024,6 +1024,10 @@ export default function TablaMovimientos({
         <Celda col="Concepto" stickyLefts={stickyLefts}>
           <div className="grupo-nombre">{nombreGrupo(g.clave)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
         </Celda>
+        {/* La cabecera de grupo no tiene nada que decir en LarpManager, pero
+            la celda tiene que estar: si no, todo lo que va detrás se corre una
+            columna respecto a la plantilla. */}
+        {lmVisible && <Celda col="larpmanager" />}
         <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
         <Celda col="Proveedor">
           {sugerenciaProveedorGrupo && viva(`provg:${g.id}`) ? (
@@ -1101,7 +1105,7 @@ export default function TablaMovimientos({
             {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </Celda>
-        {columnasVisiblesExtra.map(c => <Celda key={c} col={c} />)}
+        {otrosExtra.map(c => <Celda key={c} col={c} />)}
       </div>
     );
   }
