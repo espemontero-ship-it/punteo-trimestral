@@ -440,6 +440,16 @@ input.campo-proveedor {
    Fondo --surface-alt, el mismo de la cabecera de un grupo, para que se lea
    como algo que cuelga de la fila de arriba y no como una tabla suelta. */
 .panel-fila { background: var(--surface-alt); border-bottom: 1px solid var(--border); padding: 16px; }
+/* El contenido del panel se queda pegado al borde de lo que se ve, igual que
+   las columnas Fecha y Concepto. En una tabla con desplazamiento horizontal,
+   el panel cuelga de la fila pero se ancla a la izquierda de la TABLA: si lo
+   abres desde una columna del final, se queda fuera de la pantalla. */
+.panel-pegado { position: sticky; left: 0; }
+/* Un pago que ya contestaste (ignorar, o dado por bueno a mano) sale en la
+   lista para poder detectarlo --si el ingreso es de alguien a quien ignoraste,
+   verlo aquí es la única forma de enterarse-- pero no se puede elegir. Va en
+   gris entero para que no compita con los que sí se pueden pulsar. */
+.fila-tabla.contestado .celda { color: var(--muted); }
 .panel-fila .tabla-movimientos-envoltura { margin-top: 0; }
 /* Las celdas de dentro van en blanco: sobre el gris del panel, el gris de
    fondo normal de una celda no se distingue. */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { apiFetch, mostrarToast } from '../lib/toast';
 import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 import SubirFactura from './SubirFactura';
@@ -476,7 +476,36 @@ export default function TablaMovimientos({
   // con <table>, el ancho se repartía entre colgroup + estilo del <th> + una
   // variable CSS aparte para las columnas fijas, y esos tres sitios podían
   // desincronizarse).
-  const plantillaColumnas = columnasTodas.map(c => `${anchoDe(c)}px`).join(' ');
+  // Concepto se queda con lo que sobre en vez de tener un ancho clavado. Con
+  // todas las columnas en píxeles fijos la tabla medía siempre lo mismo, así
+  // que en cuanto la suma pasaba del ancho de la ventana había desplazamiento
+  // horizontal para siempre -- y con él, la columna donde se trabaja al final
+  // del todo. Lo fijo suma 985 px; en un contenedor de 1.368 el concepto pasa
+  // de 200 a unos 383 y la tabla encaja exacta.
+  //
+  // Si la usuaria arrastra Concepto, su ancho manda: ahí ya es una decisión
+  // suya y el desplazamiento vuelve si no cabe.
+  const plantillaColumnas = columnasTodas
+    .map(c => (c === 'Concepto' && anchos.Concepto === undefined
+      ? `minmax(${ANCHO_DEFECTO.Concepto}px, 1fr)`
+      : `${anchoDe(c)}px`))
+    .join(' ');
+
+  // Ancho de lo que se ve de la tabla (no de la tabla entera). Lo necesita el
+  // panel que cuelga de una fila: dentro de un contenedor con desplazamiento,
+  // un 100% mide la tabla completa, así que el panel se quedaba anclado a la
+  // izquierda y fuera de vista al desplazarse.
+  const envolturaRef = useRef(null);
+  const [anchoVisible, setAnchoVisible] = useState(0);
+  useEffect(() => {
+    const el = envolturaRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const medir = () => setAnchoVisible(el.clientWidth);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // Fecha y Concepto se quedan fijas al hacer scroll horizontal -- cada una
   // necesita su propio left, calculado a partir de los anchos de las que van
   // antes (misma fuente de verdad que la plantilla de arriba).
@@ -874,12 +903,17 @@ export default function TablaMovimientos({
 
   function panelVincularLm(m) {
     const plantilla = '230px 160px 90px 95px 100px 110px';
-    // El panel ocupa el ancho de la TABLA, no el de la ventana: Movimientos se
-    // desplaza en horizontal, y sin esto abrirlo mirando las columnas de la
-    // derecha lo dejaba fuera de vista, a la izquierda.
-    const estilo = { width: columnasTodas.reduce((total, c) => total + anchoDe(c), 0) };
+    // El contenido va pegado al borde de lo que se ve (position: sticky en
+    // .panel-pegado), igual que Fecha y Concepto. Sin esto, al abrir el panel
+    // desde la columna LarpManager --que está al final de la fila-- se quedaba
+    // anclado a la izquierda de la tabla, fuera de la pantalla.
+    const pegado = { width: anchoVisible || undefined };
     if (!candidatosLm) {
-      return <div className="panel-fila" style={estilo}><span className="muted">Cargando...</span></div>;
+      return (
+        <div className="panel-fila">
+          <div className="panel-pegado" style={pegado}><span className="muted">Cargando...</span></div>
+        </div>
+      );
     }
     const q = busquedaLm.trim().toLowerCase();
     const destacados = candidatosLm.filter(c => c.suNombre || c.mismoImporte);
@@ -899,7 +933,8 @@ export default function TablaMovimientos({
     }
 
     return (
-      <div className="panel-fila" style={estilo}>
+      <div className="panel-fila">
+       <div className="panel-pegado" style={pegado}>
         <p className="panel-titulo">Qué pago de LarpManager es este ingreso</p>
         {/* El buscador no está en el panel equivalente de la pestaña
             LarpManager porque allí se elige entre unas decenas de
@@ -924,7 +959,12 @@ export default function TablaMovimientos({
             <Celda cabecera> </Celda>
           </div>
           {lista.slice(0, 60).map(c => (
-            <div role="row" key={c.id} className="fila-tabla" style={{ gridTemplateColumns: plantilla }}>
+            <div
+              role="row"
+              key={c.id}
+              className={`fila-tabla${c.estado === 'pendiente' ? '' : ' contestado'}`}
+              style={{ gridTemplateColumns: plantilla }}
+            >
               <Celda>{c.nombreReal}</Celda>
               <Celda><span className="muted">{c.evento || '—'}</span></Celda>
               <Celda>{c.importe.toFixed(2)}€</Celda>
@@ -951,6 +991,7 @@ export default function TablaMovimientos({
         <div style={{ marginTop: 12 }}>
           <button type="button" className="secundario" onClick={cerrarVincularLm}>Cancelar</button>
         </div>
+       </div>
       </div>
     );
   }
@@ -1160,7 +1201,7 @@ export default function TablaMovimientos({
 
       {grupos.length === 0 && <p className="muted">Nada que coincida con este filtro.</p>}
 
-      <div className="tabla-movimientos-envoltura" role="table">
+      <div className="tabla-movimientos-envoltura" role="table" ref={envolturaRef}>
         <div role="rowgroup">
           <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: plantillaColumnas }}>
             {columnasTodas.map(c => (

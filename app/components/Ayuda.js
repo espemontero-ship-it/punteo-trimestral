@@ -210,8 +210,14 @@ const SECCIONES_ADMIN = [
         <p>
           Cuando una línea ya tiene su pago, aparece un <strong>✎</strong> al lado para <strong>quitar el vínculo</strong>
           si te has equivocado. El pago vuelve a la pestaña LarpManager y la línea deja de decir de quién es — pero
-          <em> no cambia de estado</em>: si estaba resuelta sigue resuelta, y eso se cambia a mano en Estado. Vincular se
-          hace desde la pestaña <strong>LarpManager</strong>; aquí únicamente se deshace.
+          <em> no cambia de estado</em>: si estaba resuelta sigue resuelta, y eso se cambia a mano en Estado.
+        </p>
+        <p>
+          Y si no tiene pago, hay un <strong>Vincular</strong> para ponérselo desde aquí, sin ir a la otra pestaña. Abre
+          debajo de la fila la lista de pagos que todavía no tienen movimiento —nombre, evento, importe y fecha—, con los
+          que llevan su nombre en el concepto o cuadran de importe arriba del todo, y un buscador porque el banco muchas
+          veces no escribe el apellido (&quot;Registration fee 2 of Calum&quot;). Los pagos que ya pusiste en
+          <em> ignorar</em> salen también, para que los veas, pero sin botón: primero hay que devolverlos a pendiente.
         </p>
 
         <h4>Devoluciones</h4>
@@ -348,13 +354,19 @@ const SECCIONES_ADMIN = [
         </p>
 
         <h4>Qué te puede decir el &quot;Por qué&quot;</h4>
+        <p className="muted">
+          Es una etiqueta corta y nada más. Cuál es el movimiento y de quién es lo enseñan la columna
+          <strong> Movimiento</strong> y el panel de Vincular; esta columna solo dice en qué situación está el pago.
+        </p>
         <TablaEstados filas={[
-          ['Le corresponde…', 'Encaja el apellido y el importe. Es la propuesta firme, la de color índigo.'],
+          ['Ok', 'Encaja el apellido y el importe. Es la propuesta firme, la de color índigo.'],
           ['El importe no cuadra', 'El apellido sí aparece en el banco pero por otra cantidad. Normalmente el dato de LarpManager está mal: se arregla allí y se vuelve a subir. Aun así te propone el más cercano, en ámbar.'],
-          ['Parte del nombre', 'Coincide el nombre de pila pero no el apellido, porque el banco lo corta (Van den Esschert llega como "Van Den Ess"). Te propone el más cercano, en ámbar.'],
-          ['No aparece', 'Ni rastro de ese nombre en el banco. O la transferencia no ha llegado, o falta subir el extracto de esas fechas. Aquí no hay nada que proponer.'],
-          ['Sin línea libre', 'Hay movimientos suyos por ese importe, pero ya los justifican otros pagos suyos. Tampoco hay propuesta: no queda ninguno libre.'],
-          ['Emparejado con…', 'Ya tiene su movimiento. Estos solo salen al quitar "Solo pendientes".'],
+          ['Solo coincide parte del nombre', 'Coincide el nombre de pila pero no el apellido, porque el banco lo corta (Van den Esschert llega como "Van Den Ess"). Te propone el más cercano, en ámbar.'],
+          ['No aparece en el banco', 'Ni rastro de ese nombre. O la transferencia no ha llegado, o falta subir el extracto de esas fechas. Aquí no hay nada que proponer.'],
+          ['Sin movimiento libre', 'Hay movimientos por ese importe con su apellido, pero ya están dados. Tampoco hay propuesta: no queda ninguno libre.'],
+          ['Emparejado', 'Ya tiene su movimiento. Estos solo salen al quitar "Solo pendientes".'],
+          ['Ignorado a mano', 'Lo pusiste en "ignorar": no se espera ningún ingreso.'],
+          ['Dado por bueno a mano', 'Lo pusiste en "resuelto" sin movimiento.'],
         ]} />
 
         <h4>El estado de cada pago</h4>
