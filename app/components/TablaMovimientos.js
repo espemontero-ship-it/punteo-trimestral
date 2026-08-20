@@ -171,7 +171,12 @@ export default function TablaMovimientos({
   function iniciarArrastre(e, col) {
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
     const startX = e.clientX;
-    const startWidth = anchoDe(col);
+    // El ancho de partida se mide de la celda, no de la tabla de anchos:
+    // Concepto se pinta con lo que sobra (1fr) mientras no se haya arrastrado,
+    // así que su valor "de fábrica" no es el que se está viendo y la columna
+    // pegaba un salto en cuanto empezabas a arrastrarla.
+    const celda = e.currentTarget.closest('.celda');
+    const startWidth = celda ? celda.offsetWidth : anchoDe(col);
     function mover(ev) {
       const nuevo = Math.max(50, startWidth + (ev.clientX - startX));
       setAnchos(prev => ({ ...prev, [col]: nuevo }));
