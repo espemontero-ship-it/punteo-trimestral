@@ -907,7 +907,7 @@ export default function TablaMovimientos({
   }
 
   function panelVincularLm(m) {
-    const plantilla = '230px 160px 90px 95px 100px 110px';
+    const plantilla = '210px 150px 90px 95px 100px 1fr 110px';
     // El contenido va pegado al borde de lo que se ve (position: sticky en
     // .panel-pegado), igual que Fecha y Concepto. Sin esto, al abrir el panel
     // desde la columna LarpManager --que está al final de la fila-- se quedaba
@@ -921,20 +921,24 @@ export default function TablaMovimientos({
       );
     }
     const q = busquedaLm.trim().toLowerCase();
-    const destacados = candidatosLm.filter(c => c.suNombre || c.mismoImporte);
-    let lista = candidatosLm;
+    // Los que ya tienen movimiento son la inmensa mayoría y no se pueden
+    // elegir: solo salen al buscar por nombre, para poder cazar un enlace
+    // equivocado. Sin buscar, la lista es la de los que están libres.
+    const sinMovimiento = candidatosLm.filter(c => !c.enlazado);
+    const destacados = sinMovimiento.filter(c => c.suNombre || c.mismoImporte);
+    let lista = sinMovimiento;
     let pie;
     if (q) {
       lista = candidatosLm.filter(c => `${c.nombreReal} ${c.evento || ''}`.toLowerCase().includes(q));
-      pie = `${lista.length} de ${candidatosLm.length} con ese texto.`;
+      pie = `${lista.length} con ese texto, incluidos los que ya tienen movimiento.`;
     } else if (!verTodosLm && destacados.length > 0) {
       lista = destacados;
-      pie = <>{destacados.length} de {candidatosLm.length} llevan su nombre o su importe.{' '}
+      pie = <>{destacados.length} de {sinMovimiento.length} llevan su nombre o su importe.{' '}
         <a href="#" onClick={e => { e.preventDefault(); setVerTodosLm(true); }}>Ver todos</a></>;
     } else {
       // "Sin movimiento", no "pendientes": la lista incluye los ignorados y
       // los dados por buenos a mano, que se ven aunque no se puedan enlazar.
-      pie = `Los ${candidatosLm.length} pagos sin movimiento.`;
+      pie = `Los ${sinMovimiento.length} pagos sin movimiento.`;
     }
 
     return (
@@ -961,13 +965,14 @@ export default function TablaMovimientos({
             <Celda cabecera>Importe</Celda>
             <Celda cabecera>Fecha</Celda>
             <Celda cabecera>Estado</Celda>
+            <Celda cabecera>Movimiento</Celda>
             <Celda cabecera> </Celda>
           </div>
           {lista.slice(0, 60).map(c => (
             <div
               role="row"
               key={c.id}
-              className={`fila-tabla${c.estado === 'pendiente' ? '' : ' contestado'}`}
+              className={`fila-tabla${c.estado === 'pendiente' && !c.enlazado ? '' : ' contestado'}`}
               style={{ gridTemplateColumns: plantilla }}
             >
               <Celda>{c.nombreReal}</Celda>
@@ -975,11 +980,16 @@ export default function TablaMovimientos({
               <Celda>{c.importe.toFixed(2)}€</Celda>
               <Celda><span className="muted">{c.fecha ? new Date(c.fecha).toLocaleDateString('es-ES') : '—'}</span></Celda>
               <Celda><span className="muted">{ETIQUETA_ESTADO_PAGO[c.estado] || c.estado}</span></Celda>
-              {/* Los que no están pendientes se ven, pero no se pueden
-                  enlazar: ya los contestaste. Sin botón, no con un botón
-                  apagado, para que no invite a pulsarlo. */}
+              <Celda className="envuelve">
+                {c.enlazado
+                  ? `${c.enlazado.fecha ? new Date(c.enlazado.fecha).toLocaleDateString('es-ES') : '—'} · ${c.enlazado.importe.toFixed(2)}€ · ${c.enlazado.concepto || ''}`
+                  : <span className="vacio">—</span>}
+              </Celda>
+              {/* Los que no están pendientes o ya tienen movimiento se ven,
+                  pero no se pueden elegir. Sin botón, no con un botón apagado,
+                  para que no invite a pulsarlo. */}
               <Celda>
-                {c.estado === 'pendiente' ? (
+                {c.estado === 'pendiente' && !c.enlazado ? (
                   <button type="button" className="secundario" disabled={guardandoLm} onClick={() => vincularPagoLm(m, c.id)}>
                     {guardandoLm ? '...' : 'Es este'}
                   </button>
