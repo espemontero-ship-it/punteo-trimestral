@@ -8,9 +8,14 @@ Este documento es la fuente de verdad del proyecto: qué es, qué decisiones se 
 
 "Mostrar" = describir o previsualizar **sin tocar ningún archivo**. "Implementar" = editar el archivo (aunque sea un mockup) y volver a publicarlo. Son dos pasos distintos y no se saltan: si la usuaria pide "muéstramelo", la respuesta es una descripción o boceto en palabras, nunca una edición de archivo — ni siquiera de un mockup. Solo se edita después de una confirmación explícita a esa descripción. Una idea a medio formular, o una petición que "parece clara", no es autorización para tocar un archivo.
 
-**2026-07-27, regla ampliada — "mockup siempre":** para cualquier cambio visual/de layout (no solo funcionalidad nueva), la validación previa tiene que ser un **mockup visual real**, no basta con describirlo en palabras — el comportamiento de CSS (scroll, sticky, anchos) es demasiado fácil de imaginar mal en texto. Construir el mockup, enseñarlo, y solo tras confirmación explícita aplicarlo al código real de la app.
+**2026-08-20 — se retira el "mockup siempre" (regla del 2026-07-27) y se cambia por esto:**
 
-Ver [[feedback-validate-before-coding]] en memoria — esta regla ya se incumplió más de una vez en la sesión del 2026-07-27 y hay que dejar de repetirlo.
+- **Cambio visual:** se dice en dos líneas qué se va a tocar, se hace, se sube, y lo mira ella en la app. Pequeño y reversible.
+- **No se mete nada que ella no haya pedido explícitamente.** Si aparece algo que hace falta, se dice y se espera.
+- **Al subir, dos listas cortas: lo que va a ver y dónde, y lo que se ha tocado y no se ve.** Si no se sabe decir dónde mirarlo, va en la segunda.
+- **Un commit por cada cosa pedida.**
+
+El mockup se retira porque una maqueta fuera de su pantalla no se parece a la de verdad: el 2026-08-19 se hicieron cinco del mismo panel y una pantalla entera, se rechazaron todas, y el arreglo acabó siendo dos cosas pequeñas que no se habían maquetado. Las dos listas y el commit por cosa salen de que **la usuaria no lee código**: un diff o un nombre de archivo no le sirven para controlar nada, y por eso ese día se colaron un ancho, una columna movida de sitio y textos nuevos sin que hubiera forma de verlos venir.
 
 **2026-07-28 — subir cambios sin pedir permiso cada vez.** Una vez un cambio está verificado (build limpio, y probado en local cuando es posible), se hace commit y push directamente, sin esperar a que la usuaria escriba "commit y push" cada vez. Motivo explícito: "cuantos menos oks te dé mejor, porque hay veces que no puedo hacerte caso" — minimizar cuántas veces necesita responder, no solo por comodidad. Esto **no** afecta a la regla de arriba (mostrar antes de implementar cambios de diseño/estructura/navegación) — sigue exactamente igual, esa validación es sobre qué se construye, esta es sobre cuándo se publica algo ya construido y verificado.
 
