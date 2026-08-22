@@ -24,8 +24,8 @@ const ETIQUETAS_TIPO = {
 // única plantilla de anchos se aplica a la cabecera y a cada fila, así que es
 // estructuralmente imposible que se desalineen, y cada columna tiene su
 // propio sitio fijo — nada se mete a compartir celda con otra cosa.
-const COLUMNAS = ['Fecha', 'Concepto', 'Importe', 'Nombre', 'Subida', 'Subido por', 'Vincular', 'Motivo', 'Movimiento'];
-const ANCHO_DEFECTO = { Fecha: 115, Concepto: 150, Importe: 70, Nombre: 190, Subida: 100, 'Subido por': 90, Vincular: 120, Motivo: 175, Movimiento: 190 };
+const COLUMNAS = ['Fecha', 'Proveedor', 'Concepto', 'Importe', 'Nombre', 'Subida', 'Subido por', 'Vincular', 'Motivo', 'Movimiento'];
+const ANCHO_DEFECTO = { Fecha: 115, Proveedor: 140, Concepto: 150, Importe: 70, Nombre: 190, Subida: 100, 'Subido por': 90, Vincular: 120, Motivo: 175, Movimiento: 190 };
 const ANCHO_CHECKBOX = 30;
 
 function montoCaracteristico(f) {
@@ -329,6 +329,23 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     return new Set(Object.keys(conteo).filter(n => conteo[n] > 1));
   }, [facturas]);
 
+  // El MISMO ARCHIVO subido dos veces, aunque se llame distinto: se compara la
+  // huella (sha256) del contenido. Por el nombre, "factura.pdf" y
+  // "factura (1).pdf" bajados del mismo correo pasaban por dos facturas
+  // distintas y nada avisaba.
+  const huellasDuplicadas = useMemo(() => {
+    const conteo = {};
+    for (const f of facturas) {
+      if (!f.huella) continue;
+      conteo[f.huella] = (conteo[f.huella] || 0) + 1;
+    }
+    return new Set(Object.keys(conteo).filter(h => conteo[h] > 1));
+  }, [facturas]);
+
+  function estaRepetida(f) {
+    return nombresDuplicados.has(f.nombre_original) || (!!f.huella && huellasDuplicadas.has(f.huella));
+  }
+
   function alternar(id) {
     setSeleccionadas(prev => {
       const next = new Set(prev);
@@ -348,24 +365,30 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   // todas menos la más antigua -- el objetivo es quedarse con una copia, no
   // borrar el archivo entero si nunca llegó a emparejar ninguna.
   const duplicadasSinEmparejar = useMemo(() => {
-    const porNombre = {};
-    for (const f of facturas) {
-      if (!nombresDuplicados.has(f.nombre_original)) continue;
-      (porNombre[f.nombre_original] ||= []).push(f);
+    // Se agrupa dos veces, por nombre y por huella, y se junta el resultado:
+    // dos archivos con el mismo nombre pero distinto contenido siguen siendo
+    // sospechosos, y dos con el mismo contenido y distinto nombre también.
+    const grupos = [];
+    for (const clave of ['nombre_original', 'huella']) {
+      const repetidos = clave === 'nombre_original' ? nombresDuplicados : huellasDuplicadas;
+      const porClave = {};
+      for (const f of facturas) {
+        if (!f[clave] || !repetidos.has(f[clave])) continue;
+        (porClave[f[clave]] ||= []).push(f);
+      }
+      grupos.push(...Object.values(porClave));
     }
-    const resultado = [];
-    for (const grupo of Object.values(porNombre)) {
+    const resultado = new Map();
+    for (const grupo of grupos) {
       const sinEmparejar = grupo.filter(f => f.estado !== 'matcheada');
       const hayEmparejada = sinEmparejar.length < grupo.length;
-      if (hayEmparejada) {
-        resultado.push(...sinEmparejar);
-      } else {
-        const ordenado = [...sinEmparejar].sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en));
-        resultado.push(...ordenado.slice(1));
-      }
+      const sobran = hayEmparejada
+        ? sinEmparejar
+        : [...sinEmparejar].sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en)).slice(1);
+      for (const f of sobran) resultado.set(f.id, f);
     }
-    return resultado;
-  }, [facturas, nombresDuplicados]);
+    return [...resultado.values()];
+  }, [facturas, nombresDuplicados, huellasDuplicadas]);
 
   function marcarDuplicadasSinEmparejar() {
     setSeleccionadas(new Set(duplicadasSinEmparejar.map(f => f.id)));
@@ -395,7 +418,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const facturasVisibles = soloPendientes ? facturas.filter(f => f.estado !== 'matcheada') : facturas;
 
   function contenidoCelda(col, f) {
-    const duplicada = nombresDuplicados.has(f.nombre_original);
+    const duplicada = estaRepetida(f);
     const resultadoLocal = resultadosFila[f.id];
     // Si no se acaba de recalcular esta fila a mano en esta sesión (resultadoLocal),
     // cae a lo que ya se calculó y se guardó en BD la última vez (subida de excel,
@@ -428,6 +451,16 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
           >
             {f.nombre_original}{duplicada ? ' ⚠' : ''}
           </a>
+        );
+
+      // Quien emite la factura, tal y como lo lee la IA del documento. No es
+      // editable: es un dato leído, no una decisión. Vacío en las facturas
+      // que se subieron antes de que existiera esta columna.
+      case 'Proveedor':
+        return (
+          <span title={f.proveedor || ''} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+            {f.proveedor || <span className="muted">—</span>}
+          </span>
         );
 
       case 'Concepto':
@@ -657,7 +690,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         </div>
         <div role="rowgroup">
           {facturasVisibles.map(f => {
-            const duplicada = nombresDuplicados.has(f.nombre_original);
+            const duplicada = estaRepetida(f);
             return (
               <div role="row" key={f.id} className="fila-tabla" style={{ gridTemplateColumns: plantillaColumnas, background: duplicada ? 'rgba(166, 124, 46, 0.08)' : undefined }}>
                 <Celda><input type="checkbox" checked={seleccionadas.has(f.id)} onChange={() => alternar(f.id)} /></Celda>

@@ -17,6 +17,7 @@ export async function GET() {
   const { rows } = await query(
     `SELECT f.id, f.numero, f.nombre_original, f.proveedor_clave, f.estado, f.es_imagen,
             f.importes, f.totales, f.fechas, f.concepto, f.creado_en, f.motivo_tipo, f.motivo_detalle, f.motivo_candidatos, f.lectura_regex, f.leido_con_ia,
+            f.proveedor, f.huella,
             c.nombre AS subido_por_nombre,
             m.id AS movimiento_id, m.fecha AS movimiento_fecha, m.concepto AS movimiento_concepto, m.importe AS movimiento_importe
      FROM facturas f
