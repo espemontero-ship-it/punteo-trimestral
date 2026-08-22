@@ -576,7 +576,11 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         );
 
       case 'Fecha':
-        if (bloqueada) return <span className="muted">—</span>;
+        // Igual que el importe: emparejada no es lo mismo que vacía.
+        if (bloqueada) {
+          const dia = fechaInicial(f);
+          return <span>{dia ? new Date(dia).toLocaleDateString('es-ES') : <span className="muted">—</span>}</span>;
+        }
         return (
           <input
             type="date"
@@ -588,7 +592,12 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         );
 
       case 'Importe':
-        if (bloqueada) return <span className="muted">—</span>;
+        // Emparejada: no se puede tocar, pero SE VE. Antes salía un guión y
+        // parecía que la factura no tenía importe.
+        if (bloqueada) {
+          const monto = montoCaracteristico(f);
+          return <span>{monto !== null ? `${Number(monto).toFixed(2)}€` : <span className="muted">—</span>}</span>;
+        }
         return (
           <input
             type="text"
