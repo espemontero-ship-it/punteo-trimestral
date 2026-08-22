@@ -360,40 +360,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     setSeleccionadas(prev => (prev.size === facturasVisibles.length ? new Set() : new Set(facturasVisibles.map(f => f.id))));
   }
 
-  // Por cada nombre repetido: si alguna copia ya está emparejada, todas las
-  // demás sobran (ya hay una buena). Si ninguna está emparejada, se marcan
-  // todas menos la más antigua -- el objetivo es quedarse con una copia, no
-  // borrar el archivo entero si nunca llegó a emparejar ninguna.
-  const duplicadasSinEmparejar = useMemo(() => {
-    // Se agrupa dos veces, por nombre y por huella, y se junta el resultado:
-    // dos archivos con el mismo nombre pero distinto contenido siguen siendo
-    // sospechosos, y dos con el mismo contenido y distinto nombre también.
-    const grupos = [];
-    for (const clave of ['nombre_original', 'huella']) {
-      const repetidos = clave === 'nombre_original' ? nombresDuplicados : huellasDuplicadas;
-      const porClave = {};
-      for (const f of facturas) {
-        if (!f[clave] || !repetidos.has(f[clave])) continue;
-        (porClave[f[clave]] ||= []).push(f);
-      }
-      grupos.push(...Object.values(porClave));
-    }
-    const resultado = new Map();
-    for (const grupo of grupos) {
-      const sinEmparejar = grupo.filter(f => f.estado !== 'matcheada');
-      const hayEmparejada = sinEmparejar.length < grupo.length;
-      const sobran = hayEmparejada
-        ? sinEmparejar
-        : [...sinEmparejar].sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en)).slice(1);
-      for (const f of sobran) resultado.set(f.id, f);
-    }
-    return [...resultado.values()];
-  }, [facturas, nombresDuplicados, huellasDuplicadas]);
-
-  function marcarDuplicadasSinEmparejar() {
-    setSeleccionadas(new Set(duplicadasSinEmparejar.map(f => f.id)));
-  }
-
   async function borrarSeleccionadas() {
     setConfirmarBorrado(false);
     setBorrando(true);
@@ -668,9 +634,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
           <p className="muted" style={{ fontWeight: 700, margin: 0 }}>
             ⚠ {nombresDuplicados.size} nombre(s) de archivo repetido(s) — marcados abajo.
           </p>
-          <button type="button" className="secundario" disabled={duplicadasSinEmparejar.length === 0} onClick={marcarDuplicadasSinEmparejar}>
-            Marcar duplicadas sin emparejar ({duplicadasSinEmparejar.length})
-          </button>
         </div>
       )}
 
