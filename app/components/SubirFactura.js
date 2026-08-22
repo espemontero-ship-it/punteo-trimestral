@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
+import { huellaDeArchivo, facturaConEseArchivo } from '../lib/huella';
 
 export default function SubirFactura({ hoja, clave, etiqueta, onResultado, className = 'secundario', conIcono = true }) {
   const inputRef = useRef(null);
@@ -21,6 +22,14 @@ export default function SubirFactura({ hoja, clave, etiqueta, onResultado, class
     if (!archivo) return;
     setSubiendo(true);
     try {
+      // Antes de subir nada: si este archivo ya está guardado, no se sube.
+      // La huella se calcula aquí mismo, en el navegador, y no cuesta nada.
+      const ya = await facturaConEseArchivo(await huellaDeArchivo(archivo));
+      if (ya) {
+        onResultado({ tipo: 'duplicada', detalle: `Ese archivo ya está subido como factura #${ya.numero} (${ya.nombre}). No se ha subido.` });
+        return;
+      }
+
       const prefijo = hoja && clave ? `${hoja}-${clave}` : 'sueltas';
       const blob = await uploadPresigned(`facturas/${prefijo}-${Date.now()}-${archivo.name}`, archivo, {
         access: 'private',

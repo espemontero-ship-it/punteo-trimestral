@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
+import { huellaDeArchivo, facturaConEseArchivo } from '../lib/huella';
 
 // Un único formulario de subida para colaboradores, un archivo cada vez.
 // El proyecto se elige siempre (ya no se asigna uno fijo al alta) -- entra
@@ -33,6 +34,12 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
     setSubiendo(true);
     setMensaje(null);
     try {
+      // If this exact file is already uploaded, it is not uploaded again.
+      if (await facturaConEseArchivo(await huellaDeArchivo(archivo))) {
+        setMensaje('This file has already been uploaded.');
+        return;
+      }
+
       const blob = await uploadPresigned(`facturas/colaborador-${Date.now()}-${archivo.name}`, archivo, {
         access: 'private',
         handleUploadUrl: '/api/blob-upload',

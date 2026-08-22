@@ -8,7 +8,7 @@ const PUBLICAS = [
   '/invitacion', '/api/invitaciones',
 ];
 // Rutas que cualquier sesión válida (admin o colaborador) puede usar.
-const COMPARTIDAS = ['/api/blob-upload'];
+const COMPARTIDAS = ['/api/blob-upload', '/api/facturas/huella'];
 const PREFIJOS_COLABORADOR = ['/colaborador', '/api/colaborador'];
 
 export async function proxy(request) {

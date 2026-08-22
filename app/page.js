@@ -290,6 +290,17 @@ export default function Home() {
       }
     }
 
+    // Los archivos que no se han subido porque ya estaban. Antes esto se
+    // tiraba: el servidor lo decía y aquí no se miraba, así que subir dos
+    // veces el mismo archivo no avisaba de nada.
+    const repetidos = resultados.filter(r => r.resultado?.tipo === 'duplicada');
+    if (repetidos.length) {
+      mostrarToast(repetidos.length === 1
+        ? repetidos[0].resultado.detalle
+        : `${repetidos.length} archivos no se han subido porque ya estaban: ${repetidos.map(r => r.nombreArchivo).join(", ")}`,
+        'error');
+    }
+
     setLote({ ambiguos });
     await cargar();
   }
