@@ -17,6 +17,23 @@ export async function proxy(request) {
     return NextResponse.next();
   }
 
+  // En local (npm run dev) no se pide contraseña: se entra directo como
+  // administradora. En producción NODE_ENV es 'production' y esto no se
+  // ejecuta nunca, así que el login sigue exactamente igual de cerrado.
+  //
+  // Existe para que se pueda mirar la aplicación de verdad mientras se
+  // trabaja en ella. Sin esto había que hacer el desarrollo a ciegas --
+  // maquetas sueltas y capturas de pantalla-- porque no se podía abrir ni una
+  // pantalla, y eso hizo perder horas y meter cosas rotas sin enterarse.
+  //
+  // Lo que se pierde: quien pueda arrancar la app en este ordenador entra sin
+  // contraseña. Como para arrancarla hace falta tener los archivos del
+  // proyecto, y la contraseña está en .env.local en texto plano, no abre
+  // ninguna puerta que no estuviera abierta ya.
+  if (process.env.NODE_ENV !== 'production') {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const sesion = await leerSesion(token);
 
