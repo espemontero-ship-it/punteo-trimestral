@@ -724,10 +724,17 @@ export default function TablaMovimientos({
         {combos.map((c, i) => {
           const numeros = [c.numero, ...(c.otras || []).map(o => o.numero)].join(' + ');
           const ids = [c.facturaId, ...(c.otras || []).map(o => o.id)].join(',');
+          // El aviso de que no cuadra tiene que salir aquí también, no solo en
+          // Facturas: desde aquí se acepta con el mismo clic. Cuando cuadra al
+          // céntimo no se dice nada, que es lo normal.
+          const falla = c.exacto === false && typeof c.diferencia === 'number';
+          const desvio = falla
+            ? ` · NO CUADRA: ${c.diferencia > 0 ? 'faltan' : 'sobran'} ${Math.abs(c.diferencia).toFixed(2)}€`
+            : '';
           return (
             <Sugerencia
               key={c.facturaId}
-              texto={`facturas ${numeros}`}
+              texto={`facturas ${numeros}${desvio}`}
               onAplicar={() => aplicarComboFacturas(m, c)}
               onDescartar={() => rechazar(`combo:${m.id}:${i}`, [{ hoja: m.hoja, clave: m.clave }], 'combo', ids)}
             />
