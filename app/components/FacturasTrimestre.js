@@ -7,6 +7,8 @@ import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 import { parseImporte } from '../../lib/numero.cjs';
 
 const ETIQUETAS_TIPO = {
+  emparejada_ok: 'Emparejada y cuadra',
+  emparejada_no_cuadra: 'Emparejada pero NO cuadra',
   match_directo: 'Emparejada',
   ambiguo: 'Varias líneas con el mismo importe',
   combo_sugerido: 'Combinación de facturas sugerida',
@@ -114,6 +116,19 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   }, []);
 
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
+  // Facturas donde la IA y el lector de texto no leyeron el mismo importe. Se
+  // compara el mayor de cada uno, al céntimo.
+  const discrepancias = useMemo(() => facturas.filter(f => {
+    if (!f.leido_con_ia || !f.lectura_regex) return false;
+    const mayor = (a, b) => {
+      const l = (a && a.length ? a : b) || [];
+      return l.length ? Math.max(...l.map(Number)) : null;
+    };
+    const deIA = mayor(f.totales, f.importes);
+    const deRegex = mayor(f.lectura_regex.totales, f.lectura_regex.importes);
+    if (deIA === null || deRegex === null) return deIA !== deRegex;
+    return Math.abs(deIA - deRegex) > 0.01;
+  }).length, [facturas]);
   const sinImporte = useMemo(
     () => facturas.filter(f => f.estado !== 'matcheada' && !(f.totales?.length || f.importes?.length)).length,
     [facturas]
@@ -479,7 +494,11 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         // "Ya cubierta" es el único motivo donde lo que hace falta saber está
         // en el detalle (qué factura la cubre), no en la etiqueta corta: se
         // enseña entero, en varias líneas si hace falta.
-        if ((resultadoLocal || f).motivo_tipo === 'ya_cubierta' || resultadoLocal?.tipo === 'ya_cubierta') {
+        // "Ya cubierta" y el aviso de que un emparejamiento no cuadra se
+        // enseñan enteros: lo que hace falta saber está en la frase (qué
+        // factura la cubre, cuánto se desvía), no en la etiqueta corta.
+        const largos = ['ya_cubierta', 'emparejada_no_cuadra'];
+        if (largos.includes((resultadoLocal || f).motivo_tipo) || largos.includes(resultadoLocal?.tipo)) {
           return <span className="muted" style={{ whiteSpace: 'normal' }}>{(resultadoLocal || f).motivo_detalle || resultadoLocal?.detalle}</span>;
         }
         return <span className="muted">{f.estado === 'matcheada' ? 'Emparejada' : (ETIQUETAS_TIPO[(resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo] || (resultadoLocal || f).motivo_detalle || 'Sin recalcular todavía')}</span>;
@@ -564,6 +583,13 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       <div className="fila" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
         <p className="muted" style={{ margin: 0 }}>
           {sinResolver} factura(s) sin resolver todavía.
+          {/* Cada factura la leen los dos: la IA y el lector de texto de
+              siempre. Manda la IA, pero donde no coinciden hay un fallo del
+              lector que se puede arreglar mirando el documento. El aviso vive
+              aquí, donde se trabaja, y no en un recordatorio que se olvida. */}
+          {discrepancias > 0 && (
+            <> · En <strong>{discrepancias}</strong> el lector de texto y la IA leyeron importes distintos.</>
+          )}
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <label className="toggle-pendientes">

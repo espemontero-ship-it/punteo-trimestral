@@ -1,7 +1,7 @@
 const { query } = require('../../../lib/db.cjs');
 const { descargarBlob } = require('../../../lib/blob.cjs');
 const { eliminarBlob } = require('../../../lib/blob.cjs');
-const { analizarBuffer } = require('../../../lib/facturas.cjs');
+const { analizarFactura } = require('../../../lib/facturaMatcher.cjs');
 const { procesarFacturaSubida, asegurarColumnasMotivo } = require('../../../lib/facturaMatcher.cjs');
 const { obtenerSesion } = require('../../../lib/auth.cjs');
 
@@ -16,7 +16,7 @@ export async function GET() {
   await asegurarColumnasMotivo();
   const { rows } = await query(
     `SELECT f.id, f.numero, f.nombre_original, f.proveedor_clave, f.estado, f.es_imagen,
-            f.importes, f.totales, f.fechas, f.concepto, f.creado_en, f.motivo_tipo, f.motivo_detalle, f.motivo_candidatos,
+            f.importes, f.totales, f.fechas, f.concepto, f.creado_en, f.motivo_tipo, f.motivo_detalle, f.motivo_candidatos, f.lectura_regex, f.leido_con_ia,
             c.nombre AS subido_por_nombre,
             m.id AS movimiento_id, m.fecha AS movimiento_fecha, m.concepto AS movimiento_concepto, m.importe AS movimiento_importe
      FROM facturas f
@@ -43,7 +43,7 @@ export async function POST(request) {
   try {
     const buffer = await descargarBlob(rutaBlob);
     const esPdf = /\.pdf($|\?)/i.test(nombreOriginal || rutaBlob) || rutaBlob.toLowerCase().includes('.pdf');
-    const analisis = await analizarBuffer(buffer, esPdf);
+    const analisis = await analizarFactura(buffer, esPdf, nombreOriginal);
 
     // Si quien sube la factura ya sabe el importe/fecha (a mano, cuando no
     // se puede leer del PDF), esos datos mandan sobre lo que haya extraído

@@ -1,7 +1,7 @@
 const { obtenerSesion } = require('../../../../lib/auth.cjs');
 const { obtenerColaborador } = require('../../../../lib/colaboradores.cjs');
 const { descargarBlob } = require('../../../../lib/blob.cjs');
-const { analizarBuffer } = require('../../../../lib/facturas.cjs');
+const { analizarFactura } = require('../../../../lib/facturaMatcher.cjs');
 const { procesarFacturaSubida } = require('../../../../lib/facturaMatcher.cjs');
 const { buscarOCrearLote, subirFacturaLote, trimestreActual } = require('../../../../lib/lotes.cjs');
 
@@ -46,7 +46,7 @@ export async function POST(request) {
     // proyecto indicado a mano en vez de sin ninguno.
     const buffer = await descargarBlob(rutaBlob);
     const esPdf = /\.pdf($|\?)/i.test(nombreOriginal || rutaBlob) || rutaBlob.toLowerCase().includes('.pdf');
-    const analisis = await analizarBuffer(buffer, esPdf);
+    const analisis = await analizarFactura(buffer, esPdf, nombreOriginal);
 
     const importeManual = importe ? Number(importe) : null;
     if (importeManual) {
