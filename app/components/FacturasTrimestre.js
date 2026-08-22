@@ -60,6 +60,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [borrando, setBorrando] = useState(false);
   const [progresoRecalculo, setProgresoRecalculo] = useState(null); // { actual, total } | null
   const [progresoIA, setProgresoIA] = useState(null); // { actual, total } | null
+  const [progresoCompletar, setProgresoCompletar] = useState(null); // { actual, total } | null
   const [edicionImporte, setEdicionImporte] = useState({});
   const [edicionFecha, setEdicionFecha] = useState({});
   const [edicionConcepto, setEdicionConcepto] = useState({});
@@ -113,6 +114,48 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       mensajeError: 'No se pudo cargar la lista de movimientos.',
     }).then(r => { if (!cancelado && r) setMovimientosPendientes(r.movimientos || []); });
     return () => { cancelado = true; };
+  }, []);
+
+  // Las facturas que se subieron antes de que existieran la columna Proveedor
+  // y la huella del archivo no tienen ni una cosa ni la otra: el proveedor
+  // sale vacío, y como no hay huella, volver a subir ese mismo archivo no
+  // avisaría de nada. Se completan solas al abrir esta pantalla, una a una.
+  //
+  // Tiene que pasar por el servidor: los archivos están en el almacén de
+  // Vercel y desde un ordenador de casa no se pueden abrir. Y va de una en
+  // una, no todas de golpe, para no comerse el tiempo máximo de una petición.
+  //
+  // Cuando ya están todas completas la lista viene vacía y esto no hace nada.
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      let ids = [];
+      try {
+        const r = await fetch('/api/facturas-incompletas');
+        ids = (await r.json()).ids || [];
+      } catch { return; }
+      if (cancelado || ids.length === 0) return;
+
+      let hechas = 0;
+      for (let i = 0; i < ids.length; i++) {
+        if (cancelado) return;
+        setProgresoCompletar({ actual: i + 1, total: ids.length });
+        try {
+          const res = await fetch(`/api/facturas/${ids[i]}/completar`, { method: 'POST' });
+          if (res.ok) hechas++;
+        } catch {
+          // una factura suelta que falle no debe frenar el resto
+        }
+      }
+      if (cancelado) return;
+      setProgresoCompletar(null);
+      mostrarToast(hechas > 0
+        ? `${hechas} factura(s) antigua(s) completada(s)`
+        : 'No se han podido completar las facturas antiguas', hechas > 0 ? 'ok' : 'error');
+      if (hechas > 0) onCambio();
+    })();
+    return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
@@ -628,6 +671,16 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         <div className="progreso" style={{ margin: '0 0 12px' }}>
           <div style={{ width: `${(progresoIA.actual / progresoIA.total) * 100}%` }} />
         </div>
+      )}
+      {progresoCompletar && (
+        <>
+          <p className="muted" style={{ margin: '0 0 4px' }}>
+            Completando proveedor y archivo de las facturas antiguas: {progresoCompletar.actual} de {progresoCompletar.total}
+          </p>
+          <div className="progreso" style={{ margin: '0 0 12px' }}>
+            <div style={{ width: `${(progresoCompletar.actual / progresoCompletar.total) * 100}%` }} />
+          </div>
+        </>
       )}
       {nombresDuplicados.size > 0 && (
         <div className="fila" style={{ marginBottom: 8 }}>
