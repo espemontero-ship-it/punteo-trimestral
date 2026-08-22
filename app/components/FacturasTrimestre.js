@@ -57,6 +57,7 @@ function Celda({ className = '', cabecera, children, style }) {
 export default function FacturasTrimestre({ facturas, onCambio }) {
   const [seleccionadas, setSeleccionadas] = useState(new Set());
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
+  const [confirmarCopia, setConfirmarCopia] = useState(null); // factura a borrar desde el bloque de duplicados
   const [borrando, setBorrando] = useState(false);
   const [progresoRecalculo, setProgresoRecalculo] = useState(null); // { actual, total } | null
   const [progresoIA, setProgresoIA] = useState(null); // { actual, total } | null
@@ -342,6 +343,22 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     return new Set(Object.keys(conteo).filter(h => conteo[h] > 1));
   }, [facturas]);
 
+  // Las parejas (o tríos) de facturas que son EL MISMO ARCHIVO. Es lo que se
+  // enseña arriba de la tabla: con las columnas normales no se pueden comparar,
+  // porque las emparejadas están escondidas tras "Solo pendientes" y hay que ir
+  // a buscarlas una a una.
+  const parejasMismoArchivo = useMemo(() => {
+    const porHuella = {};
+    for (const f of facturas) {
+      if (!f.huella) continue;
+      (porHuella[f.huella] ||= []).push(f);
+    }
+    return Object.values(porHuella)
+      .filter(g => g.length > 1)
+      .map(g => [...g].sort((a, b) => a.numero - b.numero))
+      .sort((a, b) => a[0].numero - b[0].numero);
+  }, [facturas]);
+
   function estaRepetida(f) {
     return nombresDuplicados.has(f.nombre_original) || (!!f.huella && huellasDuplicadas.has(f.huella));
   }
@@ -358,6 +375,19 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   // emparejadas, "seleccionar todas" no debe intentar marcar filas que no se ven).
   function alternarTodas(facturasVisibles) {
     setSeleccionadas(prev => (prev.size === facturasVisibles.length ? new Set() : new Set(facturasVisibles.map(f => f.id))));
+  }
+
+  // Borra UNA copia desde el bloque de duplicados. Llama al mismo sitio que el
+  // botón Borrar de la tabla, con una sola factura: no hay dos formas de
+  // borrar, es la misma.
+  async function borrarCopia(f) {
+    setConfirmarCopia(null);
+    const r = await apiFetch(`/api/facturas`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [f.id] }),
+    }, { mensajeOk: `Factura #${f.numero} borrada`, mensajeError: 'No se pudo borrar.' });
+    if (r) onCambio();
   }
 
   async function borrarSeleccionadas() {
@@ -629,6 +659,30 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
           <div style={{ width: `${(progresoIA.actual / progresoIA.total) * 100}%` }} />
         </div>
       )}
+      {parejasMismoArchivo.length > 0 && (
+        <div className="aviso-duplicados">
+          <p className="aviso-duplicados-titulo">⚠ El mismo archivo está subido más de una vez</p>
+          {parejasMismoArchivo.map((grupo, i) => (
+            <div key={i} className="grupo-duplicado">
+              {grupo.map(f => (
+                <div key={f.id} className="fila-duplicado">
+                  <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">
+                    #{f.numero}
+                  </a>
+                  <span className="muted">{f.fechas?.[0] ? new Date(f.fechas[0]).toLocaleDateString('es-ES') : 'sin fecha'}</span>
+                  <span>{montoCaracteristico(f) !== null ? `${Number(montoCaracteristico(f)).toFixed(2)}€` : 'sin importe'}</span>
+                  <span className="muted">
+                    {f.estado === 'matcheada' && f.movimiento_id
+                      ? `pegada a ${f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') : ''} · ${Number(f.movimiento_importe).toFixed(2)}€ · ${f.movimiento_concepto?.slice(0, 40) || ''}`
+                      : 'sin emparejar'}
+                  </span>
+                  <button type="button" className="secundario" onClick={() => setConfirmarCopia(f)}>Borrar</button>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
       {nombresDuplicados.size > 0 && (
         <div className="fila" style={{ marginBottom: 8 }}>
           <p className="muted" style={{ fontWeight: 700, margin: 0 }}>
@@ -677,6 +731,19 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         </button>
       </div>
 
+      <ConfirmDialog
+        abierto={!!confirmarCopia}
+        titulo={confirmarCopia ? `¿Borrar la factura #${confirmarCopia.numero}?` : ''}
+        mensaje={
+          confirmarCopia?.estado === 'matcheada' && confirmarCopia?.movimiento_id
+            ? `La línea del banco de ${Number(confirmarCopia.movimiento_importe).toFixed(2)}€ del ${confirmarCopia.movimiento_fecha ? new Date(confirmarCopia.movimiento_fecha).toLocaleDateString('es-ES') : ''} volverá a quedar sin resolver. No se puede deshacer.`
+            : 'Esta copia no está emparejada con ninguna línea del banco. No se puede deshacer.'
+        }
+        textoConfirmar="Borrar"
+        peligroso
+        onConfirmar={() => borrarCopia(confirmarCopia)}
+        onCancelar={() => setConfirmarCopia(null)}
+      />
       <ConfirmDialog
         abierto={confirmarBorrado}
         titulo={`¿Borrar ${seleccionadas.size} factura(s)?`}

@@ -572,3 +572,35 @@ select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; 
 .tabla-estados-ayuda { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 4px 0 14px; }
 .tabla-estados-ayuda-fila { display: grid; grid-template-columns: 120px 1fr; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--border); font-size: 13.5px; }
 .tabla-estados-ayuda-fila:first-child { border-top: none; }
+
+/* Aviso de que el mismo archivo está subido más de una vez. Usa el ámbar que
+   ya existe para "esto hay que mirarlo" (--dudosa), el mismo de las filas
+   repetidas de la tabla, no un color nuevo. */
+.aviso-duplicados {
+  border: 1px solid var(--dudosa-soft);
+  background: var(--dudosa-soft);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.aviso-duplicados-titulo {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--dudosa);
+}
+.grupo-duplicado + .grupo-duplicado {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dudosa-soft);
+}
+.fila-duplicado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 3px 0;
+  font-size: 12.5px;
+}
+.fila-duplicado > .link-factura { font-weight: 700; min-width: 34px; }
+.fila-duplicado > button { font-size: 11px; padding: 3px 10px; margin-left: auto; }
