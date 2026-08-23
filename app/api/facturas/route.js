@@ -131,7 +131,7 @@ export async function DELETE(request) {
   }
 
   const { rows: aBorrar } = await query(
-    `SELECT id, ruta_blob FROM facturas WHERE id = ANY($1::bigint[]) AND trimestre_id IS NULL`,
+    `SELECT id, ruta_blob FROM facturas WHERE id = ANY($1::bigint[]) AND lote_id IS NULL`,
     [ids]
   );
   const idsReales = aBorrar.map(f => f.id);

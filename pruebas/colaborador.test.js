@@ -197,14 +197,17 @@ describe('el colaborador corrige y retira lo suyo', () => {
     expect(otra.id).toBeTruthy();
   });
 
-  it('C13. no puede tocar ni retirar una ya aceptada', async () => {
-    const colaboradorId = await sembrarColaborador();
-    const loteId = await sembrarLote(colaboradorId);
-    const { id } = await subirDeLote(loteId, unaDe(45));
-    await query("UPDATE facturas SET estado_revision = 'aceptada' WHERE id = $1", [id]);
+  it('C13. no puede tocar ni retirar una ya aceptada, rechazada o cerrada', async () => {
+    for (const estado of ['aceptada', 'rechazada', 'cerrada']) {
+      const colaboradorId = await sembrarColaborador();
+      const loteId = await sembrarLote(colaboradorId);
+      const { id } = await subirDeLote(loteId, unaDe(45));
+      await query('UPDATE facturas SET estado_revision = $2 WHERE id = $1', [id, estado]);
 
-    await expect(corregirFacturaColaborador(colaboradorId, id, { importe: 99 })).rejects.toThrow();
-    await expect(retirarFacturaColaborador(colaboradorId, id)).rejects.toThrow();
+      await expect(corregirFacturaColaborador(colaboradorId, id, { importe: 99 })).rejects.toThrow();
+      await expect(retirarFacturaColaborador(colaboradorId, id)).rejects.toThrow();
+      await limpiarColaborador();
+    }
   });
 
   it('C13b. no puede tocar la factura de otro colaborador', async () => {

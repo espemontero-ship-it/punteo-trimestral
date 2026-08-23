@@ -5,13 +5,8 @@ import { importeDeFactura } from '../../lib/importeFactura.cjs';
 
 const FMT = n => `${Number(n || 0).toFixed(2)}€`;
 
-// El importe de una factura sale del único sitio que lo calcula. El declarado
-// a mano solo queda de red para las facturas antiguas, de cuando el
-// colaborador escribía el importe en vez de leerse del documento.
-const IMPORTE = f => {
-  const leido = importeDeFactura(f);
-  return leido === null || leido === undefined ? f.importe_declarado : leido;
-};
+// El importe de una factura sale del único sitio que lo calcula.
+const IMPORTE = f => importeDeFactura(f);
 
 const PARA_INPUT = fecha => {
   const d = new Date(fecha);
