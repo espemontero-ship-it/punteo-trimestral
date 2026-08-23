@@ -4,14 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
 import { huellaDeArchivo, facturaConEseArchivo } from '../lib/huella';
 
-// Un único formulario de subida para colaboradores, un archivo cada vez.
+// Un único formulario de subida para colaboradores. Admite VARIOS archivos a
+// la vez: se suben uno detrás de otro con los mismos datos del formulario.
 // El proyecto se elige siempre (ya no se asigna uno fijo al alta) -- entra
 // por el lote de ese proyecto, creándolo al vuelo si hace falta (ver
 // buscarOCrearLote). "Quién paga" (Yo/NOL) solo aparece si el colaborador
 // tiene el permiso puede_subir_facturas_generales; si no, siempre paga él.
 export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturasGenerales, onSubida }) {
   const inputRef = useRef(null);
-  const [archivo, setArchivo] = useState(null);
+  const [archivos, setArchivos] = useState([]);
   const [concepto, setConcepto] = useState('');
   const [importe, setImporte] = useState('');
   const [fecha, setFecha] = useState('');
@@ -29,38 +30,46 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (!archivo) { setMensaje('Choose a file first.'); return; }
+    if (archivos.length === 0) { setMensaje('Choose a file first.'); return; }
     if (!proyectoSeleccionado) { setMensaje('Choose a project first.'); return; }
     setSubiendo(true);
     setMensaje(null);
+    const problemas = [];
+    let subidas = 0;
     try {
-      // If this exact file is already uploaded, it is not uploaded again.
-      if (await facturaConEseArchivo(await huellaDeArchivo(archivo))) {
-        setMensaje('This file has already been uploaded.');
-        return;
+      for (const archivo of archivos) {
+        try {
+          // If this exact file is already uploaded, it is not uploaded again.
+          if (await facturaConEseArchivo(await huellaDeArchivo(archivo))) {
+            problemas.push(`${archivo.name}: already uploaded.`);
+            continue;
+          }
+          const blob = await uploadPresigned(`facturas/colaborador-${Date.now()}-${archivo.name}`, archivo, {
+            access: 'private',
+            handleUploadUrl: '/api/blob-upload',
+          });
+          const res = await fetch('/api/colaborador/facturas-generales', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha,
+              proyectoId: proyectoSeleccionado, quienPaga: puedeSubirFacturasGenerales ? quienPaga : 'colaborador',
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || data?.tipo === 'error') problemas.push(`${archivo.name}: ${data.error || data.detalle || 'could not upload'}`);
+          else subidas++;
+        } catch (err) {
+          problemas.push(`${archivo.name}: ${err.message}`);
+        }
       }
 
-      const blob = await uploadPresigned(`facturas/colaborador-${Date.now()}-${archivo.name}`, archivo, {
-        access: 'private',
-        handleUploadUrl: '/api/blob-upload',
-      });
-      const res = await fetch('/api/colaborador/facturas-generales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha,
-          proyectoId: proyectoSeleccionado, quienPaga: puedeSubirFacturasGenerales ? quienPaga : 'colaborador',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || data?.tipo === 'error') {
-        setMensaje(data.error || data.detalle || 'Could not upload.');
-      } else {
-        setMensaje('Uploaded.');
-        setConcepto('');
-        setImporte('');
-        setFecha('');
-        setArchivo(null);
+      setMensaje([
+        subidas ? `${subidas} invoice(s) uploaded.` : null,
+        ...problemas,
+      ].filter(Boolean).join(' '));
+      if (subidas > 0) {
+        setConcepto(''); setImporte(''); setFecha(''); setArchivos([]);
         if (inputRef.current) inputRef.current.value = '';
         onSubida();
       }
@@ -78,7 +87,8 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
         type="file"
         accept="application/pdf,image/*"
         capture="environment"
-        onChange={e => setArchivo(e.target.files[0])}
+        multiple
+        onChange={e => setArchivos([...e.target.files])}
       />
       <div style={{ height: 8 }} />
       <input type="text" placeholder="Description (e.g. petrol, gaffer tape...)" value={concepto} onChange={e => setConcepto(e.target.value)} />
@@ -103,7 +113,7 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
       )}
 
       <div style={{ height: 8 }} />
-      <button className="grande" type="submit" disabled={subiendo}>{subiendo ? 'Uploading...' : 'Upload invoice'}</button>
+      <button className="grande" type="submit" disabled={subiendo}>{subiendo ? 'Uploading...' : (archivos.length > 1 ? `Upload ${archivos.length} invoices` : 'Upload invoice')}</button>
       {mensaje && <p className="muted" style={{ marginTop: 8 }}>{mensaje}</p>}
     </form>
   );
