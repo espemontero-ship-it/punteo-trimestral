@@ -107,6 +107,22 @@ describe('cruzar facturas con el banco', () => {
     expect(String(lineaPropuesta(resultado))).toBe(String(linea.id));
   });
 
+  it('16b. la propuesta de varias facturas dentro también se ve desde Movimientos', async () => {
+    const linea = await sembrarLinea({ importe: -30 });
+    const { archivo } = await subir({
+      leer: lector([
+        { importe: 10, fecha: '2026-07-19', proveedor: 'X' },
+        { importe: 20, fecha: '2026-07-19', proveedor: 'X' },
+        { importe: 55, fecha: '2026-07-19', proveedor: 'X' },
+      ]),
+    });
+    // Movimientos solo dibuja las propuestas guardadas como combinación y con
+    // la línea dentro. Si se guarda de otra forma, esa línea parece vacía.
+    const f = await facturaPorNombre(archivo);
+    expect(f.motivo_tipo).toBe('combo_sugerido');
+    expect(String(f.motivo_candidatos.movimientoId)).toBe(String(linea.id));
+  });
+
   it('17. la factura de un colaborador no se cruza con el banco', async () => {
     const linea = await sembrarLinea({ importe: -45 });
     const { archivo } = await subir({ leer: unaDe(45), subidoPor: 1 });

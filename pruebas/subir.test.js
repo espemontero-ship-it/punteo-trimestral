@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { limpiar, subir, lector, MARCA } from './ayuda.js';
 import { query } from '../lib/db.cjs';
+import { siguienteNumero } from '../lib/facturaMatcher.cjs';
 
 beforeEach(limpiar);
 afterAll(limpiar);
@@ -36,5 +37,14 @@ describe('subir facturas', () => {
     );
     expect(rows).toHaveLength(2);
     expect(rows[0].numero).not.toBe(rows[1].numero);
+  });
+
+  it('8b. el número no sale de mirar el más alto: dos seguidos son distintos', async () => {
+    // Con "el mas alto + 1" estos dos salian iguales, porque entre uno y otro
+    // no se ha guardado ninguna factura. Es la forma que falla cuando dos
+    // personas suben a la vez, y la prueba de arriba podia pasar por suerte.
+    const primero = await siguienteNumero();
+    const segundo = await siguienteNumero();
+    expect(segundo).toBe(primero + 1);
   });
 });
