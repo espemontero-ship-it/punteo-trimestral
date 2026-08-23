@@ -348,7 +348,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     const resultadoLocal = resultadosFila[f.id];
     // Si no se acaba de recalcular esta fila a mano en esta sesión (resultadoLocal),
     // cae a lo que ya se calculó y se guardó en BD la última vez (subida de excel,
-    // "Recalcular facturas sin resolver"...) -- si no, los botones para elegir
+    // subida de excel...) -- si no, los botones para elegir
     // candidato solo aparecerían tras pulsar "Buscar" fila a fila, aunque el
     // cruce ya estuviera hecho. Ver candidatosParaGuardar en facturaMatcher.cjs.
     const persistido = !resultadoLocal && f.estado !== 'matcheada' && f.motivo_candidatos
