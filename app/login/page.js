@@ -39,7 +39,7 @@ export default function LoginPage() {
         <form onSubmit={onSubmit}>
           <input
             type="text"
-            placeholder="Username (collaborators only)"
+            placeholder="Email"
             value={usuario}
             onChange={e => setUsuario(e.target.value)}
             autoComplete="username"
@@ -58,9 +58,6 @@ export default function LoginPage() {
           </button>
           {error && <p className="error">{error}</p>}
           <p className="muted" style={{ marginTop: 12 }}>
-            If you're the administrator, leave the username blank and enter only the password.
-          </p>
-          <p className="muted" style={{ marginTop: 6 }}>
             <a href="/recuperar">Forgot your password?</a>
           </p>
         </form>

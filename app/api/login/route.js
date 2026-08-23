@@ -1,25 +1,30 @@
-const { verificarPassword, crearTokenSesion, SESSION_COOKIE, DURACION_MS } = require('../../../lib/auth.cjs');
+const { crearTokenSesion, SESSION_COOKIE, DURACION_MS } = require('../../../lib/auth.cjs');
 const { verificarColaborador } = require('../../../lib/colaboradores.cjs');
 
+// Todo el mundo entra igual: correo y contraseña. Antes habia ademas un atajo
+// --entrar solo con una contraseña suelta guardada en la configuracion del
+// servidor-- que daba paso directo como administradora. Se ha quitado: la
+// administradora es una fila mas de colaboradores, con su correo y su clave.
 export async function POST(request) {
   const { usuario, password } = await request.json();
 
-  let payload;
-  let redirect = '/';
-
-  if (usuario) {
-    const colaborador = await verificarColaborador(usuario, password);
-    if (!colaborador) {
-      return Response.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 });
-    }
-    payload = { rol: colaborador.rol, colaboradorId: colaborador.id, nombre: colaborador.nombre };
-    redirect = colaborador.rol === 'admin' ? '/' : '/colaborador';
-  } else {
-    if (!verificarPassword(password)) {
-      return Response.json({ error: 'Contraseña incorrecta' }, { status: 401 });
-    }
-    payload = { rol: 'admin' };
+  if (!usuario) {
+    return Response.json({ error: 'Falta el correo.' }, { status: 401 });
   }
+
+  const colaborador = await verificarColaborador(usuario, password);
+  if (!colaborador) {
+    return Response.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 });
+  }
+
+  // Se le dice que esta inactiva, no un error generico: si no, se queda
+  // pensando que ha escrito mal la contraseña y acaba preguntando por ahi.
+  if (colaborador.estado === 'inactivo') {
+    return Response.json({ error: 'Tu cuenta está inactiva. Habla con la administración.' }, { status: 403 });
+  }
+
+  const payload = { rol: colaborador.rol, colaboradorId: colaborador.id, nombre: colaborador.nombre };
+  const redirect = colaborador.rol === 'admin' ? '/' : '/colaborador';
 
   const token = await crearTokenSesion(payload);
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';

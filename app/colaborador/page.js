@@ -56,6 +56,22 @@ export default function ColaboradorPage() {
     router.refresh();
   }
 
+  // Corregir y retirar lo suyo, solo mientras siga sin revisar: quien lo
+  // comprueba de verdad es el servidor, aqui solo se pide.
+  async function corregirFactura(id, datos) {
+    await fetch(`/api/colaborador/facturas/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos),
+    });
+    await cargarLote();
+    await cargarLotes();
+  }
+
+  async function retirarFactura(id) {
+    await fetch(`/api/colaborador/facturas/${id}`, { method: 'DELETE' });
+    await cargarLote();
+    await cargarLotes();
+  }
+
   async function onSubida() {
     await cargarLotes();
     await cargarLote();
@@ -122,7 +138,8 @@ export default function ColaboradorPage() {
 
       {puedeInvitar && loteId && <InvitarColaborador proyectoNombre={lote?.evento} proyectoId={lote?.proyecto_id} />}
 
-      {loteId && <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura />}
+      {loteId && <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura
+        onCorregir={corregirFactura} onRetirar={retirarFactura} />}
       </>
       )}
     </div>

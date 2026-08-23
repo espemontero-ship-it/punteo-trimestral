@@ -14,8 +14,6 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
   const inputRef = useRef(null);
   const [archivos, setArchivos] = useState([]);
   const [concepto, setConcepto] = useState('');
-  const [importe, setImporte] = useState('');
-  const [fecha, setFecha] = useState('');
   const [quienPaga, setQuienPaga] = useState('colaborador');
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState(proyectoId || '');
   const [proyectos, setProyectos] = useState([]);
@@ -52,13 +50,18 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              rutaBlob: blob.url, nombreOriginal: archivo.name, concepto, importe, fecha,
+              rutaBlob: blob.url, nombreOriginal: archivo.name, concepto,
               proyectoId: proyectoSeleccionado, quienPaga: puedeSubirFacturasGenerales ? quienPaga : 'colaborador',
             }),
           });
           const data = await res.json();
           if (!res.ok || data?.tipo === 'error') problemas.push(`${archivo.name}: ${data.error || data.detalle || 'could not upload'}`);
-          else subidas++;
+          else {
+            subidas++;
+            // Si la IA no ha podido leerla, se guarda igual pero se dice por que:
+            // el importe se pone luego a mano desde la tabla.
+            if (data.motivoIA) problemas.push(`${archivo.name}: saved, but the amount could not be read (${data.motivoIA}). Edit it in the table below.`);
+          }
         } catch (err) {
           problemas.push(`${archivo.name}: ${err.message}`);
         }
@@ -69,7 +72,7 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
         ...problemas,
       ].filter(Boolean).join(' '));
       if (subidas > 0) {
-        setConcepto(''); setImporte(''); setFecha(''); setArchivos([]);
+        setConcepto(''); setArchivos([]);
         if (inputRef.current) inputRef.current.value = '';
         onSubida();
       }
@@ -93,9 +96,11 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
       <div style={{ height: 8 }} />
       <input type="text" placeholder="Description (e.g. petrol, gaffer tape...)" value={concepto} onChange={e => setConcepto(e.target.value)} />
       <div style={{ height: 8 }} />
-      <input type="number" step="0.01" placeholder="Amount" value={importe} onChange={e => setImporte(e.target.value)} />
-      <div style={{ height: 8 }} />
-      <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+      {/* El importe y la fecha ya no se piden: los lee la IA del propio
+          documento y se enseñan en la tabla, donde se pueden corregir. */}
+      <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+        Amount, supplier and date are read from the invoice itself. You can correct them afterwards.
+      </p>
       <div style={{ height: 8 }} />
       <select value={proyectoSeleccionado} onChange={e => setProyectoSeleccionado(e.target.value)}>
         <option value="">Choose project...</option>

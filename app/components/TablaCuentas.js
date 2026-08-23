@@ -1,8 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import { importeDeFactura } from '../../lib/importeFactura.cjs';
 
 const FMT = n => `${Number(n || 0).toFixed(2)}€`;
+
+// El importe de una factura sale del único sitio que lo calcula. El declarado
+// a mano solo queda de red para las facturas antiguas, de cuando el
+// colaborador escribía el importe en vez de leerse del documento.
+const IMPORTE = f => {
+  const leido = importeDeFactura(f);
+  return leido === null || leido === undefined ? f.importe_declarado : leido;
+};
+
+const PARA_INPUT = fecha => {
+  const d = new Date(fecha);
+  const dos = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`;
+};
 
 // Tabla de cuentas de un lote: cada importe vive en una única columna según su
 // naturaleza (Sin revisar/Aceptada/Rechazada/Pagos), nunca mezclado con texto.
@@ -10,14 +25,19 @@ const FMT = n => `${Number(n || 0).toFixed(2)}€`;
 // -- elegir "Rechazada"/"Borrada" pide confirmación al padre (diálogos, como
 // hoy); elegir "Cerrada" revela un campo de fecha inline antes de guardar,
 // igual que "adelanto colaborador" revela sus propios campos en Movimientos.
-// soloLectura la reutiliza tal cual en la vista del colaborador: sin
-// desplegable, sin borrar, sin vincular pagos.
+// soloLectura la reutiliza en la vista del colaborador: sin desplegable, sin
+// borrar, sin vincular pagos -- pero sí puede corregir y retirar LO SUYO
+// mientras siga sin revisar (onCorregir/onRetirar), con los mismos campos
+// inline que usa aquí el cierre.
 export default function TablaCuentas({
   lote, facturas, pagos, totales, soloLectura,
   onGuardarFactura, onSolicitarRechazo, onSolicitarBorrado,
   movimientos, onVincular, onCrearPago,
+  onCorregir, onRetirar,
 }) {
   const [cerrando, setCerrando] = useState(null); // { id, fecha }
+  const [editando, setEditando] = useState(null); // { id, concepto, importe, fecha }
+  const [retirando, setRetirando] = useState(null); // id
   const [nuevoPago, setNuevoPago] = useState({ importe: '', fecha: '', nota: '' });
 
   function onCambiarEstado(f, valor) {
@@ -34,6 +54,31 @@ export default function TablaCuentas({
     setCerrando(null);
   }
 
+  function empezarEdicion(f) {
+    const importe = IMPORTE(f);
+    setRetirando(null);
+    setEditando({
+      id: f.id,
+      concepto: f.concepto || '',
+      importe: importe === null || importe === undefined ? '' : String(importe),
+      fecha: f.fechas?.[0] ? PARA_INPUT(f.fechas[0]) : '',
+    });
+  }
+
+  async function guardarEdicion() {
+    await onCorregir(editando.id, {
+      concepto: editando.concepto,
+      importe: editando.importe === '' ? null : Number(editando.importe),
+      fecha: editando.fecha || null,
+    });
+    setEditando(null);
+  }
+
+  async function confirmarRetirada(id) {
+    await onRetirar(id);
+    setRetirando(null);
+  }
+
   async function crearPago(e) {
     e.preventDefault();
     if (!nuevoPago.importe) return;
@@ -41,7 +86,7 @@ export default function TablaCuentas({
     setNuevoPago({ importe: '', fecha: '', nota: '' });
   }
 
-  const cols = '1fr 50px 100px 100px 100px 100px 100px 100px 220px';
+  const cols = '1fr 120px 50px 100px 100px 100px 100px 100px 100px 220px';
 
   // soloLectura solo es true en la vista de colaborador (nunca en la de
   // administración) -- se usa como interruptor de idioma: colaboradores ven
@@ -49,18 +94,24 @@ export default function TablaCuentas({
   // español, sin necesidad de una i18n de verdad para un único componente.
   const locale = soloLectura ? 'en-GB' : 'es-ES';
   const t = soloLectura ? {
-    cuentas: 'Accounts', concepto: 'Description', ver: 'View', fecha: 'Date',
+    cuentas: 'Accounts', concepto: 'Description', proveedor: 'Supplier', ver: 'View', fecha: 'Date',
     sinRevisar: 'Unreviewed', aceptada: 'Accepted', rechazada: 'Rejected', pagos: 'Payments', pendiente: 'Pending', estado: 'Status',
     sinConcepto: '(no description)', verLink: 'view', sinNada: 'No invoices or payments yet.',
     cerrada: 'Closed', pago: 'Payment', total: 'Total',
     estadoTexto: { subida: 'unreviewed', aceptada: 'accepted', rechazada: 'rejected' },
+    editar: 'Edit', retirar: 'Remove', guardar: 'Save', cancelar: 'Cancel',
+    seguro: 'Remove it?', si: 'Yes', no: 'No', aMano: 'amount edited by you',
   } : {
-    cuentas: 'Cuentas', concepto: 'Concepto', ver: 'Ver', fecha: 'Fecha',
+    cuentas: 'Cuentas', concepto: 'Concepto', proveedor: 'Proveedor', ver: 'Ver', fecha: 'Fecha',
     sinRevisar: 'Sin revisar', aceptada: 'Aceptada', rechazada: 'Rechazada', pagos: 'Pagos', pendiente: 'Pendiente', estado: 'Estado',
     sinConcepto: '(sin concepto)', verLink: 'ver', sinNada: 'Todavía no hay facturas ni pagos.',
     cerrada: 'Cerrada', pago: 'Pago', total: 'Total',
     estadoTexto: { subida: 'subida', aceptada: 'aceptada', rechazada: 'rechazada' },
+    editar: 'Editar', retirar: 'Retirar', guardar: 'Guardar', cancelar: 'Cancelar',
+    seguro: '¿Retirar?', si: 'Sí', no: 'No', aMano: 'importe puesto a mano',
   };
+
+  const vacia = <span className="vacio">—</span>;
 
   return (
     <div>
@@ -69,6 +120,7 @@ export default function TablaCuentas({
         <div role="rowgroup">
           <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: cols }}>
             <div role="columnheader" className="celda">{t.concepto}</div>
+            <div role="columnheader" className="celda">{t.proveedor}</div>
             <div role="columnheader" className="celda">{t.ver}</div>
             <div role="columnheader" className="celda">{t.fecha}</div>
             <div role="columnheader" className="celda">{t.sinRevisar}</div>
@@ -91,6 +143,7 @@ export default function TablaCuentas({
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
+              <div role="cell" className="celda"></div>
             </div>
           )}
 
@@ -105,25 +158,70 @@ export default function TablaCuentas({
             const enAceptada = f.estado_revision === 'aceptada' || f.estado_revision === 'cerrada';
             const enRechazada = f.estado_revision === 'rechazada';
             const bloqueada = f.estado_revision === 'cerrada';
+            const importe = IMPORTE(f);
+            const enEdicion = editando?.id === f.id;
+            // Solo lo suyo y solo mientras nadie lo haya revisado.
+            const puedeTocarla = soloLectura && enSubida && onCorregir && onRetirar;
             return (
               <div key={f.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
-                <div role="cell" className="celda concepto">{f.concepto || t.sinConcepto}</div>
+                <div role="cell" className="celda concepto">
+                  {enEdicion
+                    ? <input type="text" value={editando.concepto} onChange={e => setEditando({ ...editando, concepto: e.target.value })} style={{ fontSize: 12, padding: '5px 6px' }} autoFocus />
+                    : (f.concepto || t.sinConcepto)}
+                </div>
+                <div role="cell" className="celda concepto">{f.proveedor || vacia}</div>
                 <div role="cell" className="celda">
                   <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">{t.verLink}</a>
                 </div>
-                <div role="cell" className="celda">{f.fechas?.[0] ? new Date(f.fechas[0]).toLocaleDateString(locale) : <span className="vacio">—</span>}</div>
-                <div role="cell" className="celda col-importe importe">{enSubida ? FMT(f.importe_declarado) : <span className="vacio">—</span>}</div>
-                <div role="cell" className="celda col-importe importe">{enAceptada ? FMT(f.importe_declarado) : <span className="vacio">—</span>}</div>
-                <div role="cell" className="celda col-importe importe">{enRechazada ? FMT(f.importe_declarado) : <span className="vacio">—</span>}</div>
-                <div role="cell" className="celda col-importe importe"><span className="vacio">—</span></div>
-                <div role="cell" className="celda col-importe importe"><span className="vacio">—</span></div>
+                <div role="cell" className="celda">
+                  {enEdicion
+                    ? <input type="date" value={editando.fecha} onChange={e => setEditando({ ...editando, fecha: e.target.value })} style={{ fontSize: 12, padding: '5px 6px' }} />
+                    : (f.fechas?.[0] ? new Date(f.fechas[0]).toLocaleDateString(locale) : vacia)}
+                </div>
+                <div role="cell" className="celda col-importe importe">
+                  {enEdicion
+                    ? <input type="number" step="0.01" value={editando.importe} onChange={e => setEditando({ ...editando, importe: e.target.value })} style={{ fontSize: 12, padding: '5px 6px', width: '100%' }} />
+                    : enSubida
+                      ? (importe === null || importe === undefined ? vacia : FMT(importe))
+                      : vacia}
+                </div>
+                <div role="cell" className="celda col-importe importe">{enAceptada && importe !== null && importe !== undefined ? FMT(importe) : vacia}</div>
+                <div role="cell" className="celda col-importe importe">{enRechazada && importe !== null && importe !== undefined ? FMT(importe) : vacia}</div>
+                <div role="cell" className="celda col-importe importe">{vacia}</div>
+                <div role="cell" className="celda col-importe importe">{vacia}</div>
                 <div role="cell" className="celda">
                   {soloLectura ? (
-                    <span className="nota-texto">
-                      {f.estado_revision === 'cerrada' && `${t.cerrada} · ${new Date(f.fecha_cierre).toLocaleDateString(locale)}`}
-                      {f.estado_revision === 'rechazada' && (f.motivo_rechazo || t.estadoTexto.rechazada)}
-                      {(f.estado_revision === 'subida' || f.estado_revision === 'aceptada') && t.estadoTexto[f.estado_revision]}
-                    </span>
+                    enEdicion ? (
+                      <div className="celda-estado">
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={guardarEdicion}>{t.guardar}</button>
+                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => setEditando(null)}>{t.cancelar}</button>
+                        </div>
+                      </div>
+                    ) : retirando === f.id ? (
+                      <div className="celda-estado">
+                        <span className="nota-texto">{t.seguro}</span>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => confirmarRetirada(f.id)}>{t.si}</button>
+                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => setRetirando(null)}>{t.no}</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="celda-estado">
+                        <span className="nota-texto">
+                          {f.estado_revision === 'cerrada' && `${t.cerrada} · ${new Date(f.fecha_cierre).toLocaleDateString(locale)}`}
+                          {f.estado_revision === 'rechazada' && (f.motivo_rechazo || t.estadoTexto.rechazada)}
+                          {(f.estado_revision === 'subida' || f.estado_revision === 'aceptada') && t.estadoTexto[f.estado_revision]}
+                          {f.importe_a_mano && ` · ${t.aMano}`}
+                        </span>
+                        {puedeTocarla && (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => empezarEdicion(f)}>{t.editar}</button>
+                            <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => { setEditando(null); setRetirando(f.id); }}>{t.retirar}</button>
+                          </div>
+                        )}
+                      </div>
+                    )
                   ) : cerrando?.id === f.id ? (
                     <div className="celda-estado">
                       <input type="date" value={cerrando.fecha} onChange={e => setCerrando({ ...cerrando, fecha: e.target.value })} style={{ fontSize: 12, padding: '5px 6px' }} autoFocus />
@@ -142,6 +240,7 @@ export default function TablaCuentas({
                         <option value="borrada">borrada</option>
                       </select>
                       {f.motivo_rechazo && <span className="muted" style={{ fontSize: 11 }}>{f.motivo_rechazo}</span>}
+                      {f.importe_a_mano && <span className="muted" style={{ fontSize: 11 }}>{t.aMano}</span>}
                     </div>
                   )}
                 </div>
@@ -152,13 +251,14 @@ export default function TablaCuentas({
           {pagos.map(p => (
             <div key={p.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
               <div role="cell" className="celda concepto">{t.pago}{p.nota ? ` — ${p.nota}` : ''}</div>
-              <div role="cell" className="celda"><span className="vacio">—</span></div>
-              <div role="cell" className="celda">{p.fecha ? new Date(p.fecha).toLocaleDateString(locale) : <span className="vacio">—</span>}</div>
-              <div role="cell" className="celda col-importe importe"><span className="vacio">—</span></div>
-              <div role="cell" className="celda col-importe importe"><span className="vacio">—</span></div>
-              <div role="cell" className="celda col-importe importe"><span className="vacio">—</span></div>
+              <div role="cell" className="celda">{vacia}</div>
+              <div role="cell" className="celda">{vacia}</div>
+              <div role="cell" className="celda">{p.fecha ? new Date(p.fecha).toLocaleDateString(locale) : vacia}</div>
+              <div role="cell" className="celda col-importe importe">{vacia}</div>
+              <div role="cell" className="celda col-importe importe">{vacia}</div>
+              <div role="cell" className="celda col-importe importe">{vacia}</div>
               <div role="cell" className="celda col-importe importe">−{FMT(p.importe)}</div>
-              <div role="cell" className="celda col-importe importe"><span className="vacio">—</span></div>
+              <div role="cell" className="celda col-importe importe">{vacia}</div>
               <div role="cell" className="celda">
                 {soloLectura ? null : p.movimiento_id ? (
                   <span className="nota-texto muted">Vinculado: {p.movimiento_concepto?.slice(0, 30)}</span>
@@ -176,6 +276,7 @@ export default function TablaCuentas({
           {totales && (
             <div role="row" className="fila-tabla fila-total" style={{ gridTemplateColumns: cols }}>
               <div role="cell" className="celda">{t.total}</div>
+              <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda col-importe importe">{FMT(totales.totalSinRevisar)}</div>

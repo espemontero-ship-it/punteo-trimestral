@@ -3,7 +3,7 @@ const { obtenerColaborador } = require('../../../../lib/colaboradores.cjs');
 const { descargarBlob } = require('../../../../lib/blob.cjs');
 const { analizarFactura } = require('../../../../lib/facturaMatcher.cjs');
 const { procesarFacturaSubida } = require('../../../../lib/facturaMatcher.cjs');
-const { buscarOCrearLote, subirFacturaLote, trimestreActual } = require('../../../../lib/lotes.cjs');
+const { buscarOCrearLote, subirFacturaLote } = require('../../../../lib/lotes.cjs');
 
 // Punto de entrada único para que un colaborador suba una factura eligiendo
 // proyecto libremente (ya no se le asigna uno fijo al alta). "Paga NOL" solo
@@ -30,32 +30,25 @@ export async function POST(request) {
   }
 
   try {
-    // Paga el propio colaborador: es una factura normal de su lote de ese
-    // proyecto (se crea el lote si todavía no existe), no una general de NOL.
-    if (quienPaga === 'colaborador') {
-      const loteId = await buscarOCrearLote(sesion.colaboradorId, proyectoId);
-      const resultado = await subirFacturaLote({
-        loteId, trimestreId: trimestreActual(), rutaBlob, nombreOriginal, concepto,
-        importe: importe ? Number(importe) : null, fecha: fecha || null, esImagen: !/\.pdf($|\?)/i.test(nombreOriginal || rutaBlob),
-      });
-      return Response.json({ tipo: 'lote', ...resultado });
-    }
-
-    // Paga NOL directamente: sigue el motor de facturas generales (intenta
-    // emparejar con el movimiento del banco real de NOL), pero ahora con el
-    // proyecto indicado a mano en vez de sin ninguno.
+    // Se lee SIEMPRE, pague quien pague: el colaborador tambien ve el importe,
+    // el proveedor y la fecha de lo que sube.
     const buffer = await descargarBlob(rutaBlob);
     const esPdf = /\.pdf($|\?)/i.test(nombreOriginal || rutaBlob) || rutaBlob.toLowerCase().includes('.pdf');
     const analisis = await analizarFactura(buffer, esPdf, nombreOriginal);
 
-    const importeManual = importe ? Number(importe) : null;
-    if (importeManual) {
-      analisis.totales = [importeManual];
-      analisis.importes = [importeManual];
+    // Paga el propio colaborador: va a su lote de ese proyecto (se crea si no
+    // existe) y NO se cruza con el banco -- ese gasto no sale de la cuenta de
+    // NOL, de ahi sale el reembolso que se le hace.
+    if (quienPaga === 'colaborador') {
+      const loteId = await buscarOCrearLote(sesion.colaboradorId, proyectoId);
+      const resultado = await subirFacturaLote({ loteId, rutaBlob, nombreOriginal, concepto, analisis });
+      return Response.json({ tipo: 'lote', ...resultado });
     }
-    if (fecha) analisis.fechas = [new Date(fecha), ...analisis.fechas];
 
-    const resultado = await procesarFacturaSubida({ rutaBlob, nombreOriginal, concepto, analisis, subidoPor: sesion.colaboradorId, proyectoId });
+    // Paga NOL: flujo normal, se le buscan lineas del banco.
+    const resultado = await procesarFacturaSubida({
+      rutaBlob, nombreOriginal, concepto, analisis, subidoPor: sesion.colaboradorId, proyectoId,
+    });
     return Response.json(resultado);
   } catch (err) {
     return Response.json({ tipo: 'error', detalle: `Fallo al procesar el archivo: ${err.message}` });
