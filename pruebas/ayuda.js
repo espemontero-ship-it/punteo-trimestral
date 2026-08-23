@@ -19,6 +19,7 @@ export async function limpiar() {
   );
   await query(`DELETE FROM facturas WHERE nombre_original LIKE $1`, [MARCA + '%']);
   await query(`DELETE FROM movimientos WHERE hoja = $1`, [HOJA]);
+  await query(`DELETE FROM lotes WHERE evento = 'LOTE DE PRUEBA'`);
 }
 
 // Una línea del banco de mentira. Por defecto pendiente, que es lo que hace
@@ -47,7 +48,12 @@ export async function subir({ leer, nombre, concepto = null, subidoPor = null, c
   const analisis = await analizarFactura(
     Buffer.from(contenido || `${archivo}-${contador}-${Math.random()}`), true, archivo, leer
   );
+  // Se sube con hoja/clave de pruebas para que el cruce mire SOLO las lineas
+  // sembradas por la prueba. Sin esto, la busqueda recorre todos los
+  // movimientos de la base de desarrollo y una linea real puede colarse como
+  // candidata -- paso al ampliar el margen a un euro.
   const resultado = await procesarFacturaSubida({
+    hoja: HOJA, clave: 'pruebas',
     rutaBlob: `https://ejemplo/${archivo}`, nombreOriginal: archivo, concepto, analisis, subidoPor,
   });
   return { resultado, archivo };
@@ -55,6 +61,27 @@ export async function subir({ leer, nombre, concepto = null, subidoPor = null, c
 
 // La fecha se pide ya formateada por la base: convertirla en JavaScript mete
 // el desfase de la zona horaria y la prueba compararia el dia anterior.
+// Marca una factura como pagada por el colaborador: vive en su lote, que es lo
+// unico que la distingue de las de la usuaria. El lote tiene que existir de
+// verdad (la base lo exige), asi que se reutiliza uno o se crea uno de prueba.
+export async function marcarComoDeLote(nombre) {
+  const { rows } = await query(
+    `SELECT l.id FROM lotes l WHERE l.evento = 'LOTE DE PRUEBA'
+     UNION ALL SELECT id FROM lotes LIMIT 1`
+  );
+  let loteId = rows[0] && rows[0].id;
+  if (!loteId) {
+    const { rows: creado } = await query(
+      `INSERT INTO lotes (trimestre_id, colaborador_id, evento, proyecto_id)
+       VALUES ((SELECT id FROM trimestres LIMIT 1), (SELECT id FROM colaboradores LIMIT 1), 'LOTE DE PRUEBA', (SELECT id FROM proyectos LIMIT 1))
+       RETURNING id`
+    );
+    loteId = creado[0].id;
+  }
+  await query('UPDATE facturas SET lote_id = $2 WHERE nombre_original = $1', [nombre, loteId]);
+  return loteId;
+}
+
 export async function facturaPorNombre(nombre) {
   const { rows } = await query(
     `SELECT *, to_char(fechas[1], 'YYYY-MM-DD') AS fecha_texto FROM facturas WHERE nombre_original = $1`, [nombre]);
