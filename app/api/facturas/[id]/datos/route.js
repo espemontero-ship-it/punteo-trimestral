@@ -6,7 +6,8 @@ export async function POST(request, { params }) {
 
   if (importe !== undefined && importe !== null && importe !== '') {
     const valor = Number(importe);
-    if (isNaN(valor) || valor <= 0) return Response.json({ error: 'Importe inválido.' }, { status: 400 });
+    // Se admite el negativo: una rectificativa es un abono. Cero, no.
+    if (isNaN(valor) || valor === 0) return Response.json({ error: 'Importe inválido.' }, { status: 400 });
   }
 
   const resultado = await confirmarDatosManual(Number(id), {

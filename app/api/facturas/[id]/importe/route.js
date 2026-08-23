@@ -5,7 +5,9 @@ export async function POST(request, { params }) {
   const { importe } = await request.json();
 
   const valor = Number(importe);
-  if (!importe || isNaN(valor) || valor <= 0) {
+  // Se admite el negativo: una factura rectificativa es un abono. Lo unico que
+  // no vale es cero ni algo que no sea un numero.
+  if (importe === undefined || importe === null || importe === '' || isNaN(valor) || valor === 0) {
     return Response.json({ error: 'Importe inválido.' }, { status: 400 });
   }
 
