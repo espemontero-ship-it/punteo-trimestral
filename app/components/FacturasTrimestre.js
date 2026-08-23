@@ -71,6 +71,12 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [anchos, setAnchos] = useAnchosPersistidos('punteo-anchos-facturas');
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
+  // Sugerencias quitadas con la ✕. Es solo para esta sesión: al recargar
+  // vuelven a salir, porque el rechazo de Movimientos se guarda por línea del
+  // banco (hoja+clave) y aquí no se sabe cuál es.
+  const [descartadas, setDescartadas] = useState(new Set());
+  const viva = k => !descartadas.has(k);
+  const descartar = k => setDescartadas(prev => new Set(prev).add(k));
 
   function anchoDe(col) {
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? 140;
@@ -425,9 +431,9 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
                 {activo.detalle || (activo.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:')}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {candidatos.map((c, i) => (
-                  <div key={i}>
-                    <button type="button" className="secundario" style={{ textAlign: 'left', padding: '6px 10px', display: 'block', width: '100%' }} onClick={() => elegirCandidato(f, c)}>
+                {candidatos.map((c, i) => ({ c, i })).filter(({ i }) => viva(`sug:${f.id}:${i}`)).map(({ c, i }) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                    <button type="button" className="secundario" style={{ textAlign: 'left', padding: '6px 10px', display: 'block', flex: 1 }} onClick={() => elegirCandidato(f, c)}>
                       {c.esCombo ? (
                         <div className="muted" style={{ fontSize: 11, whiteSpace: 'normal' }}>{c.detalle}</div>
                       ) : (
@@ -439,6 +445,12 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
                         </>
                       )}
                     </button>
+                    <button
+                      type="button"
+                      className="sugerencia-descartar"
+                      title="Descartar esta sugerencia"
+                      onClick={() => descartar(`sug:${f.id}:${i}`)}
+                    >✕</button>
                     {c.esCombo && c.otrasFacturas.map(o => (
                       <a key={o.id} className="link-factura" style={{ fontSize: 11, marginRight: 8 }} href={`/api/facturas/${o.id}/archivo`} target="_blank" rel="noreferrer">
                         ver factura {o.numero}
