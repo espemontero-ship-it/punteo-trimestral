@@ -4,6 +4,7 @@ const { eliminarBlob } = require('../../../lib/blob.cjs');
 const { analizarFactura } = require('../../../lib/facturaMatcher.cjs');
 const { procesarFacturaSubida, asegurarColumnasMotivo } = require('../../../lib/facturaMatcher.cjs');
 const { obtenerSesion } = require('../../../lib/auth.cjs');
+const { cargarRechazos, estaRechazada } = require('../../../lib/memoria.cjs');
 
 // Analizar un PDF (descarga + pdf-parse) puede tardar más de los 10s por
 // defecto de una función serverless, sobre todo con archivos escaneados o
@@ -27,7 +28,61 @@ export async function GET() {
      WHERE f.trimestre_id IS NULL AND f.lote_id IS NULL
      ORDER BY f.numero`
   );
-  return Response.json({ facturas: rows });
+  return Response.json({ facturas: await sinLasRechazadas(rows) });
+}
+
+// Quita las sugerencias que ella ya descartó con la ✕, y le pega a cada una la
+// línea del banco a la que apunta (hoja y clave) para que la pantalla pueda
+// rechazarla.
+//
+// El rechazo se guarda por línea del banco, que es como funciona el de
+// Movimientos: descartar una sugerencia en una pantalla la descarta en la otra,
+// porque es la misma sugerencia.
+async function sinLasRechazadas(facturas) {
+  const conCandidatos = facturas.filter(f => f.motivo_candidatos);
+  if (conCandidatos.length === 0) return facturas;
+
+  const ids = new Set();
+  for (const f of conCandidatos) {
+    const c = f.motivo_candidatos;
+    if (c.movimientoId) ids.add(Number(c.movimientoId));
+    for (const x of c.candidatos || []) if (x.movimientoId) ids.add(Number(x.movimientoId));
+  }
+  if (ids.size === 0) return facturas;
+
+  const { rows: lineas } = await query(
+    `SELECT id, hoja, clave FROM movimientos WHERE id = ANY($1::bigint[])`, [[...ids]]
+  );
+  const porId = new Map(lineas.map(l => [String(l.id), l]));
+  const rechazos = await cargarRechazos();
+
+  // Lo que identifica una sugerencia: las facturas que propone juntar.
+  const valorDe = (facturaId, otras) =>
+    [facturaId, ...(otras || []).map(o => o.id)].join(',');
+
+  return facturas.map(f => {
+    const c = f.motivo_candidatos;
+    if (!c) return f;
+
+    if (c.movimientoId) {
+      const linea = porId.get(String(c.movimientoId));
+      if (!linea) return f;
+      if (estaRechazada(rechazos, linea.hoja, linea.clave, 'combo', valorDe(f.id, c.otrasFacturas))) {
+        return { ...f, motivo_candidatos: null };
+      }
+      return { ...f, motivo_candidatos: { ...c, hoja: linea.hoja, clave: linea.clave } };
+    }
+
+    const vivos = (c.candidatos || [])
+      .map(x => {
+        const linea = porId.get(String(x.movimientoId));
+        return linea ? { ...x, hoja: linea.hoja, clave: linea.clave } : x;
+      })
+      .filter(x => !x.hoja || !estaRechazada(rechazos, x.hoja, x.clave, 'combo', valorDe(f.id, null)));
+
+    if (vivos.length === 0) return { ...f, motivo_candidatos: null };
+    return { ...f, motivo_candidatos: { ...c, candidatos: vivos } };
+  });
 }
 
 export async function POST(request) {

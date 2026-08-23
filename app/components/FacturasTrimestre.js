@@ -71,12 +71,27 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [anchos, setAnchos] = useAnchosPersistidos('punteo-anchos-facturas');
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
-  // Sugerencias quitadas con la ✕. Es solo para esta sesión: al recargar
-  // vuelven a salir, porque el rechazo de Movimientos se guarda por línea del
-  // banco (hoja+clave) y aquí no se sabe cuál es.
+  // Sugerencias quitadas con la ✕. El Set solo sirve para que desaparezca al
+  // instante sin esperar al servidor: el rechazo de verdad se guarda, y es el
+  // mismo que el de Movimientos — descartarla aquí la descarta allí, porque es
+  // la misma sugerencia.
   const [descartadas, setDescartadas] = useState(new Set());
   const viva = k => !descartadas.has(k);
-  const descartar = k => setDescartadas(prev => new Set(prev).add(k));
+
+  async function descartar(k, f, c) {
+    setDescartadas(prev => new Set(prev).add(k));
+    // La línea del banco a la que apunta la sugerencia viene con ella (la pega
+    // /api/facturas). Si no viniera, se queda en quitarla de la vista.
+    const { hoja, clave } = c;
+    if (!hoja || !clave) return;
+    const valor = [f.id, ...(c.otrasFacturas || []).map(o => o.id)].join(',');
+    await apiFetch('/api/sugerencias/rechazar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hoja, clave, tipo: 'combo', valor }),
+    }, { mensajeError: 'No se pudo guardar el descarte.' });
+    onCambio();
+  }
 
   function anchoDe(col) {
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? 140;
@@ -361,13 +376,16 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       ? { tipo: f.motivo_tipo, numero: f.numero, facturaConcepto: f.concepto, detalle: f.motivo_detalle, ...f.motivo_candidatos }
       : null;
     const activo = resultadoLocal || persistido;
+    // hoja y clave son la línea del banco a la que apunta la sugerencia: viajan
+    // con ella desde /api/facturas y sirven para poder descartarla de verdad.
     const candidatos = activo?.tipo === 'ambiguo' ? activo.candidatos.map(c => ({
       movimientoId: c.movimientoId, numero: activo.numero, facturaId: f.id, facturaConcepto: activo.facturaConcepto,
-      concepto: c.concepto, importe: c.importe, fecha: c.fecha,
+      concepto: c.concepto, importe: c.importe, fecha: c.fecha, hoja: c.hoja, clave: c.clave,
     })) : activo?.tipo === 'combo_sugerido' ? [{
       movimientoId: activo.movimientoId, esCombo: true, numero: activo.numero,
       otrasFacturas: activo.otrasFacturas, facturaId: f.id,
       facturaConcepto: activo.facturaConcepto, detalle: activo.detalle,
+      hoja: activo.hoja, clave: activo.clave,
     }] : null;
     const bloqueada = f.estado === 'matcheada' || !!candidatos;
 
@@ -449,7 +467,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
                       type="button"
                       className="sugerencia-descartar"
                       title="Descartar esta sugerencia"
-                      onClick={() => descartar(`sug:${f.id}:${i}`)}
+                      onClick={() => descartar(`sug:${f.id}:${i}`, f, c)}
                     >✕</button>
                     {c.esCombo && c.otrasFacturas.map(o => (
                       <a key={o.id} className="link-factura" style={{ fontSize: 11, marginRight: 8 }} href={`/api/facturas/${o.id}/archivo`} target="_blank" rel="noreferrer">
