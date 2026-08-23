@@ -5,6 +5,9 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { apiFetch, mostrarToast } from '../lib/toast';
 import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 import { parseImporte } from '../../lib/numero.cjs';
+// Cuanto vale una factura lo responde un unico sitio, el mismo que usa el
+// cruce y el paquete de la gestoria. Ver lib/importeFactura.cjs.
+import { importeDeFactura } from '../../lib/importeFactura.cjs';
 
 const ETIQUETAS_TIPO = {
   emparejada_ok: 'Emparejada y cuadra',
@@ -28,14 +31,10 @@ const COLUMNAS = ['Fecha', 'Proveedor', 'Concepto', 'Importe', 'Nombre', 'Subida
 const ANCHO_DEFECTO = { Fecha: 115, Proveedor: 140, Concepto: 150, Importe: 70, Nombre: 190, Subida: 100, 'Subido por': 90, Vincular: 120, Motivo: 175, Movimiento: 190 };
 const ANCHO_CHECKBOX = 30;
 
-function montoCaracteristico(f) {
-  if (f.totales && f.totales.length) return Math.max(...f.totales.map(Number));
-  if (f.importes && f.importes.length) return Math.max(...f.importes.map(Number));
-  return null;
-}
+
 
 function importeInicial(f) {
-  const monto = montoCaracteristico(f);
+  const monto = importeDeFactura(f);
   return monto !== null ? String(monto).replace('.', ',') : '';
 }
 
@@ -59,8 +58,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [confirmarCopia, setConfirmarCopia] = useState(null); // factura a borrar desde el bloque de duplicados
   const [borrando, setBorrando] = useState(false);
-  const [progresoRecalculo, setProgresoRecalculo] = useState(null); // { actual, total } | null
-  const [progresoIA, setProgresoIA] = useState(null); // { actual, total } | null
   const [edicionImporte, setEdicionImporte] = useState({});
   const [edicionFecha, setEdicionFecha] = useState({});
   const [edicionConcepto, setEdicionConcepto] = useState({});
@@ -117,77 +114,10 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   }, []);
 
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
-  // Facturas donde la IA y el lector de texto no leyeron el mismo importe. Se
-  // compara el mayor de cada uno, al céntimo.
-  const discrepancias = useMemo(() => facturas.filter(f => {
-    if (!f.leido_con_ia || !f.lectura_regex) return false;
-    const mayor = (a, b) => {
-      const l = (a && a.length ? a : b) || [];
-      return l.length ? Math.max(...l.map(Number)) : null;
-    };
-    const deIA = mayor(f.totales, f.importes);
-    const deRegex = mayor(f.lectura_regex.totales, f.lectura_regex.importes);
-    if (deIA === null || deRegex === null) return deIA !== deRegex;
-    return Math.abs(deIA - deRegex) > 0.01;
-  }).length, [facturas]);
   const sinImporte = useMemo(
     () => facturas.filter(f => f.estado !== 'matcheada' && !(f.totales?.length || f.importes?.length)).length,
     [facturas]
   );
-
-  // Un archivo a la vez (no un único POST largo) para poder mostrar progreso
-  // real y para no arriesgarse a que el servidor corte una petición muy larga
-  // a mitad si hay muchas facturas pendientes.
-  async function recalcular() {
-    const r = await apiFetch(`/api/recalcular-facturas`, undefined, {
-      mensajeError: 'No se pudo obtener la lista de facturas pendientes.',
-    });
-    if (!r || r.ids.length === 0) return;
-
-    let resueltas = 0;
-    for (let i = 0; i < r.ids.length; i++) {
-      setProgresoRecalculo({ actual: i + 1, total: r.ids.length });
-      try {
-        const res = await fetch(`/api/facturas/${r.ids[i]}/reprocesar`, { method: 'POST' });
-        const resultado = await res.json();
-        if (resultado.tipo === 'match_directo') resueltas++;
-      } catch {
-        // un archivo suelto que falle no debe frenar el resto de la lista
-      }
-    }
-
-    setProgresoRecalculo(null);
-    mostrarToast(`${resueltas} de ${r.ids.length} factura(s) emparejadas`, 'ok');
-    onCambio();
-  }
-
-  // Aparte de recalcular() (regex, gratis): esto le pasa a una IA las
-  // facturas que se quedaron sin ningún importe reconocido (imágenes, PDFs
-  // ilegibles) — tiene un coste pequeño por factura, así que es un botón
-  // aparte que se activa a mano después de haber probado ya el recálculo
-  // normal, no algo automático.
-  async function leerConIA() {
-    const r = await apiFetch(`/api/facturas-sin-importe`, undefined, {
-      mensajeError: 'No se pudo obtener la lista de facturas sin importe.',
-    });
-    if (!r || r.ids.length === 0) return;
-
-    let resueltas = 0;
-    for (let i = 0; i < r.ids.length; i++) {
-      setProgresoIA({ actual: i + 1, total: r.ids.length });
-      try {
-        const res = await fetch(`/api/facturas/${r.ids[i]}/leer-ia`, { method: 'POST' });
-        const resultado = await res.json();
-        if (resultado.tipo === 'match_directo') resueltas++;
-      } catch {
-        // una factura suelta que falle no debe frenar el resto de la lista
-      }
-    }
-
-    setProgresoIA(null);
-    mostrarToast(`${resueltas} de ${r.ids.length} factura(s) emparejadas con IA`, 'ok');
-    onCambio();
-  }
 
   function descargarInformeCsv() {
     const pendientes = facturas.filter(f => f.estado !== 'matcheada');
@@ -595,7 +525,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         // Emparejada: no se puede tocar, pero SE VE. Antes salía un guión y
         // parecía que la factura no tenía importe.
         if (bloqueada) {
-          const monto = montoCaracteristico(f);
+          const monto = importeDeFactura(f);
           return <span>{monto !== null ? `${Number(monto).toFixed(2)}€` : <span className="muted">—</span>}</span>;
         }
         return (
@@ -625,9 +555,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
               siempre. Manda la IA, pero donde no coinciden hay un fallo del
               lector que se puede arreglar mirando el documento. El aviso vive
               aquí, donde se trabaja, y no en un recordatorio que se olvida. */}
-          {discrepancias > 0 && (
-            <> · En <strong>{discrepancias}</strong> el lector de texto y la IA leyeron importes distintos.</>
-          )}
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <label className="toggle-pendientes">
@@ -650,24 +577,8 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
           <button type="button" className="secundario" onClick={descargarInformeCsv} disabled={sinResolver === 0}>
             Descargar CSV
           </button>
-          <button type="button" className="secundario" disabled={sinResolver === 0 || !!progresoRecalculo} onClick={recalcular}>
-            {progresoRecalculo ? `Recalculando ${progresoRecalculo.actual} de ${progresoRecalculo.total}...` : 'Recalcular facturas sin resolver'}
-          </button>
-          <button type="button" className="secundario" disabled={sinImporte === 0 || !!progresoIA} onClick={leerConIA} title="Usa IA para leer imágenes/PDFs ilegibles — tiene un coste pequeño por factura">
-            {progresoIA ? `Leyendo ${progresoIA.actual} de ${progresoIA.total}...` : `Leer con IA (${sinImporte})`}
-          </button>
         </div>
       </div>
-      {progresoRecalculo && (
-        <div className="progreso" style={{ margin: '0 0 12px' }}>
-          <div style={{ width: `${(progresoRecalculo.actual / progresoRecalculo.total) * 100}%` }} />
-        </div>
-      )}
-      {progresoIA && (
-        <div className="progreso" style={{ margin: '0 0 12px' }}>
-          <div style={{ width: `${(progresoIA.actual / progresoIA.total) * 100}%` }} />
-        </div>
-      )}
       {parejasMismoArchivo.length > 0 && (
         <div className="aviso-duplicados">
           <p className="aviso-duplicados-titulo">⚠ El mismo archivo está subido más de una vez</p>
@@ -679,7 +590,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
                     #{f.numero}
                   </a>
                   <span className="muted">{f.fechas?.[0] ? new Date(f.fechas[0]).toLocaleDateString('es-ES') : 'sin fecha'}</span>
-                  <span>{montoCaracteristico(f) !== null ? `${Number(montoCaracteristico(f)).toFixed(2)}€` : 'sin importe'}</span>
+                  <span>{importeDeFactura(f) !== null ? `${Number(importeDeFactura(f)).toFixed(2)}€` : 'sin importe'}</span>
                   <span className="muted">
                     {f.estado === 'matcheada' && f.movimiento_id
                       ? `pegada a ${f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') : ''} · ${Number(f.movimiento_importe).toFixed(2)}€ · ${f.movimiento_concepto?.slice(0, 40) || ''}`
