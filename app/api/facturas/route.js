@@ -39,7 +39,7 @@ async function sinLasRechazadas(facturas) {
   if (ids.size === 0) return facturas;
 
   const { rows: lineas } = await query(
-    `SELECT id, hoja, clave FROM movimientos WHERE id = ANY($1::bigint[])`, [[...ids]]
+    `SELECT id, hoja, clave, importe, concepto FROM movimientos WHERE id = ANY($1::bigint[])`, [[...ids]]
   );
   const porId = new Map(lineas.map(l => [String(l.id), l]));
   const rechazos = await cargarRechazos();
@@ -57,7 +57,13 @@ async function sinLasRechazadas(facturas) {
       if (estaRechazada(rechazos, linea.hoja, linea.clave, 'combo', valorDe(f.id, c.otrasFacturas))) {
         return { ...f, motivo_candidatos: null };
       }
-      return { ...f, motivo_candidatos: { ...c, hoja: linea.hoja, clave: linea.clave } };
+      return {
+        ...f,
+        motivo_candidatos: {
+          ...c, hoja: linea.hoja, clave: linea.clave,
+          lineaImporte: linea.importe, lineaConcepto: linea.concepto,
+        },
+      };
     }
 
     const vivos = (c.candidatos || [])
