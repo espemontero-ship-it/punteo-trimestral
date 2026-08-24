@@ -2,9 +2,9 @@ const { actualizarFactura, eliminarFactura } = require('../../../../../../lib/lo
 
 export async function PATCH(request, { params }) {
   const { facturaId } = await params;
-  const { concepto, importe, fecha, estadoRevision, motivoRechazo, fechaCierre } = await request.json();
+  const { concepto, importe, fecha, estadoRevision, motivoRechazo } = await request.json();
   try {
-    await actualizarFactura(facturaId, { concepto, importe, fecha, estadoRevision, motivoRechazo, fechaCierre });
+    await actualizarFactura(facturaId, { concepto, importe, fecha, estadoRevision, motivoRechazo });
     return Response.json({ ok: true });
   } catch (err) {
     return Response.json({ error: err.message }, { status: err.status || 500 });

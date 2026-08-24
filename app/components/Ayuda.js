@@ -429,8 +429,12 @@ const SECCIONES_ADMIN = [
         <ul>
           <li><strong>Devoluciones</strong> — todo lo devuelto a jugadores de ese proyecto, con <strong>Descargar CSV</strong>.</li>
           <li><strong>Facturas futuras sin recuperar</strong> — los gastos cuya factura todavía no existe. Esta es la lista que dice si el proyecto se puede cerrar de verdad.</li>
-          <li><strong>Facturas de colaboradores pendientes</strong> — las de cualquier lote del proyecto que siguen sin revisar o revisadas pero sin cerrar, con una columna <strong>Paga</strong> que distingue las que pagó NOL de las que puso el colaborador de su bolsillo.</li>
+          <li><strong>Facturas de colaboradores pendientes</strong> — las de cualquier lote del proyecto, aceptadas y todavía sin pagar, con una columna <strong>Paga</strong> que distingue las que pagó NOL de las que puso el colaborador de su bolsillo.</li>
         </ul>
+        <div className="resumen-mini" style={{ display: 'block' }}>
+          <strong>Cerrar proyecto</strong> lo cierra para todos sus colaboradores a la vez: dejan de poder subir o
+          corregir nada de ese proyecto. No es automático — lo decides tú, mirando estas tres listas.
+        </div>
       </>
     ),
   },
@@ -456,25 +460,33 @@ const SECCIONES_ADMIN = [
         </ul>
         <p>
           Quien todavía no ha subido nada aparece igualmente, sin proyecto. Pulsando su nombre se entra a sus
-          <strong> Cuentas</strong>: cada factura suya con su estado, los pagos que se le han hecho y lo que queda
-          pendiente.
+          <strong> Cuentas</strong>: cada factura suya, sus anticipos y sus pagos.
         </p>
-        <p>El estado de cada factura suya lo pones tú, y ninguno se guarda sin más:</p>
+        <p>Una factura suya entra ya <strong>aceptada</strong> — tu trabajo es comprobar que sea real y descartarla si no:</p>
         <TablaEstados filas={[
-          ['revisar', 'Recién subida, sin comprobar.'],
-          ['aceptada', 'Correcta. Cuenta como deuda con esa persona.'],
+          ['aceptada', 'Como entra. Cuenta como deuda con esa persona.'],
           ['rechazada', 'Te pide el motivo antes de guardar, y el motivo se le enseña a ella.'],
-          ['cerrada', 'Te pide la fecha de cierre. Pagada y terminada.'],
+          ['pagada', 'La pone el botón Pagar, no tú a mano.'],
           ['borrada', 'Pide confirmación aparte. Desaparece de sus cuentas.'],
         ]} />
         <p>
-          Los pagos se registran uno a uno con su importe y una nota (&quot;anticipo&quot;, &quot;diferencia&quot;), porque un
-          anticipo y su liquidación son dos movimientos distintos del banco. Cada pago se puede vincular a la línea del
-          banco que le corresponde.
+          Puedes <strong>anticiparle dinero</strong> en cualquier momento, con su importe, fecha y si es en efectivo o
+          por banco. Cuando toca, marcas las facturas <strong>aceptadas</strong> que quieres pagarle y pulsas
+          <strong> Pagar</strong>: pasan a pagadas de una vez, y ese pago junta esas facturas con los anticipos suyos
+          que seguían sin descontar — su importe es la diferencia entre ambos. Se puede pagar varias veces en el mismo
+          proyecto.
+        </p>
+        <div className="resumen-mini" style={{ display: 'block' }}>
+          Ese pago no lo vinculas tú a mano: en <strong>Movimientos</strong>, cuando aparece la línea del banco que
+          cuadra, sale como una sugerencia más — la aceptas o la descartas con la ✕, igual que cualquier otra.
+        </div>
+        <p>
+          Cuando el proyecto termina, lo <strong>cierras</strong> desde la pestaña Proyectos: se cierra para todos sus
+          colaboradores a la vez, y ya no pueden subir ni corregir nada de ese proyecto.
         </p>
         <div className="resumen-mini" style={{ display: 'block' }}>
           Las facturas de colaborador que se pagaron <strong>sí llegan a la gestoría</strong>, dentro del mismo zip y con
-          la misma numeración que las demás. Basta con que su pago esté vinculado a una línea del envío.
+          la misma numeración que las demás, en cuanto su pago queda conciliado con su línea del banco.
         </div>
       </>
     ),
@@ -559,21 +571,25 @@ const SECCIONES_COLABORADORES = [
     cuando: 'Where you check what you are still owed.',
     cuerpo: (
       <>
-        <p>Every invoice you have uploaded for that project, and where it has got to:</p>
+        <p>Every invoice you have uploaded for that project starts <strong>accepted</strong> — administration checks it is real and rejects it if not:</p>
         <TablaEstados filas={[
-          ['Unreviewed', 'Uploaded, not checked by administration yet.'],
           ['Accepted', 'Checked and correct. The money is owed to you.'],
           ['Rejected', 'Something is wrong. The reason is shown next to the invoice.'],
-          ['Closed', 'Paid and finished, with the date it was closed.'],
+          ['Paid', 'Included in a payment to you.'],
         ]} />
         <p>
-          <strong>Payments</strong> shows what has already been paid to you, and <strong>Pending</strong> what is still
-          outstanding. A single invoice can be paid in more than one go — an advance now and the rest later is normal,
-          and both appear separately.
+          You can also be given an <strong>advance</strong>, before any invoice — administration adds it with its date
+          and whether it was cash or bank. When they pay you, that payment is the difference between your accepted
+          invoices and any advances still outstanding, so an advance and the rest of what you are owed can arrive as
+          separate bank transfers.
         </p>
         <p className="muted">
           A rejected invoice is usually a receipt rather than a proper invoice, or one made out to your name instead of
           the association&apos;s. Ask the supplier for a corrected one and upload it again.
+        </p>
+        <p className="muted">
+          Once the project is closed, your invoices and payments stay visible here, but you can no longer upload,
+          correct or remove anything for it.
         </p>
       </>
     ),

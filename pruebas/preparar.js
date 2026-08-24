@@ -12,3 +12,6 @@ const produccion = fs.existsSync(`${raiz}/.env`)
 if (produccion && process.env.DATABASE_URL === produccion) {
   throw new Error('PARADO: las pruebas están apuntando a la base de PRODUCCIÓN.');
 }
+
+const { asegurarEsquemaReembolso } = await import('../lib/lotes.cjs');
+await asegurarEsquemaReembolso();

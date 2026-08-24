@@ -133,6 +133,7 @@ export default function ColaboradorPage() {
       {puedeInvitar && loteId && <InvitarColaborador proyectoNombre={lote?.evento} proyectoId={lote?.proyecto_id} />}
 
       {loteId && <TablaCuentas lote={lote} facturas={facturas} pagos={pagos} totales={totales} soloLectura
+        cerrado={lote?.proyecto_estado === 'cerrado'}
         onCorregir={corregirFactura} onRetirar={retirarFactura} />}
       </>
       )}

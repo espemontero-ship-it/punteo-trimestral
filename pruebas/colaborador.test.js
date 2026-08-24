@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { limpiar, lector, lectorRoto, sembrarLinea, lineaPorId, subir, facturaPorNombre } from './ayuda.js';
 import { query } from '../lib/db.cjs';
 import { POST as entrar } from '../app/api/login/route.js';
-import { subirFacturaLote, calcularTotales, corregirFacturaColaborador, retirarFacturaColaborador } from '../lib/lotes.cjs';
+import { subirFacturaLote, calcularTotales, corregirFacturaColaborador, retirarFacturaColaborador, asegurarEsquemaReembolso } from '../lib/lotes.cjs';
 import { analizarFactura, reintentarPendientes } from '../lib/facturaMatcher.cjs';
 import { importeDeFactura } from '../lib/importeFactura.cjs';
 
@@ -36,9 +36,10 @@ async function sembrarColaborador(estado = 'activo') {
 }
 
 async function sembrarLote(colaboradorId) {
+  await asegurarEsquemaReembolso();
   const { rows } = await query(
-    `INSERT INTO lotes (trimestre_id, colaborador_id, evento, proyecto_id)
-     VALUES ((SELECT id FROM trimestres LIMIT 1), $1, 'LOTE DE PRUEBA', (SELECT id FROM proyectos LIMIT 1))
+    `INSERT INTO lotes (colaborador_id, evento, proyecto_id)
+     VALUES ($1, 'LOTE DE PRUEBA', (SELECT id FROM proyectos LIMIT 1))
      RETURNING id`,
     [colaboradorId]
   );
@@ -128,15 +129,6 @@ describe('facturas que paga el colaborador', () => {
     expect(motivoIA).toMatch(/saldo/i);
   });
 
-  it('C8. no llevan trimestre, igual que las suyas', async () => {
-    const colaboradorId = await sembrarColaborador();
-    const loteId = await sembrarLote(colaboradorId);
-    const { id } = await subirDeLote(loteId, unaDe(45));
-
-    const { rows } = await query('SELECT trimestre_id FROM facturas WHERE id = $1', [id]);
-    expect(rows[0].trimestre_id).toBeNull();
-  });
-
   it('C9. no se usan para completar una combinación del flujo principal', async () => {
 
     await sembrarLinea({ importe: -90 });
@@ -162,7 +154,7 @@ describe('facturas que paga el colaborador', () => {
     await subirDeLote(loteId, unaDe(30));
 
     const totales = await calcularTotales(loteId);
-    expect(totales.totalSinRevisar).toBe(75);
+    expect(totales.totalAceptado).toBe(75);
   });
 });
 
@@ -193,8 +185,8 @@ describe('el colaborador corrige y retira lo suyo', () => {
     expect(otra.id).toBeTruthy();
   });
 
-  it('C13. no puede tocar ni retirar una ya aceptada, rechazada o cerrada', async () => {
-    for (const estado of ['aceptada', 'rechazada', 'cerrada']) {
+  it('C13. no puede tocar ni retirar una ya rechazada, pagada o borrada', async () => {
+    for (const estado of ['rechazada', 'pagada', 'borrada']) {
       const colaboradorId = await sembrarColaborador();
       const loteId = await sembrarLote(colaboradorId);
       const { id } = await subirDeLote(loteId, unaDe(45));

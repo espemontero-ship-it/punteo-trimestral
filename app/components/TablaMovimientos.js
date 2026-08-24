@@ -352,6 +352,15 @@ export default function TablaMovimientos({
     }
   }
 
+  async function aplicarPago(m, pagoSugerido) {
+    const r = await apiFetch(`/api/movimientos/${m.id}/vincular-pago`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pagoId: pagoSugerido.pagoId }),
+    }, { mensajeOk: 'Vinculado', mensajeError: 'No se pudo vincular.' });
+    if (r) onCambio();
+  }
+
   async function elegirCandidato(opcion) {
 
     const nota = opcion.facturaConcepto || '';
@@ -488,6 +497,16 @@ export default function TablaMovimientos({
             />
           ))}
         </div>
+      );
+    }
+
+    if (!resuelta && m.pago_sugerido && viva(`pago:${m.id}`)) {
+      return (
+        <Sugerencia
+          texto={m.pago_sugerido.texto}
+          onAplicar={() => aplicarPago(m, m.pago_sugerido)}
+          onDescartar={() => rechazar(`pago:${m.id}`, [{ hoja: m.hoja, clave: m.clave }], 'pago', String(m.pago_sugerido.pagoId))}
+        />
       );
     }
 

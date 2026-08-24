@@ -20,7 +20,7 @@ export async function GET() {
      LEFT JOIN colaboradores c ON c.id = f.subido_por
      LEFT JOIN movimiento_facturas mf ON mf.factura_id = f.id
      LEFT JOIN movimientos m ON m.id = mf.movimiento_id
-     WHERE f.trimestre_id IS NULL AND f.lote_id IS NULL
+     WHERE f.lote_id IS NULL
      ORDER BY f.numero`
   );
   return Response.json({ facturas: await sinLasRechazadas(rows) });

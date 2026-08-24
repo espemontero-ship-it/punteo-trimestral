@@ -16,26 +16,20 @@ const PARA_INPUT = fecha => {
 export default function TablaCuentas({
   lote, facturas, pagos, totales, soloLectura,
   onGuardarFactura, onSolicitarRechazo, onSolicitarBorrado,
-  movimientos, onVincular, onCrearPago,
   onCorregir, onRetirar,
+  onCrearAnticipo, onPagar, cerrado,
 }) {
-  const [cerrando, setCerrando] = useState(null);
   const [editando, setEditando] = useState(null);
   const [retirando, setRetirando] = useState(null);
-  const [nuevoPago, setNuevoPago] = useState({ importe: '', fecha: '', nota: '' });
+  const [nuevoAnticipo, setNuevoAnticipo] = useState({ importe: '', fecha: '', esEfectivo: false });
+  const [seleccionadas, setSeleccionadas] = useState(new Set());
+  const [fechaPago, setFechaPago] = useState('');
+  const [pagando, setPagando] = useState(false);
 
   function onCambiarEstado(f, valor) {
     if (valor === f.estado_revision) return;
     if (valor === 'rechazada') { onSolicitarRechazo(f.id); return; }
     if (valor === 'borrada') { onSolicitarBorrado(f.id); return; }
-    if (valor === 'cerrada') { setCerrando({ id: f.id, fecha: '' }); return; }
-    onGuardarFactura(f.id, { estadoRevision: valor });
-  }
-
-  function confirmarCierre() {
-    if (!cerrando?.fecha) return;
-    onGuardarFactura(cerrando.id, { estadoRevision: 'cerrada', fechaCierre: cerrando.fecha });
-    setCerrando(null);
   }
 
   function empezarEdicion(f) {
@@ -63,32 +57,60 @@ export default function TablaCuentas({
     setRetirando(null);
   }
 
-  async function crearPago(e) {
+  async function crearAnticipo(e) {
     e.preventDefault();
-    if (!nuevoPago.importe) return;
-    await onCrearPago(nuevoPago);
-    setNuevoPago({ importe: '', fecha: '', nota: '' });
+    if (!nuevoAnticipo.importe) return;
+    await onCrearAnticipo(nuevoAnticipo);
+    setNuevoAnticipo({ importe: '', fecha: '', esEfectivo: false });
   }
 
-  const cols = '1fr 120px 50px 100px 100px 100px 100px 100px 100px 220px';
+  function alternarSeleccion(id) {
+    setSeleccionadas(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function pagar() {
+    if (seleccionadas.size === 0) return;
+    setPagando(true);
+    try {
+      await onPagar({ facturaIds: [...seleccionadas], fecha: fechaPago || null });
+      setSeleccionadas(new Set());
+      setFechaPago('');
+    } finally {
+      setPagando(false);
+    }
+  }
+
+  const totalSeleccion = facturas
+    .filter(f => seleccionadas.has(f.id))
+    .reduce((acc, f) => acc + (IMPORTE(f) || 0), 0);
+
+  const cols = soloLectura
+    ? '1fr 120px 50px 100px 100px 100px 100px 100px 220px'
+    : '30px 1fr 120px 50px 100px 100px 100px 100px 100px 220px';
 
   const locale = soloLectura ? 'en-GB' : 'es-ES';
   const t = soloLectura ? {
     cuentas: 'Accounts', concepto: 'Description', proveedor: 'Supplier', ver: 'View', fecha: 'Date',
-    sinRevisar: 'Unreviewed', aceptada: 'Accepted', rechazada: 'Rejected', pagos: 'Payments', pendiente: 'Pending', estado: 'Status',
+    aceptada: 'Accepted', pagada: 'Paid', rechazada: 'Rejected', pagos: 'Payments', estado: 'Status',
     sinConcepto: '(no description)', verLink: 'view', sinNada: 'No invoices or payments yet.',
-    cerrada: 'Closed', pago: 'Payment', total: 'Total',
-    estadoTexto: { subida: 'unreviewed', aceptada: 'accepted', rechazada: 'rejected' },
+    total: 'Total',
+    estadoTexto: { aceptada: 'accepted', rechazada: 'rejected', pagada: 'paid' },
     editar: 'Edit', retirar: 'Remove', guardar: 'Save', cancelar: 'Cancel',
     seguro: 'Remove it?', si: 'Yes', no: 'No', aMano: 'amount edited by you',
+    anticipo: 'Advance', pago: 'Payment', esperandoLinea: 'awaiting bank line', efectivo: 'cash',
   } : {
     cuentas: 'Cuentas', concepto: 'Concepto', proveedor: 'Proveedor', ver: 'Ver', fecha: 'Fecha',
-    sinRevisar: 'Sin revisar', aceptada: 'Aceptada', rechazada: 'Rechazada', pagos: 'Pagos', pendiente: 'Pendiente', estado: 'Estado',
+    aceptada: 'Aceptada', pagada: 'Pagada', rechazada: 'Rechazada', pagos: 'Pagos', estado: 'Estado',
     sinConcepto: '(sin concepto)', verLink: 'ver', sinNada: 'Todavía no hay facturas ni pagos.',
-    cerrada: 'Cerrada', pago: 'Pago', total: 'Total',
-    estadoTexto: { subida: 'subida', aceptada: 'aceptada', rechazada: 'rechazada' },
+    total: 'Total',
+    estadoTexto: { aceptada: 'aceptada', rechazada: 'rechazada', pagada: 'pagada' },
     editar: 'Editar', retirar: 'Retirar', guardar: 'Guardar', cancelar: 'Cancelar',
     seguro: '¿Retirar?', si: 'Sí', no: 'No', aMano: 'importe puesto a mano',
+    anticipo: 'Anticipo', pago: 'Pago', esperandoLinea: 'esperando línea del banco', efectivo: 'efectivo',
   };
 
   const vacia = <span className="vacio">—</span>;
@@ -96,26 +118,31 @@ export default function TablaCuentas({
   return (
     <div>
       <strong>{t.cuentas}</strong>
+      {cerrado && (
+        <p className="muted" style={{ marginTop: 4 }}>
+          {soloLectura ? 'This project is closed.' : 'Este proyecto está cerrado.'}
+        </p>
+      )}
       <div className="tabla-movimientos-envoltura" role="table" style={{ marginTop: 8 }}>
         <div role="rowgroup">
           <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: cols }}>
+            {!soloLectura && <div role="columnheader" className="celda"></div>}
             <div role="columnheader" className="celda">{t.concepto}</div>
             <div role="columnheader" className="celda">{t.proveedor}</div>
             <div role="columnheader" className="celda">{t.ver}</div>
             <div role="columnheader" className="celda">{t.fecha}</div>
-            <div role="columnheader" className="celda">{t.sinRevisar}</div>
             <div role="columnheader" className="celda">{t.aceptada}</div>
+            <div role="columnheader" className="celda">{t.pagada}</div>
             <div role="columnheader" className="celda">{t.rechazada}</div>
             <div role="columnheader" className="celda">{t.pagos}</div>
-            <div role="columnheader" className="celda">{t.pendiente}</div>
             <div role="columnheader" className="celda">{t.estado}</div>
           </div>
         </div>
         <div role="rowgroup">
           {lote && (
             <div role="row" className="fila-tabla fila-grupo" style={{ gridTemplateColumns: cols }}>
+              {!soloLectura && <div role="cell" className="celda"></div>}
               <div role="cell" className="celda"><div className="grupo-nombre">{lote.colaborador_nombre} — {lote.evento}</div></div>
-              <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
@@ -134,16 +161,22 @@ export default function TablaCuentas({
           )}
 
           {facturas.map(f => {
-            const enSubida = f.estado_revision === 'subida';
-            const enAceptada = f.estado_revision === 'aceptada' || f.estado_revision === 'cerrada';
+            const enAceptada = f.estado_revision === 'aceptada';
+            const enPagada = f.estado_revision === 'pagada';
             const enRechazada = f.estado_revision === 'rechazada';
-            const bloqueada = f.estado_revision === 'cerrada';
             const importe = IMPORTE(f);
             const enEdicion = editando?.id === f.id;
 
-            const puedeTocarla = soloLectura && enSubida && onCorregir && onRetirar;
+            const puedeTocarla = soloLectura && enAceptada && !cerrado && onCorregir && onRetirar;
             return (
               <div key={f.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
+                {!soloLectura && (
+                  <div role="cell" className="celda">
+                    {enAceptada && (
+                      <input type="checkbox" checked={seleccionadas.has(f.id)} onChange={() => alternarSeleccion(f.id)} />
+                    )}
+                  </div>
+                )}
                 <div role="cell" className="celda concepto">
                   {enEdicion
                     ? <input type="text" value={editando.concepto} onChange={e => setEditando({ ...editando, concepto: e.target.value })} style={{ fontSize: 12, padding: '5px 6px' }} autoFocus />
@@ -161,13 +194,12 @@ export default function TablaCuentas({
                 <div role="cell" className="celda col-importe importe">
                   {enEdicion
                     ? <input type="number" step="0.01" value={editando.importe} onChange={e => setEditando({ ...editando, importe: e.target.value })} style={{ fontSize: 12, padding: '5px 6px', width: '100%' }} />
-                    : enSubida
+                    : enAceptada
                       ? (importe === null || importe === undefined ? vacia : FMT(importe))
                       : vacia}
                 </div>
-                <div role="cell" className="celda col-importe importe">{enAceptada && importe !== null && importe !== undefined ? FMT(importe) : vacia}</div>
+                <div role="cell" className="celda col-importe importe">{enPagada && importe !== null && importe !== undefined ? FMT(importe) : vacia}</div>
                 <div role="cell" className="celda col-importe importe">{enRechazada && importe !== null && importe !== undefined ? FMT(importe) : vacia}</div>
-                <div role="cell" className="celda col-importe importe">{vacia}</div>
                 <div role="cell" className="celda col-importe importe">{vacia}</div>
                 <div role="cell" className="celda">
                   {soloLectura ? (
@@ -189,9 +221,8 @@ export default function TablaCuentas({
                     ) : (
                       <div className="celda-estado">
                         <span className="nota-texto">
-                          {f.estado_revision === 'cerrada' && `${t.cerrada} · ${new Date(f.fecha_cierre).toLocaleDateString(locale)}`}
                           {f.estado_revision === 'rechazada' && (f.motivo_rechazo || t.estadoTexto.rechazada)}
-                          {(f.estado_revision === 'subida' || f.estado_revision === 'aceptada') && t.estadoTexto[f.estado_revision]}
+                          {(f.estado_revision === 'aceptada' || f.estado_revision === 'pagada') && t.estadoTexto[f.estado_revision]}
                           {f.importe_a_mano && ` · ${t.aMano}`}
                         </span>
                         {puedeTocarla && (
@@ -202,21 +233,12 @@ export default function TablaCuentas({
                         )}
                       </div>
                     )
-                  ) : cerrando?.id === f.id ? (
-                    <div className="celda-estado">
-                      <input type="date" value={cerrando.fecha} onChange={e => setCerrando({ ...cerrando, fecha: e.target.value })} style={{ fontSize: 12, padding: '5px 6px' }} autoFocus />
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={!cerrando.fecha} onClick={confirmarCierre}>Confirmar</button>
-                        <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => setCerrando(null)}>Cancelar</button>
-                      </div>
-                    </div>
                   ) : (
                     <div className="celda-estado">
-                      <select className="select-estado" value={f.estado_revision} disabled={bloqueada} onChange={e => onCambiarEstado(f, e.target.value)}>
-                        <option value="subida">revisar</option>
+                      <select className="select-estado" value={f.estado_revision} disabled={f.estado_revision !== 'aceptada'} onChange={e => onCambiarEstado(f, e.target.value)}>
                         <option value="aceptada">aceptada</option>
                         <option value="rechazada">rechazada</option>
-                        <option value="cerrada">cerrada</option>
+                        <option value="pagada">pagada</option>
                         <option value="borrada">borrada</option>
                       </select>
                       {f.motivo_rechazo && <span className="muted" style={{ fontSize: 11 }}>{f.motivo_rechazo}</span>}
@@ -228,95 +250,76 @@ export default function TablaCuentas({
             );
           })}
 
-          {pagos.map(p => (
-            <div key={p.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
-              <div role="cell" className="celda concepto">{t.pago}{p.nota ? ` — ${p.nota}` : ''}</div>
-              <div role="cell" className="celda">{vacia}</div>
-              <div role="cell" className="celda">{vacia}</div>
-              <div role="cell" className="celda">{p.fecha ? new Date(p.fecha).toLocaleDateString(locale) : vacia}</div>
-              <div role="cell" className="celda col-importe importe">{vacia}</div>
-              <div role="cell" className="celda col-importe importe">{vacia}</div>
-              <div role="cell" className="celda col-importe importe">{vacia}</div>
-              <div role="cell" className="celda col-importe importe">−{FMT(p.importe)}</div>
-              <div role="cell" className="celda col-importe importe">{vacia}</div>
-              <div role="cell" className="celda">
-                {soloLectura ? null : p.movimiento_id ? (
-                  <span className="nota-texto muted">Vinculado: {p.movimiento_concepto?.slice(0, 30)}</span>
-                ) : (
-                  <VincularPago
-                    movimientos={movimientos}
-                    facturasAceptadas={facturas.filter(f => f.estado_revision === 'aceptada')}
-                    onVincular={(movimientoId, facturaIds) => onVincular(p.id, movimientoId, facturaIds)}
-                  />
-                )}
+          {pagos.map(p => {
+            const esAnticipo = !p.facturas_numeros || p.facturas_numeros.length === 0;
+            const etiqueta = esAnticipo ? t.anticipo : t.pago;
+            return (
+              <div key={p.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
+                {!soloLectura && <div role="cell" className="celda"></div>}
+                <div role="cell" className="celda concepto">
+                  {etiqueta}
+                  {!esAnticipo && p.facturas_numeros?.length ? ` — #${p.facturas_numeros.join(', #')}` : ''}
+                </div>
+                <div role="cell" className="celda">{vacia}</div>
+                <div role="cell" className="celda">{vacia}</div>
+                <div role="cell" className="celda">{p.fecha ? new Date(p.fecha).toLocaleDateString(locale) : vacia}</div>
+                <div role="cell" className="celda col-importe importe">{vacia}</div>
+                <div role="cell" className="celda col-importe importe">{vacia}</div>
+                <div role="cell" className="celda col-importe importe">{vacia}</div>
+                <div role="cell" className="celda col-importe importe">{FMT(Math.abs(Number(p.importe)))}</div>
+                <div role="cell" className="celda">
+                  <span className="nota-texto muted">
+                    {p.es_efectivo
+                      ? t.efectivo
+                      : p.movimiento_id
+                        ? (soloLectura ? t.pagada : (p.movimiento_concepto?.slice(0, 30) || '—'))
+                        : t.esperandoLinea}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {totales && (
             <div role="row" className="fila-tabla fila-total" style={{ gridTemplateColumns: cols }}>
+              {!soloLectura && <div role="cell" className="celda"></div>}
               <div role="cell" className="celda">{t.total}</div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
-              <div role="cell" className="celda col-importe importe">{FMT(totales.totalSinRevisar)}</div>
               <div role="cell" className="celda col-importe importe">{FMT(totales.totalAceptado)}</div>
+              <div role="cell" className="celda col-importe importe">{FMT(totales.totalPagado)}</div>
               <div role="cell" className="celda col-importe importe">{FMT(totales.totalRechazado)}</div>
-              <div role="cell" className="celda col-importe importe">−{FMT(totales.totalPagado)}</div>
-              <div role="cell" className="celda col-importe importe">{FMT(totales.pendiente)}</div>
+              <div role="cell" className="celda col-importe importe">{FMT(totales.totalConciliado)}</div>
               <div role="cell" className="celda"></div>
             </div>
           )}
         </div>
       </div>
 
-      {!soloLectura && (
-        <form onSubmit={crearPago} style={{ marginTop: 12 }}>
-          <div className="fila">
-            <input type="number" step="0.01" placeholder="Importe del pago" value={nuevoPago.importe} onChange={e => setNuevoPago({ ...nuevoPago, importe: e.target.value })} />
-            <input type="date" value={nuevoPago.fecha} onChange={e => setNuevoPago({ ...nuevoPago, fecha: e.target.value })} />
-          </div>
-          <div style={{ height: 8 }} />
-          <input type="text" placeholder="Nota (ej. anticipo, diferencia...)" value={nuevoPago.nota} onChange={e => setNuevoPago({ ...nuevoPago, nota: e.target.value })} />
-          <div style={{ height: 8 }} />
-          <button type="submit" className="secundario">+ Añadir pago</button>
-        </form>
-      )}
-    </div>
-  );
-}
-
-function VincularPago({ movimientos, facturasAceptadas, onVincular }) {
-  const [movimientoId, setMovimientoId] = useState('');
-  const [seleccionadas, setSeleccionadas] = useState([]);
-
-  function toggle(id) {
-    setSeleccionadas(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-      <select style={{ fontSize: 11.5, padding: '4px 6px' }} value={movimientoId} onChange={e => setMovimientoId(e.target.value)}>
-        <option value="">Elige movimiento...</option>
-        {(movimientos || []).map(m => (
-          <option key={m.id} value={m.id}>
-            {m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''} · {Number(m.importe).toFixed(2)}€ · {m.concepto?.slice(0, 30)}
-          </option>
-        ))}
-      </select>
-      {facturasAceptadas.length > 0 && (
-        <div style={{ fontSize: 11 }}>
-          {facturasAceptadas.map(f => (
-            <label key={f.id} style={{ display: 'block' }}>
-              <input type="checkbox" checked={seleccionadas.includes(f.id)} onChange={() => toggle(f.id)} />
-              {' '}#{f.numero} {f.concepto || ''}
-            </label>
-          ))}
+      {!soloLectura && !cerrado && seleccionadas.size > 0 && (
+        <div className="fila" style={{ marginTop: 12, alignItems: 'center' }}>
+          <span className="muted">{seleccionadas.size} factura(s) seleccionadas · {FMT(totalSeleccion)}</span>
+          <input type="date" value={fechaPago} onChange={e => setFechaPago(e.target.value)} />
+          <button type="button" className="secundario" disabled={pagando} onClick={pagar}>{pagando ? 'Pagando...' : 'Pagar'}</button>
         </div>
       )}
-      <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} disabled={!movimientoId} onClick={() => onVincular(movimientoId, seleccionadas)}>
-        Vincular
-      </button>
+
+      {!soloLectura && !cerrado && (
+        <form onSubmit={crearAnticipo} style={{ marginTop: 12 }}>
+          <div className="fila">
+            <input type="number" step="0.01" placeholder="Importe del anticipo" value={nuevoAnticipo.importe} onChange={e => setNuevoAnticipo({ ...nuevoAnticipo, importe: e.target.value })} />
+            <input type="date" value={nuevoAnticipo.fecha} onChange={e => setNuevoAnticipo({ ...nuevoAnticipo, fecha: e.target.value })} />
+          </div>
+          <div style={{ height: 8 }} />
+          <label className="fila-checkbox">
+            <input type="checkbox" checked={nuevoAnticipo.esEfectivo} onChange={e => setNuevoAnticipo({ ...nuevoAnticipo, esEfectivo: e.target.checked })} />
+            En efectivo (no sale del banco)
+          </label>
+          <div style={{ height: 8 }} />
+          <button type="submit" className="secundario">+ Añadir anticipo</button>
+        </form>
+      )}
     </div>
   );
 }

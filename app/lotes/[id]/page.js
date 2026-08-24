@@ -19,7 +19,6 @@ export default function LotePage({ params }) {
   const [facturas, setFacturas] = useState([]);
   const [pagos, setPagos] = useState([]);
   const [totales, setTotales] = useState(null);
-  const [movimientos, setMovimientos] = useState([]);
   const [aRechazar, setARechazar] = useState(null);
   const [aBorrar, setABorrar] = useState(null);
 
@@ -30,10 +29,6 @@ export default function LotePage({ params }) {
     setFacturas(r.facturas || []);
     setPagos(r.pagos || []);
     setTotales(r.totales);
-    if (r.lote) {
-      const rm = await apiFetch(`/api/movimientos-pendientes`);
-      setMovimientos((rm && rm.movimientos) || []);
-    }
   }, [id]);
 
   useEffect(() => { cargar(); }, [cargar]);
@@ -62,22 +57,21 @@ export default function LotePage({ params }) {
     if (r) cargar();
   }
 
-  async function crearPago(campos) {
-    const r = await apiFetch(`/api/lotes/${id}/pagos`, {
+  async function crearAnticipo(campos) {
+    const r = await apiFetch(`/api/lotes/${id}/anticipos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(campos),
-    }, { mensajeOk: 'Pago añadido', mensajeError: 'No se pudo añadir el pago.' });
+    }, { mensajeOk: 'Anticipo añadido', mensajeError: 'No se pudo añadir el anticipo.' });
     if (r) cargar();
   }
 
-  async function vincularPago(pagoId, movimientoId, facturaIds) {
-    if (!movimientoId) return;
-    const r = await apiFetch(`/api/pagos/${pagoId}/vincular`, {
+  async function pagar(campos) {
+    const r = await apiFetch(`/api/lotes/${id}/pagar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ movimientoId: Number(movimientoId), facturaIds }),
-    }, { mensajeOk: 'Pago vinculado al movimiento', mensajeError: 'No se pudo vincular.' });
+      body: JSON.stringify(campos),
+    }, { mensajeOk: 'Pagado. Queda esperando su línea del banco.', mensajeError: 'No se pudo pagar.' });
     if (r) cargar();
   }
 
@@ -94,7 +88,7 @@ export default function LotePage({ params }) {
       <div className="fila" style={{ marginTop: 16 }}>
         <div>
           <h1 className="titulo-pagina" style={{ margin: 0 }}>{lote.evento}</h1>
-          <p className="muted" style={{ margin: 0 }}>{lote.colaborador_nombre} · {lote.trimestre_id}</p>
+          <p className="muted" style={{ margin: 0 }}>{lote.colaborador_nombre}</p>
         </div>
         <a href="/"><button className="secundario">Volver</button></a>
       </div>
@@ -104,12 +98,12 @@ export default function LotePage({ params }) {
         facturas={facturas}
         pagos={pagos}
         totales={totales}
+        cerrado={lote.proyecto_estado === 'cerrado'}
         onGuardarFactura={(facturaId, campos) => guardarFactura(facturaId, campos, { mensajeOk: 'Guardado' })}
         onSolicitarRechazo={setARechazar}
         onSolicitarBorrado={setABorrar}
-        movimientos={movimientos}
-        onVincular={vincularPago}
-        onCrearPago={crearPago}
+        onCrearAnticipo={crearAnticipo}
+        onPagar={pagar}
       />
 
       <MotivoDialog

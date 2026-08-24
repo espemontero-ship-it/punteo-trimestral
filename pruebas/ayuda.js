@@ -52,8 +52,8 @@ export async function marcarComoDeLote(nombre) {
   let loteId = rows[0] && rows[0].id;
   if (!loteId) {
     const { rows: creado } = await query(
-      `INSERT INTO lotes (trimestre_id, colaborador_id, evento, proyecto_id)
-       VALUES ((SELECT id FROM trimestres LIMIT 1), (SELECT id FROM colaboradores LIMIT 1), 'LOTE DE PRUEBA', (SELECT id FROM proyectos LIMIT 1))
+      `INSERT INTO lotes (colaborador_id, evento, proyecto_id)
+       VALUES ((SELECT id FROM colaboradores LIMIT 1), 'LOTE DE PRUEBA', (SELECT id FROM proyectos LIMIT 1))
        RETURNING id`
     );
     loteId = creado[0].id;

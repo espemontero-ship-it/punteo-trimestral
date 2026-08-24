@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, use } from 'react';
 import CabeceraApp from '../../components/CabeceraApp';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { apiFetch } from '../../lib/toast';
 
 async function cerrarSesion() {
@@ -19,6 +20,7 @@ export default function ProyectoPage({ params }) {
   const [devoluciones, setDevoluciones] = useState(null);
   const [facturasFuturas, setFacturasFuturas] = useState(null);
   const [facturasLote, setFacturasLote] = useState(null);
+  const [confirmandoCierre, setConfirmandoCierre] = useState(false);
 
   const cargar = useCallback(async () => {
     const [rp, r, rf, rl] = await Promise.all([
@@ -34,6 +36,14 @@ export default function ProyectoPage({ params }) {
   }, [id]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  async function cerrarProyecto() {
+    setConfirmandoCierre(false);
+    const r = await apiFetch(`/api/proyectos/${id}/cerrar`, { method: 'POST' }, {
+      mensajeOk: 'Proyecto cerrado', mensajeError: 'No se pudo cerrar el proyecto.',
+    });
+    if (r) cargar();
+  }
 
   function descargarCsv() {
     if (!devoluciones || devoluciones.length === 0) return;
@@ -69,10 +79,29 @@ export default function ProyectoPage({ params }) {
       <div className="fila" style={{ marginTop: 16 }}>
         <div>
           <h1 className="titulo-pagina" style={{ margin: 0 }}>{proyecto.nombre}</h1>
-          <p className="muted" style={{ margin: 0 }}>Pendientes de cierre</p>
+          <p className="muted" style={{ margin: 0 }}>
+            {proyecto.estado === 'cerrado' ? 'Cerrado' : 'Pendientes de cierre'}
+          </p>
         </div>
-        <a href="/"><button className="secundario">Volver</button></a>
+        <div>
+          {proyecto.estado !== 'cerrado' && (
+            <button className="secundario" style={{ marginRight: 8 }} onClick={() => setConfirmandoCierre(true)}>
+              Cerrar proyecto
+            </button>
+          )}
+          <a href="/"><button className="secundario">Volver</button></a>
+        </div>
       </div>
+
+      <ConfirmDialog
+        abierto={confirmandoCierre}
+        titulo="¿Cerrar este proyecto?"
+        mensaje="Se cierra para todos sus colaboradores: no podrán subir más facturas ni corregir las que ya tienen."
+        textoConfirmar="Cerrar"
+        peligroso
+        onConfirmar={cerrarProyecto}
+        onCancelar={() => setConfirmandoCierre(false)}
+      />
 
       <div style={{ marginTop: 24 }}>
         <p style={{ fontWeight: 600, marginBottom: 4 }}>Devoluciones</p>
@@ -135,7 +164,7 @@ export default function ProyectoPage({ params }) {
 
       <div style={{ marginTop: 24 }}>
         <p style={{ fontWeight: 600, marginBottom: 4 }}>Facturas de colaboradores pendientes</p>
-        <p className="muted" style={{ marginTop: 0 }}>De cualquier lote de este proyecto, todavía sin revisar o revisadas pero sin cerrar.</p>
+        <p className="muted" style={{ marginTop: 0 }}>De cualquier lote de este proyecto, aceptadas y todavía sin pagar.</p>
         {facturasLote && facturasLote.length === 0 && <p className="muted">Ninguna factura de colaborador pendiente de este proyecto.</p>}
         {facturasLote && facturasLote.length > 0 && (
           <div className="tabla-movimientos-envoltura" role="table">

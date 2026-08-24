@@ -1,9 +1,3 @@
-CREATE TABLE IF NOT EXISTS trimestres (
-  id TEXT PRIMARY KEY,
-  creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
-  cerrado BOOLEAN NOT NULL DEFAULT false
-);
-
 CREATE TABLE IF NOT EXISTS colaboradores (
   id BIGSERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
@@ -19,6 +13,7 @@ CREATE TABLE IF NOT EXISTS colaboradores (
 CREATE TABLE IF NOT EXISTS proyectos (
   id BIGSERIAL PRIMARY KEY,
   nombre TEXT NOT NULL UNIQUE,
+  estado TEXT NOT NULL DEFAULT 'abierto',
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -40,7 +35,6 @@ CREATE TABLE IF NOT EXISTS tokens_acceso (
 
 CREATE TABLE IF NOT EXISTS lotes (
   id BIGSERIAL PRIMARY KEY,
-  trimestre_id TEXT NOT NULL REFERENCES trimestres(id) ON DELETE CASCADE,
   colaborador_id BIGINT NOT NULL REFERENCES colaboradores(id) ON DELETE CASCADE,
   evento TEXT NOT NULL,
   proyecto_id BIGINT NOT NULL REFERENCES proyectos(id),
@@ -58,7 +52,6 @@ CREATE TABLE IF NOT EXISTS envios_gestoria (
 
 CREATE TABLE IF NOT EXISTS facturas (
   id BIGSERIAL PRIMARY KEY,
-  trimestre_id TEXT REFERENCES trimestres(id) ON DELETE CASCADE,
   envio_id BIGINT REFERENCES envios_gestoria(id) ON DELETE SET NULL,
   proveedor_clave TEXT,
   ruta_blob TEXT NOT NULL,
@@ -76,11 +69,10 @@ CREATE TABLE IF NOT EXISTS facturas (
   subido_por BIGINT REFERENCES colaboradores(id),
 
   lote_id BIGINT REFERENCES lotes(id) ON DELETE CASCADE,
+  pago_id BIGINT,
   concepto TEXT,
-  importe_declarado NUMERIC(12,2),
   estado_revision TEXT,
   motivo_rechazo TEXT,
-  fecha_cierre DATE,
   proyecto_id BIGINT REFERENCES proyectos(id)
 );
 
@@ -124,14 +116,10 @@ CREATE TABLE IF NOT EXISTS pagos (
   importe NUMERIC(12,2) NOT NULL,
   fecha DATE,
   nota TEXT,
+  es_efectivo BOOLEAN NOT NULL DEFAULT false,
+  consumido_en_pago_id BIGINT REFERENCES pagos(id) ON DELETE SET NULL,
   movimiento_id BIGINT REFERENCES movimientos(id),
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS pago_facturas (
-  pago_id BIGINT NOT NULL REFERENCES pagos(id) ON DELETE CASCADE,
-  factura_id BIGINT NOT NULL REFERENCES facturas(id) ON DELETE CASCADE,
-  PRIMARY KEY (pago_id, factura_id)
 );
 
 CREATE TABLE IF NOT EXISTS larpmanager_pagos (
@@ -159,7 +147,9 @@ CREATE INDEX IF NOT EXISTS idx_movimientos_envio ON movimientos(envio_id);
 CREATE INDEX IF NOT EXISTS idx_facturas_envio ON facturas(envio_id);
 CREATE INDEX IF NOT EXISTS idx_facturas_lote ON facturas(lote_id);
 CREATE INDEX IF NOT EXISTS idx_lotes_colaborador ON lotes(colaborador_id);
-CREATE INDEX IF NOT EXISTS idx_lotes_trimestre ON lotes(trimestre_id);
+CREATE UNIQUE INDEX IF NOT EXISTS lotes_colaborador_proyecto ON lotes(colaborador_id, proyecto_id);
 CREATE INDEX IF NOT EXISTS idx_pagos_lote ON pagos(lote_id);
+CREATE INDEX IF NOT EXISTS idx_pagos_consumido ON pagos(consumido_en_pago_id);
+CREATE INDEX IF NOT EXISTS idx_facturas_pago ON facturas(pago_id);
 CREATE INDEX IF NOT EXISTS idx_tokens_acceso_hash ON tokens_acceso(token_hash);
 CREATE UNIQUE INDEX IF NOT EXISTS larpmanager_pagos_natural_key ON larpmanager_pagos(nombre_real, evento, importe, fecha);
