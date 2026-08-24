@@ -15,7 +15,7 @@ describe('subir facturas', () => {
 
     const segunda = await subir({ leer: unaDe(45), contenido: 'mismo-archivo', nombre: MARCA + 'otro-nombre.pdf' });
     expect(segunda.resultado.tipo).toBe('duplicada');
-    // Tiene que decir CUÁNDO se subió la anterior, no solo su número.
+
     expect(segunda.resultado.detalle).toMatch(/\d{1,2}\/\d{1,2}\/\d{4}/);
 
     const { rows } = await query('SELECT COUNT(*)::int n FROM facturas WHERE nombre_original LIKE $1', [MARCA + '%']);
@@ -40,9 +40,7 @@ describe('subir facturas', () => {
   });
 
   it('8b. el número no sale de mirar el más alto: dos seguidos son distintos', async () => {
-    // Con "el mas alto + 1" estos dos salian iguales, porque entre uno y otro
-    // no se ha guardado ninguna factura. Es la forma que falla cuando dos
-    // personas suben a la vez, y la prueba de arriba podia pasar por suerte.
+
     const primero = await siguienteNumero();
     const segundo = await siguienteNumero();
     expect(segundo).toBe(primero + 1);

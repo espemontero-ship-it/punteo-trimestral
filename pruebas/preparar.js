@@ -1,6 +1,3 @@
-// Carga las variables de la base de DESARROLLO antes de cualquier prueba, y se
-// asegura de que no son las de producción: una prueba siembra y borra datos, y
-// hacerlo contra la base real sería un desastre.
 import fs from 'fs';
 
 const raiz = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');

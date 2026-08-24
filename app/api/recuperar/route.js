@@ -2,8 +2,6 @@ const { query } = require('../../../lib/db.cjs');
 const { crearRestablecimiento } = require('../../../lib/tokens.cjs');
 const { enviarRecuperacion } = require('../../../lib/email.cjs');
 
-// Siempre responde igual, exista o no la cuenta -- para no filtrar qué
-// correos están registrados.
 export async function POST(request) {
   const { usuario } = await request.json();
   if (usuario) {

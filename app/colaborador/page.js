@@ -16,9 +16,7 @@ export default function ColaboradorPage() {
   const [totales, setTotales] = useState(null);
   const [puedeInvitar, setPuedeInvitar] = useState(false);
   const [puedeSubirFacturasGenerales, setPuedeSubirFacturasGenerales] = useState(false);
-  // Esta pantalla no tiene barra de pestañas, así que la ayuda se abre y se
-  // cierra desde la cabecera y ocupa el sitio del contenido, igual que haría
-  // una pestaña. Solo se le enseña la parte de colaboradores, en inglés.
+
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const router = useRouter();
 
@@ -33,8 +31,6 @@ export default function ColaboradorPage() {
 
   useEffect(() => { cargarLotes(); }, [cargarLotes]);
 
-  // Al entrar, si ya tiene exactamente un proyecto, se abre solo; con varios
-  // o ninguno, elige ella qué ver (o sube directo sin elegir ninguno).
   useEffect(() => {
     if (lotes && lotes.length === 1 && loteId === null) setLoteId(lotes[0].id);
   }, [lotes, loteId]);
@@ -56,8 +52,6 @@ export default function ColaboradorPage() {
     router.refresh();
   }
 
-  // Corregir y retirar lo suyo, solo mientras siga sin revisar: quien lo
-  // comprueba de verdad es el servidor, aqui solo se pide.
   async function corregirFactura(id, datos) {
     await fetch(`/api/colaborador/facturas/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos),

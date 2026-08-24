@@ -1,6 +1,3 @@
--- Memoria aprendida para el nombre corto de Proveedor, igual que
--- memoria_proveedores aprende la Nota por clave.
-
 CREATE TABLE IF NOT EXISTS memoria_proveedor_nombre (
   hoja TEXT NOT NULL,
   clave TEXT NOT NULL,

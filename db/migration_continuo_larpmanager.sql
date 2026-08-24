@@ -1,6 +1,3 @@
--- Addendum a migration_continuo.sql: larpmanager_pagos también vivía dentro
--- de un trimestre. Los pagos de LarpManager se cruzan contra todo el
--- histórico de ingresos sin resolver, no contra un trimestre concreto.
 DO $$
 DECLARE nombre_constraint text;
 BEGIN

@@ -1,10 +1,5 @@
 const { rechazarSugerencia } = require('../../../../lib/agrupador.cjs');
 
-// La ✕ de una sugerencia. `tipo` es nota | proveedor | proyecto | devolucion |
-// jugador; `valor` es lo que se rechaza (el nombre del proyecto, el del
-// proveedor...), vacío en las que no tienen valor.
-// LarpManager no pasa por aquí a propósito: sus propuestas son candidatos
-// concretos de un pago, no una regla del tipo de movimiento.
 const TIPOS = ['nota', 'proveedor', 'proyecto', 'devolucion', 'jugador'];
 
 export async function POST(request) {

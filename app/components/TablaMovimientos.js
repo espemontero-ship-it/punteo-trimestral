@@ -12,25 +12,12 @@ const ETIQUETAS = {
   nueva: 'nueva',
 };
 
-// La columna Grupo (los iconos "−" sacar y "+" unir) se quitó el 2026-08-15:
-// agrupar y desagrupar se hace escribiendo o borrando el Proveedor, que además
-// cruza textos distintos del banco Y bancos distintos, cosa que el "+" no
-// hacía. El backend (/api/movimientos/:id/separar y /unir, y sus funciones en
-// lib/agrupador.cjs) se deja intacto a propósito, para poder rescatar la
-// columna en un solo commit si algún día hace falta separar líneas que el
-// banco escribe idénticas.
-// Mismas palabras que el desplegable de la pestaña LarpManager.
 const ETIQUETA_ESTADO_PAGO = { pendiente: 'pendiente', resuelta: 'resuelto', ignorada: 'ignorar' };
 
 const COLUMNAS_BASE = ['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Factura', 'Nota', 'Proyecto'];
 const ANCHO_DEFECTO = { Fecha: 85, Concepto: 200, Banco: 85, Proveedor: 150, Importe: 80, Estado: 130, Factura: 90, Nota: 135, Proyecto: 110 };
 const ANCHO_EXTRA_DEFECTO = 120;
 
-// Celda vive fuera del componente a propósito: si se define dentro (como
-// estaba antes), React la trata como un tipo de componente nuevo en cada
-// render y desmonta/remonta todo lo de dentro -- incluidos los <input>, que
-// pierden el foco en cada tecla. stickyLefts se pasa como prop en vez de
-// leerlo de un cierre porque Celda ya no tiene acceso al estado del componente.
 function claseCeldaTabla(col) {
   if (col === 'Fecha') return 'col-fecha';
   if (col === 'Concepto') return 'col-concepto';
@@ -57,15 +44,6 @@ function Celda({ col, className = '', cabecera, children, stickyLefts }) {
   );
 }
 
-// Único elemento para TODA sugerencia del sistema, sea del tipo que sea:
-// nota aprendida, proveedor, proyecto, devolución probable, jugador, cruce de
-// LarpManager o factura de una subida en lote. Antes cada una se pintaba
-// distinta -- unas como chip de texto y otras metidas dentro del campo de la
-// usuaria, donde eran indistinguibles de lo que había escrito ella.
-// Pulsar el texto la acepta; pulsar la ✕ la descarta (solo mientras dure la
-// sesión). Fuera del componente principal a propósito, igual que Celda: si se
-// define dentro, React lo trata como un tipo nuevo en cada render y los
-// <input> de alrededor pierden el foco en cada tecla.
 function Sugerencia({ texto, onAplicar, onDescartar }) {
   return (
     <span className="sugerencia" role="group">
@@ -75,16 +53,10 @@ function Sugerencia({ texto, onAplicar, onDescartar }) {
   );
 }
 
-// Un movimiento separado de su grupo lleva su id como sufijo en la clave
-// (ver lib/agrupador.cjs#separarDeGrupo) para que quede aparte pero el
-// nombre en pantalla siga siendo el original.
 function nombreGrupo(clave) {
   return (clave || '').replace(/ #\d+$/, '');
 }
 
-// La cabecera del grupo muestra el nombre corto de Proveedor si ya se ha
-// puesto en alguna línea del grupo — si no, cae al texto de la clave (el
-// mismo que se usaba antes de que existiera el campo Proveedor).
 function nombreGrupoMostrado(g) {
   const conProveedor = g.movimientos.find(m => m.proveedor);
   return conProveedor ? conProveedor.proveedor : nombreGrupo(g.clave);
@@ -96,7 +68,7 @@ export default function TablaMovimientos({
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(true);
-  const [ordenPor, setOrdenPor] = useState(null); // { campo, dir } | null (null = agrupado por proveedor)
+  const [ordenPor, setOrdenPor] = useState(null);
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [mostrarFechas, setMostrarFechas] = useState(false);
   const [columnasExtraVisibles, setColumnasExtraVisibles] = useState(() => new Set(['larpmanager']));
@@ -107,20 +79,12 @@ export default function TablaMovimientos({
   const [anchos, setAnchos] = useAnchosPersistidos('punteo-anchos-movimientos');
   const [modoDevolucion, setModoDevolucion] = useState(new Set());
   const [jugadorManual, setJugadorManual] = useState({});
-  // Sugerencias descartadas con la ✕. El Set solo sirve para que desaparezca
-  // al instante sin esperar al servidor: el rechazo de verdad se guarda, y
-  // vale para todas las líneas de ese tipo de movimiento. Antes solo vivía
-  // aquí, y al recargar --por ejemplo al volver de una subida-- salían todas
-  // otra vez.
+
   const [descartadas, setDescartadas] = useState(new Set());
   const viva = k => !descartadas.has(k);
-  // Deshacer el vínculo de un pago de LarpManager con esta línea. Vincular se
-  // hace solo desde "Pagos sin emparejar" (ahí es donde se ve el problema);
-  // aquí solo se puede quitar, igual que la devolución se corrige con su ✎
-  // desde la fila en la que se está viendo.
-  const [confirmarDesvincular, setConfirmarDesvincular] = useState(null); // { pago, movimiento }
-  // Enlazar un pago de LarpManager desde esta pantalla: qué fila está abierta,
-  // con qué pagos candidatos, y el filtro por nombre.
+
+  const [confirmarDesvincular, setConfirmarDesvincular] = useState(null);
+
   const [vinculandoLm, setVinculandoLm] = useState(null);
   const [candidatosLm, setCandidatosLm] = useState(null);
   const [busquedaLm, setBusquedaLm] = useState('');
@@ -139,12 +103,8 @@ export default function TablaMovimientos({
     if (r) onCambio();
   }
 
-  // Descarte local, sin guardar. Lo usan las sugerencias de LarpManager, que
-  // son candidatos concretos de un pago y no una regla del tipo de movimiento.
   const descartar = k => setDescartadas(prev => new Set(prev).add(k));
 
-  // Descarte de verdad: desaparece y no vuelve. `clavesDe` es el par
-  // hoja+clave al que aplica -- de una línea, o de todas las del grupo.
   async function rechazar(k, clavesDe, tipo, valor) {
     setDescartadas(prev => new Set(prev).add(k));
     for (const { hoja, clave } of clavesDe) {
@@ -161,20 +121,10 @@ export default function TablaMovimientos({
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? ANCHO_EXTRA_DEFECTO;
   }
 
-  // Escucha en window (no en el propio tirador) para que el arrastre siga
-  // funcionando aunque el cursor se salga de la franja de 12px durante el
-  // movimiento. setPointerCapture se intenta como mejora, pero envuelto en
-  // try/catch: puede lanzar una excepción en algunos navegadores/casos, y si
-  // no se protege, esa excepción mata la función entera antes de que se
-  // lleguen a registrar los listeners — eso hacía que el arrastre no
-  // hiciera nada aunque el cursor sí cambiase (el cursor es solo CSS).
   function iniciarArrastre(e, col) {
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
     const startX = e.clientX;
-    // El ancho de partida se mide de la celda, no de la tabla de anchos:
-    // Concepto se pinta con lo que sobra (1fr) mientras no se haya arrastrado,
-    // así que su valor "de fábrica" no es el que se está viendo y la columna
-    // pegaba un salto en cuanto empezabas a arrastrarla.
+
     const celda = e.currentTarget.closest('.celda');
     const startWidth = celda ? celda.offsetWidth : anchoDe(col);
     function mover(ev) {
@@ -209,9 +159,7 @@ export default function TablaMovimientos({
     return proveedores
       .map(g => ({
         ...g,
-        // Las líneas del grupo SIN filtrar. La cabecera necesita mirar el
-        // grupo entero -- por ejemplo, para saber si todas sus líneas tienen
-        // la misma nota -- y no solo lo que "Solo pendientes" deja ver.
+
         movimientosTodos: g.movimientos,
         movimientos: g.movimientos.filter(m => {
           if (soloPendientes && ['resuelta', 'ignorada', 'factura_futura'].includes(m.estado)) return false;
@@ -276,11 +224,6 @@ export default function TablaMovimientos({
     if (r) onCambio();
   }
 
-  // Aceptar una combinación de facturas desde Movimientos. Manda lo mismo que
-  // la pestaña Facturas (ver elegirCandidato en FacturasTrimestre.js): la
-  // línea, todas las facturas del combo y el concepto de la primera como
-  // nota. Si esa factura no tiene concepto, la nota va vacía -- confirmar no
-  // la exige, y la columna Nota de esta misma fila sigue siendo editable.
   async function aplicarComboFacturas(m, combo) {
     const facturaIds = [combo.facturaId, ...(combo.otras || []).map(o => o.id)];
     const r = await apiFetch(`/api/movimientos/${m.id}/confirmar`, {
@@ -292,18 +235,13 @@ export default function TablaMovimientos({
   }
 
   async function cambiarEstado(m, nuevoEstado) {
-    // "devolución" no es un estado que se guarde tal cual (ver
-    // lib/devoluciones.cjs) -- elegirlo en el desplegable solo abre el campo
-    // de jugador en la celda de Proveedor; el guardado real (que deja la
-    // línea en "resuelta") pasa por confirmarDevolucion. Al no tocar m.estado
-    // aquí, el desplegable (controlado por valorEstadoSelect) vuelve solo a
-    // mostrar el valor real en cuanto se re-renderiza.
+
     if (nuevoEstado === 'devolucion') {
       alternarModoDevolucion(m);
       return;
     }
     if (nuevoEstado === 'resuelta') {
-      // La nota es opcional: se guarda si hay algo escrito, pero no bloquea marcar como resuelta.
+
       const nota = (notasManual[m.id] ?? m.nota_final ?? '').trim();
       const r = await apiFetch(`/api/movimientos/${m.id}/confirmar`, {
         method: 'POST',
@@ -321,11 +259,6 @@ export default function TablaMovimientos({
     if (r) onCambio();
   }
 
-  // Un grupo puede abarcar varias parejas hoja+clave: pasa cuando se ha
-  // unificado por proveedor (el mismo proveedor real llega del banco con
-  // conceptos distintos, ej. "COMPRA EN ALSA INTERNET" y "REGULARIZACION
-  // COMPRA EN ALSA INTERNET"). Las acciones de grupo tienen que aplicarse a
-  // todas, o se quedarían líneas sin actualizar. Un solo aviso al final.
   async function porCadaClave(g, url, extra, { mensajeOk, mensajeError }) {
     const claves = g.claves?.length ? g.claves : [{ hoja: g.hoja, clave: g.clave }];
     for (const k of claves) {
@@ -346,8 +279,7 @@ export default function TablaMovimientos({
       mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`,
       mensajeError: 'No se pudo confirmar el grupo.',
     });
-    // Igual que en guardarProveedorGrupo: se limpia lo tecleado para que el
-    // guardado al salir del campo no repita el mismo envío tras un Enter.
+
     if (ok) {
       setNotasGrupo(prev => { const n = { ...prev }; delete n[g.id]; return n; });
       onCambio();
@@ -356,7 +288,7 @@ export default function TablaMovimientos({
 
   async function cambiarEstadoGrupo(g, nuevoEstado) {
     if (nuevoEstado === 'resuelta') {
-      // La nota es opcional: se guarda si hay algo escrito, pero no bloquea marcar el grupo como resuelto.
+
       const nota = (notasGrupo[g.id] ?? '').trim();
       const ok = await porCadaClave(g, `/api/proveedores/confirmar-grupo`, { nota }, {
         mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`,
@@ -383,10 +315,6 @@ export default function TablaMovimientos({
     if (r) onCambio();
   }
 
-  // Alternativa a Proveedor: en vez de un gasto, la línea es una devolución
-  // a un jugador de LarpManager. Se entra en "modo edición" para poder
-  // revisar/corregir el nombre sugerido antes de confirmar -- nunca se marca
-  // sola, ni con la sugerencia automática por texto.
   function alternarModoDevolucion(m) {
     setModoDevolucion(prev => {
       const next = new Set(prev);
@@ -394,8 +322,7 @@ export default function TablaMovimientos({
         next.delete(m.id);
       } else {
         next.add(m.id);
-        // Ya NO se prellena con m.jugador_sugerido: la sugerencia se pinta
-        // aparte, como todas las demás, y el campo se queda vacío.
+
       }
       return next;
     });
@@ -418,9 +345,7 @@ export default function TablaMovimientos({
     const r = await porCadaClave(g, `/api/proveedores/proveedor-grupo`, { proveedor: (valor ?? '').trim() }, {
       mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.',
     });
-    // Se limpia lo tecleado al guardar bien: así el guardado al salir del
-    // campo (onBlur) no vuelve a mandar lo mismo justo después de un Enter,
-    // que contaría dos veces en la memoria aprendida.
+
     if (r) {
       setProveedoresGrupo(prev => { const n = { ...prev }; delete n[g.id]; return n; });
       onCambio();
@@ -428,8 +353,7 @@ export default function TablaMovimientos({
   }
 
   async function elegirCandidato(opcion) {
-    // La nota es solo el concepto de la factura. Los números viven en la
-    // columna Factura, que es su sitio -- también los de una combinación.
+
     const nota = opcion.facturaConcepto || '';
     const facturaIds = opcion.esCombo ? [opcion.facturaId, ...opcion.otrasFacturas.map(o => o.id)] : [opcion.facturaId];
     const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
@@ -440,14 +364,6 @@ export default function TablaMovimientos({
     if (r) onCambio();
   }
 
-  // A propósito NO escribe nada en la Nota -- son dos conceptos distintos:
-  // la Nota es la referencia que se manda a gestoría, la columna larpmanager
-  // es solo la comprobación de que el pago llegó. Si LarpManager ya sabe de
-  // qué evento es (ej. "Wield #2"), se aprovecha para sugerir proyecto igual
-  // que ya hace el resto de la app por texto de concepto. Un único endpoint
-  // (no dos fetches sueltos) para que también quede marcado en
-  // larpmanager_pagos que este pago concreto ya encontró su línea del
-  // banco -- si no, "ver pagos sin emparejar" seguiría listándolo.
   async function resolverConLarpManager(m, candidato) {
     const r = await apiFetch(`/api/movimientos/${m.id}/resolver-larpmanager`, {
       method: 'POST',
@@ -475,31 +391,13 @@ export default function TablaMovimientos({
 
   const columnasVisiblesExtra = columnasExtra.filter(c => columnasExtraVisibles.has(c));
   const columnasTodas = [...COLUMNAS_BASE, ...columnasVisiblesExtra];
-  // Única fuente de verdad para el ancho de columnas: la misma plantilla se
-  // aplica a la cabecera y a cada fila via grid-template-columns, así que es
-  // estructuralmente imposible que una fila quede desalineada de otra (antes,
-  // con <table>, el ancho se repartía entre colgroup + estilo del <th> + una
-  // variable CSS aparte para las columnas fijas, y esos tres sitios podían
-  // desincronizarse).
-  // Concepto se queda con lo que sobre en vez de tener un ancho clavado. Con
-  // todas las columnas en píxeles fijos la tabla medía siempre lo mismo, así
-  // que en cuanto la suma pasaba del ancho de la ventana había desplazamiento
-  // horizontal para siempre -- y con él, la columna donde se trabaja al final
-  // del todo. Lo fijo suma 985 px; en un contenedor de 1.368 el concepto pasa
-  // de 200 a unos 383 y la tabla encaja exacta.
-  //
-  // Si la usuaria arrastra Concepto, su ancho manda: ahí ya es una decisión
-  // suya y el desplazamiento vuelve si no cabe.
+
   const plantillaColumnas = columnasTodas
     .map(c => (c === 'Concepto' && anchos.Concepto === undefined
       ? `minmax(${ANCHO_DEFECTO.Concepto}px, 1fr)`
       : `${anchoDe(c)}px`))
     .join(' ');
 
-  // Ancho de lo que se ve de la tabla (no de la tabla entera). Lo necesita el
-  // panel que cuelga de una fila: dentro de un contenedor con desplazamiento,
-  // un 100% mide la tabla completa, así que el panel se quedaba anclado a la
-  // izquierda y fuera de vista al desplazarse.
   const envolturaRef = useRef(null);
   const [anchoVisible, setAnchoVisible] = useState(0);
   useEffect(() => {
@@ -511,9 +409,7 @@ export default function TablaMovimientos({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  // Fecha y Concepto se quedan fijas al hacer scroll horizontal -- cada una
-  // necesita su propio left, calculado a partir de los anchos de las que van
-  // antes (misma fuente de verdad que la plantilla de arriba).
+
   const anchoFecha = anchoDe('Fecha');
   const stickyLefts = { Fecha: 0, Concepto: anchoFecha };
 
@@ -525,13 +421,8 @@ export default function TablaMovimientos({
     return 'pendiente';
   }
 
-  // Devolución vive aquí, no en Proveedor: una devolución no tiene proveedor,
-  // el jugador es la referencia que de verdad se manda a gestoría (igual que
-  // la Nota de cualquier otra línea), así que comparten celda.
   function celdaNota(m, g) {
-    // El modo edición va ANTES que "es una devolución". Al revés, el botón ✎
-    // no podía funcionar: activaba el modo, pero la pantalla volvía a entrar
-    // por la rama de arriba y seguía enseñando el texto de siempre.
+
     if (!modoDevolucion.has(m.id) && m.es_devolucion) {
       return (
         <>
@@ -543,9 +434,7 @@ export default function TablaMovimientos({
     if (modoDevolucion.has(m.id)) {
       return (
         <div>
-          {/* La sugerencia solo tiene sentido al marcar una devolución nueva.
-              Si ya lo es y la estás editando, lo que hace falta es ver el
-              jugador que tiene puesto para corregirlo. */}
+
           {!m.es_devolucion && m.jugador_sugerido && viva(`jug:${m.id}`) ? (
             <Sugerencia
               texto={m.jugador_sugerido}
@@ -560,8 +449,7 @@ export default function TablaMovimientos({
             className="campo-proveedor"
             type="text"
             placeholder="Jugador en LarpManager..."
-            // Al editar una devolución ya marcada, enseña el jugador guardado:
-            // editar sin ver lo que hay no es editar.
+
             value={jugadorManual[m.id] ?? (m.jugador_larpmanager || '')}
             onChange={e => setJugadorManual(prev => ({ ...prev, [m.id]: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarDevolucion(m); } }}
@@ -578,30 +466,16 @@ export default function TablaMovimientos({
         </div>
       );
     }
-    // La nota de una línea resuelta también se edita. Antes se pintaba como
-    // texto plano y no había dónde escribir: para corregir o borrar una nota
-    // había que devolver la línea a pendiente, cambiarla y volver a
-    // resolverla. Mismo criterio que el desplegable de Estado, que es siempre
-    // editable a propósito para poder deshacer lo que se hizo mal.
-    //
-    // A una línea ya resuelta no se le proponen sugerencias: ya tiene su
-    // respuesta, y una píldora encima taparía la nota que hay que poder ver y
-    // corregir. Solo se le enseña su campo.
+
     const resuelta = m.estado === 'resuelta';
 
-    // Una clave por candidato, no por línea: descartar una opción no puede
-    // llevarse por delante las demás, que son alternativas entre las que hay
-    // que poder seguir eligiendo. Se conserva el índice original al filtrar,
-    // porque si no las claves se recolocan y descartar una afectaría a otra.
     const opcionesLote = (filtroLote?.ambiguos?.[m.id] || [])
       .map((o, i) => ({ o, i }))
       .filter(({ i }) => viva(`lote:${m.id}:${i}`));
     if (!resuelta && opcionesLote?.length) {
       return (
         <div className="sugerencias-lista">
-          {/* Esta frase existía y se borró en el commit 88bfdfc (2026-08-03)
-              sin pedirlo: sin ella aparecen dos opciones sin explicar por qué
-              hay que elegir. */}
+
           <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>Varias facturas con este importe:</p>
           {opcionesLote.map(({ o, i }) => (
             <Sugerencia
@@ -616,8 +490,7 @@ export default function TablaMovimientos({
         </div>
       );
     }
-    // La sugerencia YA NO se mete dentro del campo: va aparte, encima. El
-    // campo muestra solo lo que haya escrito la usuaria.
+
     const sugerencia = g.sugerenciaNota;
     return (
       <>
@@ -632,15 +505,11 @@ export default function TablaMovimientos({
           className="campo-nota"
           type="text"
           placeholder=""
-          // Enseña la nota que ya está guardada. Antes arrancaba en blanco
-          // siempre: no veías lo que había, así que no se podía corregir ni
-          // borrar, solo escribir encima a ciegas.
+
           value={notasManual[m.id] ?? (m.nota_final || '')}
           onChange={e => setNotasManual(prev => ({ ...prev, [m.id]: e.target.value }))}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNota(m.id, e.target.value); } }}
-          // Guardar también al salir del campo: antes solo se guardaba con
-          // Enter, así que escribir y hacer clic en otro sitio tiraba lo
-          // escrito sin avisar.
+
           onBlur={e => {
             const v = e.target.value.trim();
             if (notasManual[m.id] !== undefined && v !== (m.nota_final || '')) confirmarNota(m.id, v);
@@ -652,10 +521,7 @@ export default function TablaMovimientos({
   }
 
   function celdaEstado(m) {
-    // Cuando el concepto sugiere que es una devolución, se avisa como
-    // cualquier otra sugerencia (chip "Aplicar: devolución") en vez de
-    // resaltar el desplegable con una caja de color -- elegirla sigue
-    // siendo siempre una acción manual.
+
     return (
       <div className="celda-estado">
         <select
@@ -681,15 +547,9 @@ export default function TablaMovimientos({
     );
   }
 
-  // Unificada: ver si ya hay factura, Subir si no, "—" si es devolución (no
-  // hay factura posible en una devolución).
   function celdaFactura(m, g) {
     if (m.es_devolucion) return <span className="vacio">—</span>;
-    // El número de cada factura, no la palabra "ver": es el nombre que lleva
-    // el archivo dentro del zip que va a la gestoría, así que lo que ves en
-    // pantalla y lo que ella recibe se llaman igual. Con varias, separadas por
-    // coma y cada una abre la suya. Antes solo se podía abrir la primera, y
-    // sin saber cuál era.
+
     const facturas = m.facturas || [];
     if (facturas.length > 0) {
       return (
@@ -705,28 +565,16 @@ export default function TablaMovimientos({
         </span>
       );
     }
-    // A una línea ya cerrada no se le ofrece subir factura: si está resuelta
-    // sin ninguna, es que no lleva (stripe y los tickets son ingresos; banco,
-    // dgm e impuestos no emiten factura), y si está ignorada es que no hay
-    // nada que hacer con ella. Comprobado contra producción: las 42 líneas de
-    // ese tipo están todas resueltas y ninguna tiene factura.
-    // Las que SÍ esperan una -- pendiente, pedida y factura futura -- siguen
-    // con su botón, que es justo donde hace falta.
+
     if (m.estado === 'resuelta' || m.estado === 'ignorada') return null;
-    // Combinaciones de facturas que explican el importe de esta línea. La
-    // sugerencia existía desde antes pero solo se veía en la pestaña
-    // Facturas: aquí la línea parecía no tener nada, aunque sus dos facturas
-    // ya estuvieran subidas. Aceptarla hace exactamente lo mismo que aceptarla
-    // allí -- el mismo endpoint, con las mismas facturas y la misma nota.
+
     const combos = (m.combos_factura || []).filter((c, i) => viva(`combo:${m.id}:${i}`));
     return (
       <div className="celda-estado">
         {combos.map((c, i) => {
           const numeros = [c.numero, ...(c.otras || []).map(o => o.numero)].join(' + ');
           const ids = [c.facturaId, ...(c.otras || []).map(o => o.id)].join(',');
-          // El aviso de que no cuadra tiene que salir aquí también, no solo en
-          // Facturas: desde aquí se acepta con el mismo clic. Cuando cuadra al
-          // céntimo no se dice nada, que es lo normal.
+
           const falla = c.exacto === false && typeof c.diferencia === 'number';
           const desvio = falla
             ? ` · NO CUADRA: ${c.diferencia > 0 ? 'faltan' : 'sobran'} ${Math.abs(c.diferencia).toFixed(2)}€`
@@ -751,11 +599,8 @@ export default function TablaMovimientos({
     );
   }
 
-  // Proveedor ya no muestra nada de devolución -- una devolución no tiene
-  // proveedor (ver celdaNota, donde vive el jugador). "Sacar del grupo" se
-  // mudó a la columna Grupo (icono "−" siempre visible).
   function celdaProveedor(m) {
-    // Igual que la nota: la sugerencia va aparte, nunca dentro del campo.
+
     const sugerido = !m.proveedor ? m.proveedor_sugerido : null;
     return (
       <>
@@ -801,15 +646,6 @@ export default function TablaMovimientos({
     );
   }
 
-  // La interacción de LarpManager vive aquí, no en la Nota -- son dos
-  // conceptos distintos (ver resolverConLarpManager). Se lee siempre de
-  // m.larpmanager_candidatos (guardado en BD al subir el CSV), NUNCA de un
-  // estado que solo viva en el navegador -- si dependiera de eso, el botón
-  // desaparecería al recargar la página o volver más tarde, aunque el cruce
-  // ya estuviera hecho, y habría que subir el mismo CSV otra vez para nada.
-  // El ✎ para deshacer un vínculo, solo en las líneas que tienen uno. Mismo
-  // icono pequeño sin caja que el de editar una devolución: es una corrección
-  // puntual, no algo que se haga a diario.
   function editarVinculoLm(m) {
     const pagos = m.pagos_larpmanager || [];
     if (pagos.length === 0) return null;
@@ -826,9 +662,7 @@ export default function TablaMovimientos({
 
   function celdaLarpManager(m) {
     const guardado = m.datos_originales?.larpmanager;
-    // Una línea ya resuelta no lleva sugerencias, pero sí puede necesitar el
-    // enlace a mano: de hecho es el caso más común, porque las transferencias
-    // se puntean antes de subir el CSV.
+
     if (m.estado === 'resuelta') {
       return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}{botonVincularLm(m)}</>;
     }
@@ -845,8 +679,7 @@ export default function TablaMovimientos({
       );
     }
     if (resultado?.tipo === 'ambiguo' && resultado.candidatos?.length) {
-      // Igual que en las facturas de un lote: una clave por candidato, con el
-      // índice original conservado, para que descartar uno no quite los otros.
+
       const vivos = resultado.candidatos.map((c, i) => ({ c, i })).filter(({ i }) => viva(`lm:${m.id}:${i}`));
       if (vivos.length === 0) return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}{botonVincularLm(m)}</>;
       return (
@@ -862,19 +695,10 @@ export default function TablaMovimientos({
         </div>
       );
     }
-    // Aquí cae el caso que motivó todo esto: el cruce no encontró nada
-    // ("no encontrada") porque el banco no escribió el nombre en el concepto.
+
     return <>{guardado ?? <span className="vacio">—</span>}{editarVinculoLm(m)}{botonVincularLm(m)}</>;
   }
 
-  // Enlazar desde este lado. Antes solo se podía deshacer: si el cruce no
-  // encontraba el pago --porque el banco describe la transferencia como
-  // "Registration fee 2 of Calum", sin apellido-- había que irse a la pestaña
-  // LarpManager y buscar el pago allí para enlazarlo al revés.
-  //
-  // Sale en cualquier ingreso sin pago, TAMBIÉN si la línea ya está resuelta:
-  // ese es el caso normal, porque las transferencias se puntean antes de
-  // subir el export de LarpManager.
   function botonVincularLm(m) {
     if (Number(m.importe) <= 0) return null;
     if ((m.pagos_larpmanager || []).length > 0) return null;
@@ -915,10 +739,7 @@ export default function TablaMovimientos({
 
   function panelVincularLm(m) {
     const plantilla = '210px 150px 90px 95px 100px 1fr 110px';
-    // El contenido va pegado al borde de lo que se ve (position: sticky en
-    // .panel-pegado), igual que Fecha y Concepto. Sin esto, al abrir el panel
-    // desde la columna LarpManager --que está al final de la fila-- se quedaba
-    // anclado a la izquierda de la tabla, fuera de la pantalla.
+
     const pegado = { width: anchoVisible || undefined };
     if (!candidatosLm) {
       return (
@@ -928,9 +749,7 @@ export default function TablaMovimientos({
       );
     }
     const q = busquedaLm.trim().toLowerCase();
-    // Los que ya tienen movimiento son la inmensa mayoría y no se pueden
-    // elegir: solo salen al buscar por nombre, para poder cazar un enlace
-    // equivocado. Sin buscar, la lista es la de los que están libres.
+
     const sinMovimiento = candidatosLm.filter(c => !c.enlazado);
     const destacados = sinMovimiento.filter(c => c.suNombre || c.mismoImporte);
     let lista = sinMovimiento;
@@ -943,8 +762,7 @@ export default function TablaMovimientos({
       pie = <>{destacados.length} de {sinMovimiento.length} llevan su nombre o su importe.{' '}
         <a href="#" onClick={e => { e.preventDefault(); setVerTodosLm(true); }}>Ver todos</a></>;
     } else {
-      // "Sin movimiento", no "pendientes": la lista incluye los ignorados y
-      // los dados por buenos a mano, que se ven aunque no se puedan enlazar.
+
       pie = `Los ${sinMovimiento.length} pagos sin movimiento.`;
     }
 
@@ -952,10 +770,7 @@ export default function TablaMovimientos({
       <div className="panel-fila">
        <div className="panel-pegado" style={pegado}>
         <p className="panel-titulo">Qué pago de LarpManager es este ingreso</p>
-        {/* El buscador no está en el panel equivalente de la pestaña
-            LarpManager porque allí se elige entre unas decenas de
-            movimientos; aquí son cientos de pagos, y el concepto del banco
-            muchas veces no trae el apellido con el que buscarlos. */}
+
         <div className="buscador-fila" style={{ marginBottom: 6 }}>
           <input
             type="text"
@@ -992,9 +807,7 @@ export default function TablaMovimientos({
                   ? `${c.enlazado.fecha ? new Date(c.enlazado.fecha).toLocaleDateString('es-ES') : '—'} · ${c.enlazado.importe.toFixed(2)}€ · ${c.enlazado.concepto || ''}`
                   : <span className="vacio">—</span>}
               </Celda>
-              {/* Los que no están pendientes o ya tienen movimiento se ven,
-                  pero no se pueden elegir. Sin botón, no con un botón apagado,
-                  para que no invite a pulsarlo. */}
+
               <Celda>
                 {c.estado === 'pendiente' && !c.enlazado ? (
                   <button type="button" className="secundario" disabled={guardandoLm} onClick={() => vincularPagoLm(m, c.id)}>
@@ -1031,10 +844,7 @@ export default function TablaMovimientos({
     return (
       <div role="row" className={`fila-tabla${esInicioGrupo ? ' inicio-grupo' : ''}`} style={{ gridTemplateColumns: plantillaColumnas }}>
         <Celda col="Fecha" className="muted" stickyLefts={stickyLefts}>{m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES') : ''}</Celda>
-        {/* El concepto se lee entero. Estuvo cortado a 80 caracteres desde el
-            commit b2d2c79 (2026-07-27) sin que se pidiera ni se dijera en el
-            mensaje del commit: cualquier concepto más largo se veía truncado
-            y no había forma de leerlo desde la tabla. */}
+
         <Celda col="Concepto" className="concepto" stickyLefts={stickyLefts}>{m.concepto}</Celda>
         <Celda col="Banco" className="muted banco">{g.hoja}</Celda>
         <Celda col="Proveedor" className="proveedor">{celdaProveedor(m)}</Celda>
@@ -1044,9 +854,7 @@ export default function TablaMovimientos({
         <Celda col="Nota">{celdaNota(m, g)}</Celda>
         <Celda col="Proyecto">{celdaProyecto(m)}</Celda>
         {columnasVisiblesExtra.map(c => (
-          // "envuelve" en LarpManager: el texto parte de línea en vez de
-          // recortarse con puntos suspensivos. Ahí caben un nombre largo, el ✎
-          // y el botón, y recortando no se leía ninguno de los tres.
+
           <Celda key={c} col={c} className={c === 'larpmanager' ? 'envuelve' : 'muted'}>
             {c === 'larpmanager' ? celdaLarpManager(m) : (m.datos_originales?.[c] ?? <span className="vacio">—</span>)}
           </Celda>
@@ -1056,25 +864,18 @@ export default function TablaMovimientos({
   }
 
   function filaGrupo(g) {
-    // Solo se agrupa visualmente cuando hay mas de una linea de verdad (contando el
-    // total real del grupo, no lo que quede tras filtrar).
+
     if (g.total <= 1) return null;
     const pendientesGrupo = g.total - g.resueltas;
     const permiteAccionesGrupo = pendientesGrupo > 0;
-    // La nota que comparten TODAS las líneas del grupo, si es que comparten
-    // una. Si cada línea tiene la suya, el campo se queda vacío: no hay una
-    // nota del grupo que enseñar. Sin esto el campo salía siempre en blanco y
-    // no había nada que borrar, así que vaciarlo no hacía nada.
+
     const notasDelGrupo = new Set((g.movimientosTodos || g.movimientos).map(m => m.nota_final || ''));
     const notaComunGrupo = notasDelGrupo.size === 1 ? [...notasDelGrupo][0] : '';
     const sugerenciaProveedorGrupo = g.movimientos.find(m => m.proveedor_sugerido)?.proveedor_sugerido || null;
     return (
       <div role="row" className="fila-tabla fila-grupo" key={`g-${g.id}`} style={{ gridTemplateColumns: plantillaColumnas }}>
         <Celda col="Fecha" stickyLefts={stickyLefts} />
-        {/* Cada columna con lo suyo: en Concepto va lo que escribe el banco, y
-            el proveedor va en la columna Proveedor. Antes el nombre del
-            proveedor se pintaba aquí, con el campo de Proveedor vacío al
-            lado -- la misma cosa en dos sitios, y en ninguno el que le toca. */}
+
         <Celda col="Concepto" stickyLefts={stickyLefts}>
           <div className="grupo-nombre">{nombreGrupo(g.clave)} <span className="categoria-texto">· {ETIQUETAS[g.categoria]}</span></div>
         </Celda>
@@ -1091,9 +892,7 @@ export default function TablaMovimientos({
             className="campo-proveedor"
             type="text"
             placeholder=""
-            // Enseña el proveedor que el grupo ya tiene, no un campo vacío:
-            // es donde se lee y donde se cambia o se borra (borrarlo desagrupa
-            // y olvida).
+
             value={proveedoresGrupo[g.id] ?? (g.proveedor || '')}
             onChange={e => setProveedoresGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarProveedorGrupo(g, e.target.value); } }}
@@ -1101,10 +900,7 @@ export default function TablaMovimientos({
           />
           )}
         </Celda>
-        {/* Sin total de grupo. Sumaba SIEMPRE las líneas del grupo entero,
-            también las que "Solo pendientes" está ocultando, así que enseñaba
-            un número que no cuadraba con nada de lo que había debajo: en
-            Amazon, −617,86 € encima de tres líneas que suman −421,39 €. */}
+
         <Celda col="Importe" />
         <Celda col="Estado">
           {permiteAccionesGrupo && (
@@ -1116,14 +912,7 @@ export default function TablaMovimientos({
           )}
         </Celda>
         <Celda col="Factura" />
-        {/* La nota del grupo se escribe siempre, aunque no queden líneas
-            pendientes: si no, en cuanto el grupo estaba entero resuelto
-            desaparecía el campo y no había forma de corregir ni borrar su
-            nota. Mismo problema que tenía la nota de una línea suelta.
-            Escribirla la aplica a TODAS las líneas del grupo, resueltas
-            incluidas -- que es justo lo que hace falta para corregir. La
-            sugerencia, en cambio, solo se ofrece si queda algo por resolver:
-            proponer sobre un grupo ya cerrado no tiene sentido. */}
+
         <Celda col="Nota">
           {
             <>
@@ -1141,8 +930,7 @@ export default function TablaMovimientos({
                 value={notasGrupo[g.id] ?? notaComunGrupo}
                 onChange={e => setNotasGrupo(prev => ({ ...prev, [g.id]: e.target.value }))}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNotaGrupo(g, e.target.value); } }}
-                // Guarda también al vaciarlo: antes solo si quedaba texto, así
-                // que borrar la nota de un grupo entero era imposible.
+
                 onBlur={e => { if (notasGrupo[g.id] !== undefined) confirmarNotaGrupo(g, e.target.value); }}
               />
             </>
@@ -1162,12 +950,7 @@ export default function TablaMovimientos({
 
   return (
     <div>
-      {/* Subir facturas ya no cambia lo que se ve en esta tabla. Antes, subir
-          en Facturas dejaba Movimientos filtrado a las líneas de esa subida,
-          con una barra para deshacerlo, y el aviso de las que no encontraron
-          línea salía también aquí, en otra pantalla, pidiendo otra vez un
-          importe ya escrito. Todo eso vive en Facturas, que es donde se sube.
-          Aquí manda "Solo pendientes", como siempre. */}
+
       <div className="buscador-fila">
         <div className="grupo-tb">
           <input type="text" placeholder="Buscar en cualquier columna..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />

@@ -7,7 +7,7 @@ beforeEach(limpiar);
 afterAll(limpiar);
 
 const unaDe = importe => lector([{ importe, fecha: '2026-07-19', proveedor: 'Proveedor' }]);
-// La línea que propone el resultado, se llame como se llame la propuesta.
+
 const lineaPropuesta = r => r.movimientoId ?? r.candidatos?.[0]?.movimientoId ?? null;
 
 describe('cruzar facturas con el banco', () => {
@@ -57,13 +57,12 @@ describe('cruzar facturas con el banco', () => {
     const linea = await sembrarLinea({ importe: -45.01 });
     const { archivo, resultado } = await subir({ leer: unaDe(45) });
 
-    // Se propone: es lo que ella pidió, "que me lo proponga, no que valide".
     expect(String(lineaPropuesta(resultado))).toBe(String(linea.id));
-    // Pero no se da por bueno ni se toca nada.
+
     expect((await lineaPorId(linea.id)).estado).toBe('sin_resolver');
     expect((await facturaPorNombre(archivo)).estado).not.toBe('matcheada');
     expect(resultado.exacto).toBe(false);
-    // Y el aviso dice cuánto falta, no se lo calla.
+
     expect(resultado.detalle).toMatch(/NO CUADRA/);
     expect(resultado.detalle).toMatch(/0,01|0.01/);
   });
@@ -128,8 +127,7 @@ describe('cruzar facturas con el banco', () => {
         { importe: 55, fecha: '2026-07-19', proveedor: 'X' },
       ]),
     });
-    // Movimientos solo dibuja las propuestas guardadas como combinación y con
-    // la línea dentro. Si se guarda de otra forma, esa línea parece vacía.
+
     const f = await facturaPorNombre(archivo);
     expect(f.motivo_tipo).toBe('combo_sugerido');
     expect(String(f.motivo_candidatos.movimientoId)).toBe(String(linea.id));
@@ -137,12 +135,10 @@ describe('cruzar facturas con el banco', () => {
 
   it('17. la factura que paga un colaborador de su bolsillo no se cruza', async () => {
     const linea = await sembrarLinea({ importe: -45 });
-    // Lo que la distingue es que la pague el (que viva en un lote), NO quien la
-    // sube: la propia usuaria esta dada de alta y sube casi todas.
+
     const { archivo } = await subir({ leer: unaDe(45) });
     await marcarComoDeLote(archivo);
 
-    // Escribirle el importe a mano vuelve a cruzarla: aqui es donde se ve.
     const f0 = await facturaPorNombre(archivo);
     const resultado = await confirmarDatosManual(f0.id, { importe: 45 });
     expect(resultado.tipo).toBe('no_se_cruza');

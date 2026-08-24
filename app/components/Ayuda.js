@@ -2,17 +2,6 @@
 
 import { useState } from 'react';
 
-// Manual de uso. Dos versiones: la de administración en español (la usa ella)
-// y la de colaboradores en inglés, que es el idioma real de su pantalla —
-// aquí se nombran los botones exactamente como los ven, no traducidos.
-// La versión de colaboradores se enseña en los dos sitios: en esta pestaña
-// (para poder leer lo que se les ha contado) y en su propia pantalla, con el
-// botón "Help" de su cabecera.
-//
-// Todo lo que se nombra aquí está sacado leyendo las pantallas, literal. Si
-// se cambia un rótulo en la app, hay que cambiarlo también aquí: un manual que
-// nombra botones que no existen es peor que no tener manual.
-
 const SECCIONES_ADMIN = [
   {
     titulo: 'Entrar',
@@ -492,8 +481,6 @@ const SECCIONES_ADMIN = [
   },
 ];
 
-// En inglés a propósito: es el idioma de toda la pantalla del colaborador, y
-// los rótulos que se nombran aquí son los que ellos ven de verdad.
 const SECCIONES_COLABORADORES = [
   {
     titulo: 'Signing in',
@@ -631,8 +618,6 @@ function Secciones({ secciones }) {
   );
 }
 
-// `soloColaboradores` la usa la pantalla del colaborador: la misma ayuda, sin
-// el interruptor -- ahí no hay ninguna otra versión que elegir.
 export default function Ayuda({ soloColaboradores = false }) {
   const [version, setVersion] = useState('admin');
 

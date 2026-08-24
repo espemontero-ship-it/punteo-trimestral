@@ -20,11 +20,6 @@ export async function POST(request) {
       return Response.json({ error: 'Ninguna fila del archivo se puede cruzar con el banco (todas son de pasarela o apuntes internos).' }, { status: 400 });
     }
 
-    // El archivo se guarda y la subida queda registrada, igual que la del
-    // excel del banco: antes el CSV se procesaba y se tiraba, y no había forma
-    // de saber qué se subió, cuándo, ni de deshacerlo.
-    // Antes de registrar nada: las columnas nuevas (importaciones.origen entre
-    // ellas) se crean aquí, y sin ellas el registro de la subida falla.
     await asegurarTablaPagosLarpManager();
 
     const blob = await put(`larpmanager/${Date.now()}-${file.name || 'pagos.csv'}`, buffer, {
@@ -38,9 +33,7 @@ export async function POST(request) {
     const importacionId = rows[0].id;
 
     const resultados = await emparejarIngresosConLarpManager(filas, importacionId);
-    // 'match_ya_resuelta' son líneas que ya estaban punteadas a mano y a las
-    // que solo les faltaba el enlace: cuentan como emparejadas igual, si no
-    // el mensaje diría que no se ha emparejado nada cuando sí se ha hecho.
+
     const emparejadas = resultados.filter(r => r.tipo === 'match' || r.tipo === 'match_ya_resuelta').length;
     return Response.json({
       resultados,

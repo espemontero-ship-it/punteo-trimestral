@@ -15,7 +15,6 @@ afterAll(async () => {
 
 const unaDe = importe => lector([{ importe, fecha: '2026-07-19', proveedor: 'Proveedor' }]);
 
-// Lo que devuelve la pantalla de Facturas para una factura concreta.
 async function comoLaVeLaPantalla(archivo) {
   const respuesta = await listarFacturas();
   const { facturas } = await respuesta.json();
@@ -31,7 +30,7 @@ describe('descartar una sugerencia', () => {
     expect(f.motivo_candidatos).not.toBeNull();
     const candidato = f.motivo_candidatos.candidatos[0];
     expect(String(candidato.movimientoId)).toBe(String(linea.id));
-    // Sin esto la pantalla no puede descartarla de verdad, solo esconderla.
+
     expect(candidato.hoja).toBe(HOJA);
     expect(candidato.clave).toBeTruthy();
   });
@@ -44,7 +43,6 @@ describe('descartar una sugerencia', () => {
     const candidato = antes.motivo_candidatos.candidatos[0];
     expect(candidato).toBeTruthy();
 
-    // Es lo mismo que hace la ✕ de la pantalla.
     await registrarRechazo(candidato.hoja, candidato.clave, 'combo', String(antes.id));
 
     const despues = await comoLaVeLaPantalla(archivo);

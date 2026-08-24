@@ -4,12 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
 import { huellaDeArchivo, facturaConEseArchivo } from '../lib/huella';
 
-// Un único formulario de subida para colaboradores. Admite VARIOS archivos a
-// la vez: se suben uno detrás de otro con los mismos datos del formulario.
-// El proyecto se elige siempre (ya no se asigna uno fijo al alta) -- entra
-// por el lote de ese proyecto, creándolo al vuelo si hace falta (ver
-// buscarOCrearLote). "Quién paga" (Yo/NOL) solo aparece si el colaborador
-// tiene el permiso puede_subir_facturas_generales; si no, siempre paga él.
 export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturasGenerales, onSubida }) {
   const inputRef = useRef(null);
   const [archivos, setArchivos] = useState([]);
@@ -37,7 +31,7 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
     try {
       for (const archivo of archivos) {
         try {
-          // If this exact file is already uploaded, it is not uploaded again.
+
           if (await facturaConEseArchivo(await huellaDeArchivo(archivo))) {
             problemas.push(`${archivo.name}: already uploaded.`);
             continue;
@@ -58,8 +52,7 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
           if (!res.ok || data?.tipo === 'error') problemas.push(`${archivo.name}: ${data.error || data.detalle || 'could not upload'}`);
           else {
             subidas++;
-            // Si la IA no ha podido leerla, se guarda igual pero se dice por que:
-            // el importe se pone luego a mano desde la tabla.
+
             if (data.motivoIA) problemas.push(`${archivo.name}: saved, but the amount could not be read (${data.motivoIA}). Edit it in the table below.`);
           }
         } catch (err) {
@@ -96,8 +89,7 @@ export default function SubirFacturaColaborador({ proyectoId, puedeSubirFacturas
       <div style={{ height: 8 }} />
       <input type="text" placeholder="Description (e.g. petrol, gaffer tape...)" value={concepto} onChange={e => setConcepto(e.target.value)} />
       <div style={{ height: 8 }} />
-      {/* El importe y la fecha ya no se piden: los lee la IA del propio
-          documento y se enseñan en la tabla, donde se pueden corregir. */}
+
       <p className="muted" style={{ margin: 0, fontSize: 12 }}>
         Amount, supplier and date are read from the invoice itself. You can correct them afterwards.
       </p>

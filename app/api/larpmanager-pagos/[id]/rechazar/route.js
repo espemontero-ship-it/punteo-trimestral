@@ -1,9 +1,5 @@
 const { rechazarSugerenciaLarpManager } = require('../../../../../lib/larpmanager.cjs');
 
-// La ✕ de la sugerencia. Se guarda el par pago-movimiento para siempre: decir
-// que no a una propuesta no es "ahora no", es "ese movimiento no es de esta
-// persona". El reparto sigue buscando, así que rechazar hace que salga la
-// siguiente mejor en vez de dejar el pago sin nada.
 export async function POST(request, { params }) {
   try {
     const { id } = await params;

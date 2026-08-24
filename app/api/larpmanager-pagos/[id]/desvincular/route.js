@@ -1,6 +1,5 @@
 const { desvincularPago } = require('../../../../../lib/larpmanager.cjs');
 
-// Deshacer el vínculo entre un pago de LarpManager y su línea del banco.
 export async function POST(request, { params }) {
   try {
     const { id } = await params;

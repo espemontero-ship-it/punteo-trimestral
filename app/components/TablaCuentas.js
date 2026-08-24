@@ -5,7 +5,6 @@ import { importeDeFactura } from '../../lib/importeFactura.cjs';
 
 const FMT = n => `${Number(n || 0).toFixed(2)}€`;
 
-// El importe de una factura sale del único sitio que lo calcula.
 const IMPORTE = f => importeDeFactura(f);
 
 const PARA_INPUT = fecha => {
@@ -14,25 +13,15 @@ const PARA_INPUT = fecha => {
   return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`;
 };
 
-// Tabla de cuentas de un lote: cada importe vive en una única columna según su
-// naturaleza (Sin revisar/Aceptada/Rechazada/Pagos), nunca mezclado con texto.
-// El desplegable de Estado de una factura solo cambia lo que ya está guardado
-// -- elegir "Rechazada"/"Borrada" pide confirmación al padre (diálogos, como
-// hoy); elegir "Cerrada" revela un campo de fecha inline antes de guardar,
-// igual que "adelanto colaborador" revela sus propios campos en Movimientos.
-// soloLectura la reutiliza en la vista del colaborador: sin desplegable, sin
-// borrar, sin vincular pagos -- pero sí puede corregir y retirar LO SUYO
-// mientras siga sin revisar (onCorregir/onRetirar), con los mismos campos
-// inline que usa aquí el cierre.
 export default function TablaCuentas({
   lote, facturas, pagos, totales, soloLectura,
   onGuardarFactura, onSolicitarRechazo, onSolicitarBorrado,
   movimientos, onVincular, onCrearPago,
   onCorregir, onRetirar,
 }) {
-  const [cerrando, setCerrando] = useState(null); // { id, fecha }
-  const [editando, setEditando] = useState(null); // { id, concepto, importe, fecha }
-  const [retirando, setRetirando] = useState(null); // id
+  const [cerrando, setCerrando] = useState(null);
+  const [editando, setEditando] = useState(null);
+  const [retirando, setRetirando] = useState(null);
   const [nuevoPago, setNuevoPago] = useState({ importe: '', fecha: '', nota: '' });
 
   function onCambiarEstado(f, valor) {
@@ -83,10 +72,6 @@ export default function TablaCuentas({
 
   const cols = '1fr 120px 50px 100px 100px 100px 100px 100px 100px 220px';
 
-  // soloLectura solo es true en la vista de colaborador (nunca en la de
-  // administración) -- se usa como interruptor de idioma: colaboradores ven
-  // esta tabla compartida en inglés, administración la sigue viendo en
-  // español, sin necesidad de una i18n de verdad para un único componente.
   const locale = soloLectura ? 'en-GB' : 'es-ES';
   const t = soloLectura ? {
     cuentas: 'Accounts', concepto: 'Description', proveedor: 'Supplier', ver: 'View', fecha: 'Date',
@@ -155,7 +140,7 @@ export default function TablaCuentas({
             const bloqueada = f.estado_revision === 'cerrada';
             const importe = IMPORTE(f);
             const enEdicion = editando?.id === f.id;
-            // Solo lo suyo y solo mientras nadie lo haya revisado.
+
             const puedeTocarla = soloLectura && enSubida && onCorregir && onRetirar;
             return (
               <div key={f.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>

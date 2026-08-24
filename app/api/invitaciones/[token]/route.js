@@ -3,8 +3,6 @@ const { verTokenPendiente, consumirToken } = require('../../../../lib/tokens.cjs
 const { crearColaboradorDesdeInvitacion } = require('../../../../lib/colaboradores.cjs');
 const { crearTokenSesion, SESSION_COOKIE, DURACION_MS } = require('../../../../lib/auth.cjs');
 
-// Solo consulta -- para mostrar "te han invitado a {proyecto}" antes de pedir
-// la contraseña, sin gastar la invitación.
 export async function GET(request, { params }) {
   const { token } = await params;
   const invitacion = await verTokenPendiente(token, 'invitacion');

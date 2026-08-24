@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 
 export default function InvitacionPage({ params }) {
   const { token } = use(params);
-  const [invitacion, setInvitacion] = useState(undefined); // undefined = cargando, null = inválida
+  const [invitacion, setInvitacion] = useState(undefined);
   const [password, setPassword] = useState('');
   const [confirmar, setConfirmar] = useState('');
   const [error, setError] = useState(null);

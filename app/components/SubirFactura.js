@@ -18,16 +18,13 @@ export default function SubirFactura({ hoja, clave, etiqueta, onResultado, class
     if (elegidos.length) setArchivos(elegidos);
   }
 
-  // Se pueden elegir varias a la vez: se suben una detras de otra con los
-  // mismos datos del formulario, y cada una devuelve su resultado.
   async function subir() {
     if (archivos.length === 0) return;
     setSubiendo(true);
     try {
       for (const archivo of archivos) {
         try {
-          // Antes de subir nada: si este archivo ya está guardado, no se sube.
-          // La huella se calcula aquí mismo, en el navegador, y no cuesta nada.
+
           const ya = await facturaConEseArchivo(await huellaDeArchivo(archivo));
           if (ya) {
             onResultado({ tipo: 'duplicada', detalle: `${archivo.name}: ese archivo ya está subido como factura #${ya.numero} (${ya.nombre}). No se ha subido.` });

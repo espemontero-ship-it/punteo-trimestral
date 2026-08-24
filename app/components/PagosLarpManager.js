@@ -4,28 +4,18 @@ import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
 import { apiFetch, mostrarToast } from '../lib/toast';
 import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 
-// Mismo motor de tabla que Movimientos y Facturas (CSS Grid, no <table>): una
-// plantilla de anchos que se aplica a la cabecera y a cada fila, así que es
-// imposible que se desalineen. Ver PROYECTO.md, "Toda lista de datos con
-// columnas es una tabla de verdad".
 const COLUMNAS = ['Nombre', 'Evento', 'Importe', 'Fecha', 'Movimiento', 'Por qué', 'Estado', 'Vincular'];
 const ANCHO_DEFECTO = {
   Nombre: 200, Evento: 150, Importe: 90, Fecha: 95,
   'Movimiento': 340, 'Por qué': 200, Estado: 110, Vincular: 130,
 };
 
-// Los mismos tres de Movimientos. Se guardan con el vocabulario de esa tabla
-// ('resuelta'/'ignorada') para no tener dos nombres para lo mismo, y se
-// enseñan como los lee la usuaria.
 const ESTADOS = [
   ['pendiente', 'pendiente'],
   ['resuelta', 'resuelto'],
   ['ignorada', 'ignorar'],
 ];
 
-// La misma forma de sugerencia que en Movimientos (ver TablaMovimientos.js y
-// la Guía de diseño): una sola píldora para todos los tipos, el texto acepta
-// y la ✕ rechaza.
 function Sugerencia({ texto, dudosa, onAplicar, onDescartar }) {
   return (
     <span className={`sugerencia${dudosa ? ' dudosa' : ''}`} role="group">
@@ -35,8 +25,6 @@ function Sugerencia({ texto, dudosa, onAplicar, onDescartar }) {
   );
 }
 
-// Fuera del componente a propósito: si se define dentro, React la trata como
-// un tipo nuevo en cada render y los <select> de dentro pierden el foco.
 function Celda({ className = '', cabecera, children, style }) {
   return (
     <div role={cabecera ? 'columnheader' : 'cell'} className={`celda ${className}`.trim()} style={style}>
@@ -48,10 +36,6 @@ function Celda({ className = '', cabecera, children, style }) {
 const eur = n => `${Number(n).toFixed(2)}€`;
 const dia = f => (f ? new Date(f).toLocaleDateString('es-ES') : '—');
 
-// Con qué movimiento ha quedado este pago. Va en columna propia --y no
-// solo dentro de la frase de "Por qué"-- para poder ordenar, buscar y repasar
-// de un vistazo a qué se está enlazando cada cosa: un vínculo equivocado
-// (dos nombres que el banco escribe parecido) no se ve de ninguna otra forma.
 function lineaTexto(p) {
   if (!p.movimiento_id) return '';
   return `${dia(p.movimiento_fecha)} · ${eur(p.movimiento_importe)} · ${p.movimiento_concepto || ''}`;
@@ -62,20 +46,16 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
   const [cargando, setCargando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(true);
-  const [ordenPor, setOrdenPor] = useState(null);           // { campo, dir } | null
+  const [ordenPor, setOrdenPor] = useState(null);
   const [anchos, setAnchos] = useAnchosPersistidos('punteo-anchos-larpmanager');
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
-  // Vincular a mano: qué fila está abierta, con qué candidatas y con qué
-  // histórico de esa persona.
+
   const [abierto, setAbierto] = useState(null);
-  const [detalle, setDetalle] = useState(null);             // { candidatos, historial } | null
+  const [detalle, setDetalle] = useState(null);
   const [verTodas, setVerTodas] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  // Entrar en la página ya cruza: el endpoint reparte y escribe los enlaces
-  // antes de devolver la lista, así que lo que se ve aquí es lo que queda por
-  // mirar a mano, no una predicción.
   const cargar = useCallback(async () => {
     setCargando(true);
     const data = await apiFetch('/api/larpmanager-sin-emparejar', undefined, {
@@ -91,8 +71,6 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? 140;
   }
 
-  // Ver iniciarArrastre en TablaMovimientos.js para por qué se escucha en
-  // window y por qué el try/catch alrededor de setPointerCapture.
   function iniciarArrastre(e, col) {
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
     const startX = e.clientX;
@@ -137,9 +115,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
 
   const visibles = useMemo(() => {
     let lista = pagos || [];
-    // Igual que "Solo pendientes" en Movimientos: lo contestado no desaparece
-    // de la aplicación, solo deja de estar delante. Quitando la marca salen
-    // los ignorados y se les puede volver a poner pendiente.
+
     if (soloPendientes) lista = lista.filter(p => (p.estado || 'pendiente') === 'pendiente');
     const q = busqueda.trim().toLowerCase();
     if (q) {
@@ -189,10 +165,6 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     }
   }
 
-  // La ✕: se guarda que ese movimiento NO es de esta persona, para siempre.
-  // Se recarga porque el reparto sigue buscando: al descartar uno, el hueco
-  // lo puede ocupar la siguiente propuesta, tanto para este pago como para
-  // otro que tuviera ese movimiento cogido.
   async function rechazar(p, movimientoId) {
     const r = await apiFetch(`/api/larpmanager-pagos/${p.id}/rechazar`, {
       method: 'POST',
@@ -208,9 +180,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ estado }),
     }, { mensajeError: 'No se pudo cambiar el estado.' });
-    // Se recarga entero, no solo esa fila: sacar un pago del cruce libera la
-    // movimiento que tenía cogido, y eso cambia el "Por qué" de los
-    // demás pagos de esa persona.
+
     if (r) await cargar();
   }
 
@@ -226,9 +196,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     if (col === 'Movimiento') {
       const t = lineaTexto(p);
       if (t) return t;
-      // La propuesta del cruce se enseña como sugerencia, igual que el
-      // proveedor o el proyecto en Movimientos: la app propone y tú aceptas.
-      // Antes se escribía sola, y un acierto falso se cerraba en silencio.
+
       if (p.sugerencia) {
         const s = p.sugerencia;
         return (
@@ -244,10 +212,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     }
     if (col === 'Por qué') return <span className="muted">{p.motivoTexto || '—'}</span>;
     if (col === 'Estado') {
-      // Un pago con movimiento está resuelto porque lo dice el dinero,
-      // no porque nadie lo haya elegido: para cambiarlo hay que quitarle el
-      // vínculo antes, y eso se hace desde la columna LarpManager de
-      // Movimientos.
+
       return (
         <select
           className="select-estado"
@@ -267,14 +232,11 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
     );
   }
 
-  // Panel de la fila abierta. Va a todo el ancho de la tabla a propósito: el
-  // concepto del banco es lo que identifica una línea y no cabe en una celda.
   function panel(p) {
     if (!detalle) return <div className="panel-fila" style={{ width: anchoTotal }}><span className="muted">Cargando...</span></div>;
 
     const { candidatos, historial } = detalle;
-    // Primero las líneas que llevan su nombre o su importe: son las que la
-    // columna "Por qué" acaba de nombrar.
+
     const suyas = candidatos.filter(c => c.suNombre || c.mismoImporte);
     const todas = verTodas || suyas.length === 0;
     const lista = todas ? candidatos : suyas;

@@ -49,9 +49,7 @@ describe('leer una factura', () => {
   });
 
   it('3b. la lectura de la IA no tira los negativos por el camino', () => {
-    // Esto entra por donde entra la respuesta de verdad de la IA. Antes aquí
-    // se descartaba todo lo que no fuera mayor que cero, asi que una
-    // rectificativa no llegaba nunca a guardarse por mucho que se leyera bien.
+
     const leidas = facturasDeLaRespuesta({
       legible: true,
       facturas: [{ importe: -30 }, { importe: 0 }, { importe: 45 }],
@@ -78,7 +76,6 @@ describe('leer una factura', () => {
     expect(r2.status).not.toBe(400);
     expect(importeDeFactura(await facturaPorNombre(archivo))).toBe(-12.5);
 
-    // Cero no es un importe.
     const r3 = await ponerImporte(peticion({ importe: 0 }), params);
     expect(r3.status).toBe(400);
   });

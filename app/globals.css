@@ -7,12 +7,7 @@
   --muted: #656b80;
   --accent: #3f3d8f;
   --accent-soft: rgba(63, 61, 143, .09);
-  /* Ámbar: ÚNICA excepción a "solo el color de acento", decidida por la
-     usuaria el 2026-08-18 y anotada en PROYECTO.md. Marca una propuesta del
-     sistema de la que el propio sistema duda (LarpManager: el banco solo
-     escribe parte del nombre, o el importe no cuadra). Se puede aceptar de un
-     clic igual que las demás, así que tenía que distinguirse de una firme sin
-     lugar a error. No se usa para nada más. */
+
   --dudosa: #7a5800;
   --dudosa-soft: rgba(191, 138, 0, .15);
   --accent-text: #ffffff;
@@ -31,9 +26,6 @@ html, body {
   font-family: Calibri, Candara, "Segoe UI", system-ui, sans-serif;
 }
 
-/* Botones/inputs/selects no heredan la tipografía del body por defecto del
-   navegador -- sin esto usan la fuente del sistema operativo en vez de la de
-   la web, mezclada con el resto del texto. Ver Guía de diseño en PROYECTO.md. */
 button, input, select, textarea {
   font-family: inherit;
 }
@@ -140,7 +132,6 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 
 .error { color: var(--new); font-size: 14px; margin-top: 8px; }
 
-/* Toasts */
 .toast {
   display: flex;
   align-items: center;
@@ -163,7 +154,6 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .toast.ok .toast-icono { background: rgba(63,125,92,.14); color: var(--ok); }
 .toast.error .toast-icono { background: rgba(168,64,44,.14); color: var(--new); }
 
-/* Diálogos (sustituyen a confirm()/prompt()) */
 .dialogo-fondo {
   position: fixed; inset: 0; z-index: 999;
   background: rgba(25, 25, 24, 0.45);
@@ -202,12 +192,8 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   background: var(--accent); border-color: var(--accent);
 }
 
-/* Título de una página de detalle suelta (/lotes/[id], /proyectos/[id]) --
-   un <h1> sin clase hereda el tamaño por defecto del navegador (32px), muy
-   por encima de toda la escala tipográfica de la app (12.5-18px). */
 .titulo-pagina { font-size: 18px; font-weight: 700; }
 
-/* Cabecera: marca + pestañas + pendientes + sesión, todo en una sola fila */
 .cabecera-app {
   display: flex;
   align-items: center;
@@ -215,16 +201,10 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   border-bottom: 1px solid var(--border);
   margin: 14px 0 16px;
 }
-/* Menú "subrayado depurado" (maqueta_menu.html, opción A, 2026-08-13): misma
-   idea que antes -- texto + raya bajo la pestaña activa -- pero con más aire,
-   raya más gruesa y de esquinas redondeadas, y la marca con más peso. */
+
 .cabecera-app .marca { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -.01em; flex-shrink: 0; }
 .cabecera-app .tabs-cabecera { display: flex; gap: 4px; flex: 1; min-width: 0; }
-/* button en la SPA (cambia de pestaña sin navegar), <a> en las páginas
-   sueltas (/lotes/[id], /proyectos/[id], /proyectos -- vuelven a "/?tab=x").
-   Sin esta doble selección, las páginas sueltas quedaban con el enlace azul
-   subrayado por defecto del navegador, sin ningún estilo (bug encontrado
-   2026-08-13: nunca se cubrió el caso <a>, solo el de <button>). */
+
 .cabecera-app .tabs-cabecera button, .cabecera-app .tabs-cabecera a {
   font: inherit;
   font-size: 14px;
@@ -245,10 +225,6 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .cabecera-app .pendientes-cabecera { font-size: 13px; white-space: nowrap; flex-shrink: 0; }
 .cabecera-app button.secundario { flex-shrink: 0; }
 
-/* Menú móvil: nada de scroll horizontal para encontrar una pestaña. Por
-   debajo de 768px las pestañas desaparecen del todo y aparece un botón ☰
-   que abre la lista completa en vertical, a pantalla completa. Maqueta
-   aprobada: maqueta_menu_movil.html. */
 .btn-menu-movil {
   display: none; background: transparent; border: 1px solid var(--border); color: var(--text);
   font-size: 18px; line-height: 1; padding: 9px 12px; border-radius: 8px; cursor: pointer; flex-shrink: 0;
@@ -269,14 +245,10 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   .btn-menu-movil { display: flex; align-items: center; justify-content: center; }
 }
 
-/* Fila de acciones de Movimientos: bloques separados por un divisor vertical --
-   subir / revisar / enviar. Se probaron rótulos de texto encima de cada grupo
-   y se descartaron (2026-08-14): el divisor solo ya basta. */
 .bloques { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; }
 .bloque { display: flex; flex-direction: column; gap: 6px; }
 .bloque .btns { display: flex; gap: 6px; flex-wrap: wrap; }
-/* Avance del punteo, al final de la fila y pegado a la derecha: cuánto queda
-   para que esto se pueda enviar a la gestoría. */
+
 .bloque-avance { margin-left: auto; min-width: 170px; }
 .bloque-avance .progreso { margin: 0; }
 .texto-avance { font-size: 12px; color: var(--muted); }
@@ -284,10 +256,6 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .btn-icono { display: flex; align-items: center; gap: 6px; }
 .btn-icono .ico { font-size: 15px; line-height: 1; }
 
-/* Acción principal de Inicio (maqueta_inicio.html, opción A, 2026-08-13):
-   sin bloque de color -- título + instrucción + botón ancho relleno de
-   acento, igual de protagonista que antes sin ser un rectángulo sólido que
-   ocupa media pantalla. */
 .inicio-subir { margin-bottom: 12px; }
 .titulo-inicio { margin: 0 0 4px; font-size: 16px; font-weight: 400; }
 .instruccion-inicio { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
@@ -299,7 +267,6 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 }
 .resumen-mini a { color: var(--accent); font-size: 12.5px; font-weight: 600; text-decoration: none; }
 
-/* Subida en lote de facturas */
 .zona-subida-lote-progreso { flex: 1; min-width: 220px; }
 .fila-progreso-lote { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; text-align: left; }
 .num-progreso-lote { font-size: 13.5px; font-weight: 400; }
@@ -319,8 +286,6 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
 .importe-manual button { font-size: 12px; padding: 5px 10px; }
 .opciones-lote { font-size: 12px; }
 
-/* Barra de la tabla: bloques agrupados con divisor, igual lenguaje que
-   .bloques de la fila de acciones -- nada suelto sin relación visual. */
 .buscador-fila { display: flex; align-items: center; gap: 20px; margin-bottom: 10px; flex-wrap: wrap; }
 .buscador-fila input[type="text"] { width: 240px; font-size: 13px; padding: 7px 11px; }
 .grupo-tb { display: flex; align-items: center; gap: 8px; }
@@ -329,7 +294,7 @@ input[type="password"], input[type="text"], input[type="number"], input[type="da
   white-space: nowrap; border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer;
 }
 .toggle-pendientes input { accent-color: var(--accent); }
-/* Texto plano, sin caja -- no es un botón ni una acción, es un dato de estado. */
+
 .pend { color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; background: none; border: none; }
 
 details.excel-toggle { margin-bottom: 14px; }
@@ -338,7 +303,6 @@ details.excel-toggle > summary::-webkit-details-marker { display: none; }
 
 details.excel-toggle[open] > summary { margin-bottom: 10px; }
 
-/* Botón "Columnas" y su panel de casillas */
 .panel-columnas {
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 20;
   background: var(--card); border: 1px solid var(--border); border-radius: 10px;
@@ -349,23 +313,13 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
 .fila-checkbox input { accent-color: var(--accent); }
 .panel-columnas input[type="date"] { width: auto; font-size: 13px; padding: 6px 8px; }
 
-/* Tabla plana de movimientos (pestaña Trimestre) */
-/* Tabla montada con CSS Grid en vez de <table>: la misma cadena de anchos
-   (plantillaColumnas, calculada en JS a partir de un único estado "anchos")
-   se aplica via grid-template-columns a la cabecera y a cada fila. Un solo
-   sitio decide el ancho de cada columna — antes, con <table>, colgroup + el
-   style del <th> + una variable CSS aparte para las columnas fijas tenían
-   que coincidir los tres, y se desincronizaban. */
 .tabla-movimientos-envoltura { overflow-x: auto; margin-top: 4px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
 .fila-tabla-cabecera, .fila-tabla { display: grid; }
 .celda {
   padding: 9px 12px; display: flex; align-items: center; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; border-bottom: 1px solid var(--border); background: var(--bg);
 }
-/* Único tamaño para todo lo que va dentro de una celda de tabla -- texto,
-   inputs, selects, botones, enlaces -- nunca font-size suelto en línea por
-   componente (Guía de diseño en PROYECTO.md: "12-12.5px, sin excepciones
-   sueltas"). La cabecera ya tiene el suyo aparte y gana por especificidad. */
+
 .celda, .celda input, .celda select, .celda button, .celda a, .celda .muted {
   font-size: 12.5px;
 }
@@ -380,18 +334,14 @@ details.excel-toggle[open] > summary { margin-bottom: 10px; }
 }
 .etiqueta-orden:hover { color: var(--text); }
 .celda.concepto { white-space: normal; }
-/* Igual que Concepto: cuando una línea lleva varias facturas, los números
-   parten a la línea siguiente en vez de recortarse. Con tres caben; a partir
-   de cuatro se salían y las celdas de esta tabla cortan lo que sobra. */
+
 .celda.facturas { white-space: normal; }
 .celda.banco { text-transform: capitalize; }
 input.campo-proveedor {
   font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
   width: 100%; background: var(--surface-alt); color: var(--text);
 }
-/* Las celdas editables no parecen casillas de formulario hasta que se
-   interactúa con ellas -- con tantas columnas de inputs/selects, mostrar
-   siempre el recuadro convierte la tabla en un muro de rectángulos. */
+
 .celda input[type="text"], .celda select {
   background: transparent; border-color: transparent;
 }
@@ -403,14 +353,6 @@ input.campo-proveedor {
 .celda.col-importe { justify-content: flex-end; text-align: right; }
 .vacio { color: var(--border); }
 
-/* Acciones raras de fila -- hoy solo queda editar una devolución (✎). Las de
-   la columna Grupo (sacar "−" y unir "+") se retiraron el 2026-08-15: agrupar
-   y desagrupar se hace con el campo Proveedor.
-   Sin cajas: ningún control de celda tiene caja permanente en reposo -- la
-   caja aparece igual para todos solo al pasar por encima o hacer foco. Lo
-   único que distingue una acción de un dato en reposo es el peso de la
-   letra, no una caja. Alcance: solo dentro de las tablas (Movimientos y
-   Facturas), el resto de botones de la app no cambia. */
 .btn-editar-mini {
   width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
   padding: 0; font-size: 14px; font-weight: 700; line-height: 1; background: none;
@@ -418,10 +360,6 @@ input.campo-proveedor {
 }
 .btn-editar-mini:hover { color: var(--muted); }
 
-/* Arrastrar el borde derecho de una cabecera para hacer la columna mas
-   estrecha o mas ancha (a demanda, no se guarda entre sesiones). La zona de
-   agarre real es de 8px, pero se ve una linea fina siempre visible en el
-   borde para que se note que ahi se puede arrastrar. */
 .resize-handle { position: absolute; top: 0; right: 0; width: 12px; height: 100%; cursor: col-resize; touch-action: none; user-select: none; }
 .resize-handle::after {
   content: ''; position: absolute; top: 4px; bottom: 4px; right: 3px; width: 2px;
@@ -429,79 +367,46 @@ input.campo-proveedor {
 }
 .resize-handle:hover::after, .resize-handle:active::after { background: var(--text); }
 
-/* Fecha y Concepto se quedan fijas al hacer scroll horizontal (position y left
-   se calculan en JS, en linea, junto a la plantilla de anchos de arriba). */
 .celda.col-concepto { box-shadow: 3px 0 6px -3px rgba(0,0,0,.12); }
 
-/* Panel de una fila abierta (LarpManager: vincular a mano). Ocupa TODO el
-   ancho de la tabla, no el de su columna -- antes las lineas del banco se
-   elegian en un <select> dentro de una celda de 230px y el navegador cortaba
-   el concepto justo ahi, que es la parte por la que se reconoce la linea.
-   Fondo --surface-alt, el mismo de la cabecera de un grupo, para que se lea
-   como algo que cuelga de la fila de arriba y no como una tabla suelta. */
 .panel-fila { background: var(--surface-alt); border-bottom: 1px solid var(--border); padding: 16px; }
-/* El contenido del panel se queda pegado al borde de lo que se ve, igual que
-   las columnas Fecha y Concepto. En una tabla con desplazamiento horizontal,
-   el panel cuelga de la fila pero se ancla a la izquierda de la TABLA: si lo
-   abres desde una columna del final, se queda fuera de la pantalla. */
+
 .panel-pegado { position: sticky; left: 0; }
-/* Un pago que ya contestaste (ignorar, o dado por bueno a mano) sale en la
-   lista para poder detectarlo --si el ingreso es de alguien a quien ignoraste,
-   verlo aquí es la única forma de enterarse-- pero no se puede elegir. Va en
-   gris entero para que no compita con los que sí se pueden pulsar. */
+
 .fila-tabla.contestado .celda { color: var(--muted); }
 .panel-fila .tabla-movimientos-envoltura { margin-top: 0; }
-/* Las celdas de dentro van en blanco: sobre el gris del panel, el gris de
-   fondo normal de una celda no se distingue. */
+
 .panel-fila .fila-tabla .celda { background: var(--card); }
 .panel-titulo {
   font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
   color: var(--muted); margin: 0 0 4px;
 }
 .panel-bloque + .panel-bloque { margin-top: 24px; }
-/* Concepto y linea del banco: el texto entero, partido en varias lineas. El
-   resto de la app corta con ellipsis, pero aqui el texto ES el dato con el
-   que se decide. */
+
 .celda.envuelve { white-space: normal; align-items: flex-start; }
-/* El pago desde el que se abrio el panel, dentro de su propio historial. */
+
 .fila-tabla.fila-esta .celda { font-weight: 700; }
 
-/* Fila de cabecera de grupo (proveedor) — solo para grupos de mas de 1 linea.
-   Usa las mismas columnas que las filas normales (Estado, Nota...), en vez de
-   una sola celda combinada, para que quede claro que cada control actua
-   sobre todo el grupo por estar alineado bajo esa columna. */
 .fila-grupo .celda {
   background: var(--surface-alt); border-bottom: 1px solid var(--border);
   white-space: normal; align-items: flex-start;
 }
-/* Un grupo de 1 sola línea no tiene cabecera propia -- para que no se
-   confunda con una fila suelta, su única fila lleva el mismo fondo que la
-   cabecera de un grupo real. Regla real que existía, se perdió sin querer
-   en un rediseño anterior (el className se seguía aplicando en el JSX pero
-   ya no tenía estilo) -- restaurada 2026-08-13. */
+
 .inicio-grupo .celda { background: var(--surface-alt); }
 .fila-grupo .grupo-nombre { font-weight: 400; }
 .fila-grupo .meta { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .fila-grupo select.select-estado, .fila-grupo input.campo-nota { width: 100%; }
 .fila-grupo .chip-sugerencia { display: block; margin-bottom: 4px; }
 
-/* Nota: campo único, guarda con Enter. Un valor sugerido pero no confirmado
-   no lleva ninguna caja/color especial -- ya se lee en el propio texto, no
-   hace falta un tratamiento aparte (antes tenía un fondo azul confuso). */
 input.campo-nota {
   font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
   width: 100%; background: var(--surface-alt); color: var(--text);
 }
 .nota-texto { font-size: 13px; }
 
-/* Estado: siempre un desplegable editable (pendiente/pedida/resuelta); si hay
-   factura emparejada, un enlace debajo, sin flecha ni color nuevo */
 .celda-estado { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 select.select-estado { font-size: 13px; padding: 5px 8px; border-radius: 6px; width: auto; }
-/* Enlace y botón dentro de celda comparten el mismo tratamiento sin cajas:
-   texto en negrita, sin subrayar, sin caja en reposo -- la caja aparece
-   igual para los dos solo al pasar por encima o hacer foco. El azul se
-   queda reservado solo para sugerencias del sistema y la pestaña activa. */
+
 .celda .link-factura, .celda button.secundario {
   background: transparent; border: 1px solid transparent; color: var(--text);
   font-weight: 400; text-decoration: none; padding: 5px 10px; border-radius: 6px; display: inline-block;
@@ -511,29 +416,7 @@ select.select-estado { font-size: 13px; padding: 5px 8px; border-radius: 6px; wi
 }
 
 select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; width: auto; min-width: 90px; }
-/* Sugerencia del sistema: UN SOLO elemento para todas, se llame como se
-   llame el dato (nota, proveedor, proyecto, devolución, jugador, LarpManager,
-   factura de un lote). Píldora de acento suave con la ✕ dentro, como una
-   etiqueta que se cierra: pulsar el texto la acepta, pulsar la ✕ la descarta.
-   Ya no lleva la palabra "Aplicar" -- la forma dice sola que es una propuesta.
 
-   Los valores de la píldora (fondo --accent-soft, sin borde, radio 99px,
-   padding 3px 9px) son los que tenía .chip-sugerencia hasta el commit
-   88bfdfc (2026-08-03), donde se quitaron sin pedirlo; la usuaria los eligió
-   de nuevo el 2026-08-14 viendo las alternativas.
-
-   Por qué hizo falta: hasta hoy lo ÚNICO que distinguía una sugerencia de un
-   dato escrito por la usuaria era la palabra "Aplicar". El índigo de 46c92f9
-   dejó además el acento tan cerca del color del texto normal que solo con
-   color tampoco se distinguía. Y en cuatro sitios la sugerencia se escribía
-   directamente dentro del campo de la usuaria: eso ya no pasa. */
-/* El texto sigue abajo, no se corta. Antes era nowrap + ellipsis, y con eso
-   una sugerencia larga --el concepto de un movimiento del banco pasa de 100
-   caracteres-- se quedaba en "ABONO POR TRANSFERENCIA A SU FAVOR RECI...",
-   que es justo la parte que no distingue una línea de otra. El radio baja de
-   99px a 12px por lo mismo: en una píldora de tres líneas, el radio de
-   cápsula deja los lados como dos medias lunas. En las de una línea (nota,
-   proveedor, proyecto) no cambia nada a la vista. */
 .sugerencia {
   font: inherit; font-size: 12px; color: var(--accent);
   background: var(--accent-soft); border: none;
@@ -541,22 +424,18 @@ select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; 
   display: inline-flex; align-items: flex-start; gap: 4px;
   cursor: pointer; white-space: normal; text-decoration: none; max-width: 100%;
 }
-/* La ✕ vive dentro del recuadro, así que es su propio botón: si no, aceptar
-   y descartar serían el mismo clic. */
+
 .sugerencia-descartar {
   font: inherit; font-size: 13px; line-height: 1; color: var(--accent);
   background: none; border: none; padding: 0 1px; cursor: pointer; opacity: .65;
 }
 .sugerencia-descartar:hover { opacity: 1; }
-/* La misma píldora, en ámbar, cuando el sistema propone algo de lo que no
-   está seguro. Ver --dudosa arriba para por qué existe este color. */
+
 .sugerencia.dudosa { background: var(--dudosa-soft); color: var(--dudosa); }
 .sugerencia.dudosa .sugerencia-descartar { color: var(--dudosa); }
-/* Varias propuestas para la misma celda (LarpManager ambiguo, facturas de un
-   lote): una debajo de otra, no en fila, que la celda es estrecha. */
+
 .sugerencias-lista { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 
-/* Pestaña Ayuda: interruptor admin/colaboradores + secciones de texto */
 .interruptor-ayuda { display: inline-flex; gap: 4px; background: var(--surface-alt); padding: 3px; border-radius: 999px; margin-bottom: 20px; }
 .interruptor-ayuda button {
   font: inherit; font-size: 13.5px; font-weight: 600; padding: 8px 16px; border-radius: 999px;
@@ -573,9 +452,6 @@ select.select-proyecto { font-size: 13px; padding: 5px 8px; border-radius: 6px; 
 .tabla-estados-ayuda-fila { display: grid; grid-template-columns: 120px 1fr; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--border); font-size: 13.5px; }
 .tabla-estados-ayuda-fila:first-child { border-top: none; }
 
-/* Aviso de que el mismo archivo está subido más de una vez. Usa el ámbar que
-   ya existe para "esto hay que mirarlo" (--dudosa), el mismo de las filas
-   repetidas de la tabla, no un color nuevo. */
 .aviso-duplicados {
   border: 1px solid var(--dudosa-soft);
   background: var(--dudosa-soft);

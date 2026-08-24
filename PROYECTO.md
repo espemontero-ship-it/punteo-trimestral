@@ -18,6 +18,8 @@ El mockup se retira porque una maqueta fuera de su pantalla no se parece a la de
 
 **2026-07-28 — subir cambios sin pedir permiso cada vez.** Una vez un cambio está verificado (build limpio, y probado en local cuando es posible), se hace commit y push directamente, sin esperar a que la usuaria escriba "commit y push" cada vez. Motivo explícito: "cuantos menos oks te dé mejor, porque hay veces que no puedo hacerte caso" — minimizar cuántas veces necesita responder, no solo por comodidad. Esto **no** afecta a la regla de arriba (mostrar antes de implementar cambios de diseño/estructura/navegación) — sigue exactamente igual, esa validación es sobre qué se construye, esta es sobre cuándo se publica algo ya construido y verificado.
 
+**2026-08-24 — sin comentarios en el código.** No se escriben comentarios en el código: ni crónica de averías ("el 22/8/2026 vació cuatro", "por ahí entraron 124,74 € dados por buenos"), ni historia de qué hacía antes, ni justificaciones de por qué se cambió algo. Eso es un historial de incidencias metido dentro del código fuente y no le sirve a nadie: la usuaria no lee código, y para lo demás están el git y las conversaciones. Si algo necesita explicación, va en este documento. Ese día se quitaron los 1.874 comentarios que había: 13.514 líneas pasaron a 11.376.
+
 ## Guía de diseño (fija, no negociable)
 
 Acordada explícitamente durante el rediseño de Movimientos (2026-08-03) y aplicada de verdad en `app/globals.css` — este documento existe para que no se pierda ni se reinvente cada vez (ya pasó una vez: vivía solo en un archivo de plan de Claude Code que se sobreescribió sin querer al empezar el siguiente plan; a partir de ahora vive aquí, que no se sobreescribe).

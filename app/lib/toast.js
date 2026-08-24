@@ -12,8 +12,6 @@ export function suscribirToast(fn) {
   return () => { listeners = listeners.filter(l => l !== fn); };
 }
 
-// Envuelve fetch: si la respuesta no es OK, lanza un toast de error y devuelve
-// null en vez de un JSON a medio parsear. Si va bien, muestra un toast opcional.
 export async function apiFetch(url, options, { mensajeOk, mensajeError } = {}) {
   let res;
   try {
@@ -23,7 +21,7 @@ export async function apiFetch(url, options, { mensajeOk, mensajeError } = {}) {
     return null;
   }
   let data = null;
-  try { data = await res.json(); } catch { /* respuesta vacía */ }
+  try { data = await res.json(); } catch {  }
   if (!res.ok) {
     mostrarToast((data && data.error) || mensajeError || 'Algo ha fallado. Reintenta.', 'error');
     return null;

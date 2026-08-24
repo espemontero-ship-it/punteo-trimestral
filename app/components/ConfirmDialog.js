@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-// Diálogo de confirmación simple, sustituye a window.confirm().
 export function ConfirmDialog({ abierto, titulo, mensaje, textoConfirmar = 'Confirmar', peligroso, onConfirmar, onCancelar }) {
   if (!abierto) return null;
   return (
@@ -22,8 +21,6 @@ export function ConfirmDialog({ abierto, titulo, mensaje, textoConfirmar = 'Conf
   );
 }
 
-// Diálogo para elegir un motivo de una lista (con opción "otro" en texto libre),
-// sustituye a window.prompt().
 export function MotivoDialog({ abierto, titulo, opciones, onConfirmar, onCancelar }) {
   const [elegido, setElegido] = useState(opciones?.[0] || '');
   const [otro, setOtro] = useState('');

@@ -1,9 +1,3 @@
-// Herramientas comunes de las pruebas: sembrar datos de mentira, borrarlos, y
-// un lector de facturas falso para no llamar a la IA de verdad.
-//
-// Todo lo sembrado lleva marca propia (la hoja "pruebas" y el nombre de archivo
-// empezando por PRUEBA-) para poder borrarlo sin tocar nada más de la base de
-// desarrollo.
 import { query } from '../lib/db.cjs';
 import { analizarFactura, procesarFacturaSubida } from '../lib/facturaMatcher.cjs';
 
@@ -22,8 +16,6 @@ export async function limpiar() {
   await query(`DELETE FROM lotes WHERE evento = 'LOTE DE PRUEBA'`);
 }
 
-// Una línea del banco de mentira. Por defecto pendiente, que es lo que hace
-// falta para que el cruce la mire.
 export async function sembrarLinea({ importe, fecha = '2026-07-20', concepto = 'LINEA DE PRUEBA', estado = 'sin_resolver' }) {
   const { rows } = await query(
     `INSERT INTO movimientos (hoja, fila, fecha, concepto, importe, clave, estado)
@@ -34,13 +26,9 @@ export async function sembrarLinea({ importe, fecha = '2026-07-20', concepto = '
   return rows[0];
 }
 
-// Un lector que devuelve lo que se le diga, en vez de llamar a la IA.
 export const lector = facturas => async () => ({ ok: true, facturas });
 export const lectorRoto = error => async () => ({ ok: false, error });
 
-// Sube una factura por el camino de verdad de la app, con el lector de mentira.
-// `contenido` cambia en cada llamada para que la huella sea distinta; si no,
-// la segunda subida se rechazaría por duplicada.
 let contador = 0;
 export async function subir({ leer, nombre, concepto = null, subidoPor = null, contenido = null }) {
   contador++;
@@ -48,10 +36,7 @@ export async function subir({ leer, nombre, concepto = null, subidoPor = null, c
   const analisis = await analizarFactura(
     Buffer.from(contenido || `${archivo}-${contador}-${Math.random()}`), true, archivo, leer
   );
-  // Se sube con hoja/clave de pruebas para que el cruce mire SOLO las lineas
-  // sembradas por la prueba. Sin esto, la busqueda recorre todos los
-  // movimientos de la base de desarrollo y una linea real puede colarse como
-  // candidata -- paso al ampliar el margen a un euro.
+
   const resultado = await procesarFacturaSubida({
     hoja: HOJA, clave: 'pruebas',
     rutaBlob: `https://ejemplo/${archivo}`, nombreOriginal: archivo, concepto, analisis, subidoPor,
@@ -59,11 +44,6 @@ export async function subir({ leer, nombre, concepto = null, subidoPor = null, c
   return { resultado, archivo };
 }
 
-// La fecha se pide ya formateada por la base: convertirla en JavaScript mete
-// el desfase de la zona horaria y la prueba compararia el dia anterior.
-// Marca una factura como pagada por el colaborador: vive en su lote, que es lo
-// unico que la distingue de las de la usuaria. El lote tiene que existir de
-// verdad (la base lo exige), asi que se reutiliza uno o se crea uno de prueba.
 export async function marcarComoDeLote(nombre) {
   const { rows } = await query(
     `SELECT l.id FROM lotes l WHERE l.evento = 'LOTE DE PRUEBA'

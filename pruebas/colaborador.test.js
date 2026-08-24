@@ -51,7 +51,7 @@ const peticion = cuerpo => new Request('http://pruebas/', {
 
 const unaDe = importe => lector([{ importe, fecha: '2026-07-19', proveedor: 'Proveedor' }]);
 let contador = 0;
-// Igual que hace la ruta: primero se lee el archivo, luego se guarda.
+
 async function subirDeLote(loteId, leer, contenido = null) {
   contador++;
   const nombre = `PRUEBA-colab-${contador}.pdf`;
@@ -138,9 +138,7 @@ describe('facturas que paga el colaborador', () => {
   });
 
   it('C9. no se usan para completar una combinación del flujo principal', async () => {
-    // Una línea de 90 y dos facturas de 45: una suya, de lote, y otra del
-    // flujo normal. Si la de lote entrara en el cruce, la app propondría
-    // juntarlas para explicar los 90 -- y ese dinero no salió de la cuenta.
+
     await sembrarLinea({ importe: -90 });
     const colaboradorId = await sembrarColaborador();
     const loteId = await sembrarLote(colaboradorId);
@@ -153,7 +151,6 @@ describe('facturas que paga el colaborador', () => {
     const otras = suya.motivo_candidatos?.otrasFacturas?.map(o => String(o.id)) || [];
     expect(otras).not.toContain(String(idDeLote));
 
-    // Y a la de lote no se le calcula ninguna propuesta.
     const { rows } = await query('SELECT motivo_candidatos FROM facturas WHERE id = $1', [idDeLote]);
     expect(rows[0].motivo_candidatos).toBeNull();
   });
@@ -192,7 +189,6 @@ describe('el colaborador corrige y retira lo suyo', () => {
     const { rows } = await query('SELECT * FROM facturas WHERE id = $1', [id]);
     expect(rows).toHaveLength(0);
 
-    // El mismo archivo se puede volver a subir: su huella ya no está ocupada.
     const otra = await subirDeLote(loteId, unaDe(45), 'el mismo archivo');
     expect(otra.id).toBeTruthy();
   });

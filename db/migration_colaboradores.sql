@@ -1,6 +1,3 @@
--- Migración incremental para bases ya desplegadas (la base ya tiene trimestres/facturas/etc.
--- de antes de que existiera el sistema de colaboradores/lotes/pagos).
-
 CREATE TABLE IF NOT EXISTS colaboradores (
   id BIGSERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,

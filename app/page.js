@@ -14,8 +14,6 @@ import { Modal } from './components/Modal';
 import CabeceraApp, { PESTANAS } from './components/CabeceraApp';
 import { apiFetch, mostrarToast } from './lib/toast';
 
-// Clasifica un resultado de matching (de la subida en lote o de fijar un
-// importe a mano) en los mismos ids/ambiguos que ya sabe pintar la tabla.
 function clasificarResultado(resultado, ids, ambiguos) {
   if (resultado.tipo === 'match_directo') {
     ids.add(resultado.movimientoId);
@@ -42,8 +40,7 @@ export default function Home() {
   const [facturas, setFacturas] = useState(null);
   const [proyectos, setProyectos] = useState([]);
   const [cargando, setCargando] = useState(false);
-  // Histórico continuo: sin filtro, trae todo. Con datos de años se podrá
-  // acotar aquí para no traer de más -- por ahora no hace falta un límite.
+
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [subiendoExcel, setSubiendoExcel] = useState(false);
@@ -55,19 +52,19 @@ export default function Home() {
     return PESTANAS.some(p => p.id === tab) ? tab : 'inicio';
   });
   const [lote, setLote] = useState(null);
-  const [modalAbierto, setModalAbierto] = useState(null); // 'excel' | 'larpmanager' | 'devoluciones' | 'importaciones' | 'envio' | null
+  const [modalAbierto, setModalAbierto] = useState(null);
   const [recalculando, setRecalculando] = useState(false);
   const [subiendoLarpManager, setSubiendoLarpManager] = useState(false);
   const [mensajeLarpManager, setMensajeLarpManager] = useState(null);
   const [cargandoPagosSinEmparejar, setCargandoPagosSinEmparejar] = useState(false);
-  // OPCIÓN 1: vincular un pago a mano desde la lista de sin emparejar.
+
   const [lineaElegida, setLineaElegida] = useState('');
   const [guardandoVinculo, setGuardandoVinculo] = useState(false);
   const [importaciones, setImportaciones] = useState(null);
   const [cargandoImportaciones, setCargandoImportaciones] = useState(false);
   const [devoluciones, setDevoluciones] = useState(null);
   const [cargandoDevoluciones, setCargandoDevoluciones] = useState(false);
-  const [confirmarBorrarImportacion, setConfirmarBorrarImportacion] = useState(null); // { id, hoja, total, resueltas } | null
+  const [confirmarBorrarImportacion, setConfirmarBorrarImportacion] = useState(null);
   const [borrandoImportacion, setBorrandoImportacion] = useState(false);
   const [envioHasta, setEnvioHasta] = useState('');
   const [envioEtiqueta, setEnvioEtiqueta] = useState('');
@@ -141,12 +138,6 @@ export default function Home() {
     }
   }
 
-  // Sube el CSV de pagos de LarpManager y cruza sus filas Wire contra los
-  // ingresos sin resolver por nombre (ver lib/larpmanager.cjs). El resultado
-  // queda guardado en cada movimiento (larpmanager_candidatos), no en un
-  // estado de este componente -- así el botón de confirmar sigue ahí aunque
-  // se recargue la página o se vuelva más tarde, sin tener que subir el
-  // mismo CSV otra vez.
   async function subirLarpManager(e) {
     e.preventDefault();
     const file = e.target.elements.file.files[0];
@@ -160,8 +151,7 @@ export default function Home() {
         mensajeError: 'No se pudo procesar el CSV de LarpManager.',
       });
       if (data) {
-        // Se dice también cuántas filas se guardaron sin cruzar, para que no
-        // parezca que se han perdido: están todas, se pueden revisar después.
+
         setMensajeLarpManager(
           `${data.emparejadas} de ${data.resultados.length} ingreso(s) emparejados. ` +
           `Del CSV se han guardado ${data.totalFilasCsv} filas: ${data.filasCruzadas} se cruzan con el banco ` +
@@ -175,11 +165,6 @@ export default function Home() {
     }
   }
 
-
-
-
-  // Revisión de las devoluciones pendientes de enviar -- también se incluyen
-  // como pestaña propia en el excel del próximo envío a gestoría.
   async function verDevoluciones() {
     setModalAbierto('devoluciones');
     setCargandoDevoluciones(true);
@@ -190,11 +175,6 @@ export default function Home() {
     setCargandoDevoluciones(false);
   }
 
-  // Para cuando se sube el archivo equivocado por error (ej. el de otra
-  // cuenta) y hace falta quitarlo entero para volver a subir el correcto,
-  // sin que se mezclen los movimientos malos con los buenos. Cada excel
-  // subido es su propia importación (no un singleton por banco), así que se
-  // puede borrar una subida suelta sin tocar las demás.
   async function verImportaciones() {
     setModalAbierto('importaciones');
     setCargandoImportaciones(true);
@@ -220,10 +200,6 @@ export default function Home() {
     }
   }
 
-  // El envío a gestoría reemplaza a "cerrar trimestre": se revisa qué
-  // entraría (todo lo resuelto y sin enviar hasta esa fecha, incluidas
-  // facturas futuras recuperadas tarde de fechas anteriores) antes de
-  // confirmar y descargar.
   function abrirEnvio() {
     setModalAbierto('envio');
     setEnvioHasta(new Date().toISOString().slice(0, 10));
@@ -273,13 +249,6 @@ export default function Home() {
     }
   }
 
-  // Junta los resultados de una subida en lote: qué líneas quedaron
-  // resueltas solas, cuáles tienen varias facturas con el mismo importe
-  // (para elegir en la tabla) y qué archivos no encontraron ninguna línea.
-  // Subir facturas ya no cambia lo que se ve en Movimientos: ni lo filtra, ni
-  // avisa allí de las que no encontraron línea. Eso vive en Facturas, que es
-  // donde se suben. Lo único que sigue viajando es la lista de líneas con
-  // varias facturas candidatas, para poder elegir desde la columna Nota.
   async function completarLote(resultados) {
     const ids = new Set();
     const ambiguos = {};
@@ -290,9 +259,6 @@ export default function Home() {
       }
     }
 
-    // Los archivos que no se han subido porque ya estaban. Antes esto se
-    // tiraba: el servidor lo decía y aquí no se miraba, así que subir dos
-    // veces el mismo archivo no avisaba de nada.
     const repetidos = resultados.filter(r => r.resultado?.tipo === 'duplicada');
     if (repetidos.length) {
       mostrarToast(repetidos.length === 1
@@ -309,13 +275,9 @@ export default function Home() {
   const resueltas = resumen?.resueltas ?? 0;
   const facturaFutura = resumen?.facturaFutura ?? 0;
   const ignoradas = resumen?.ignoradas ?? 0;
-  // Factura futura no cuenta como "pendiente" urgente: no tiene sentido
-  // reclamarla hasta que se cierre el proyecto (ver pestaña Proyectos).
-  // Ignorada tampoco: es deliberadamente "no hay nada que hacer aquí".
+
   const pendientesMov = total - resueltas - facturaFutura - ignoradas;
-  // Avance del punteo: de lo que de verdad necesita factura (ni ignorado ni
-  // factura futura, que no dependen de nadie ahora mismo), cuánto está ya
-  // resuelto. Es la única cifra que dice si esto se acerca a poder enviarse.
+
   const aPuntear = resueltas + pendientesMov;
   const avance = aPuntear > 0 ? Math.round((resueltas / aPuntear) * 100) : 0;
 
@@ -445,7 +407,6 @@ export default function Home() {
         {mensajeLarpManager && <p className="muted" style={{ marginTop: 8 }}>{mensajeLarpManager}</p>}
       </Modal>
 
-
       <Modal abierto={modalAbierto === 'devoluciones'} titulo="Devoluciones sin enviar" onCerrar={() => setModalAbierto(null)}>
         <p className="muted">Se incluyen como pestaña propia ("Devoluciones") en el excel del próximo envío a gestoría.</p>
         {cargandoDevoluciones && <p className="muted">Cargando...</p>}
@@ -492,12 +453,7 @@ export default function Home() {
                 <th>Origen</th>
                 <th>Archivo</th>
                 <th>Subido</th>
-                {/* Sin cabecera: las dos clases de archivo traen cosas
-                    distintas --el excel del banco trae movimientos que se
-                    resuelven, el CSV de LarpManager trae pagos que se
-                    emparejan-- y la propia celda ya dice de qué habla
-                    ("75 pagos · 21 emparejados"). Cualquier título común
-                    saldría forzado. */}
+
                 <th></th>
                 <th></th>
                 <th></th>
@@ -531,9 +487,7 @@ export default function Home() {
           : `¿Borrar este excel de ${confirmarBorrarImportacion?.hoja}?`}
         mensaje={
           confirmarBorrarImportacion?.origen === 'larpmanager'
-            // Borrar un CSV no toca las líneas del banco: siguen resueltas y
-            // con su nota. Solo se pierde la comprobación de que ese pago
-            // llegó, y se recupera volviendo a subir el CSV.
+
             ? (confirmarBorrarImportacion?.resueltas > 0
               ? `Se borrarán los ${confirmarBorrarImportacion.total} pagos de esta subida — ${confirmarBorrarImportacion.resueltas} de ellos están emparejados con un movimiento y perderán ese enlace. Los movimientos no se tocan: siguen resueltos y con su nota. Se recupera volviendo a subir el CSV.`
               : `Se borrarán los ${confirmarBorrarImportacion?.total} pagos de esta subida. Los movimientos no se tocan.`)

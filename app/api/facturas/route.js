@@ -6,13 +6,8 @@ const { procesarFacturaSubida, asegurarColumnasMotivo } = require('../../../lib/
 const { obtenerSesion } = require('../../../lib/auth.cjs');
 const { cargarRechazos, estaRechazada } = require('../../../lib/memoria.cjs');
 
-// Analizar un PDF (descarga + pdf-parse) puede tardar más de los 10s por
-// defecto de una función serverless, sobre todo con archivos escaneados o
-// grandes — con la subida en lote, decenas de archivos seguidos hacían que
-// algunos fallaran por tiempo. Se sube el límite explícitamente.
 export const maxDuration = 60;
 
-// Facturas del flujo principal (no de lote) -- histórico continuo.
 export async function GET() {
   await asegurarColumnasMotivo();
   const { rows } = await query(
@@ -31,13 +26,6 @@ export async function GET() {
   return Response.json({ facturas: await sinLasRechazadas(rows) });
 }
 
-// Quita las sugerencias que ella ya descartó con la ✕, y le pega a cada una la
-// línea del banco a la que apunta (hoja y clave) para que la pantalla pueda
-// rechazarla.
-//
-// El rechazo se guarda por línea del banco, que es como funciona el de
-// Movimientos: descartar una sugerencia en una pantalla la descarta en la otra,
-// porque es la misma sugerencia.
 async function sinLasRechazadas(facturas) {
   const conCandidatos = facturas.filter(f => f.motivo_candidatos);
   if (conCandidatos.length === 0) return facturas;
@@ -56,7 +44,6 @@ async function sinLasRechazadas(facturas) {
   const porId = new Map(lineas.map(l => [String(l.id), l]));
   const rechazos = await cargarRechazos();
 
-  // Lo que identifica una sugerencia: las facturas que propone juntar.
   const valorDe = (facturaId, otras) =>
     [facturaId, ...(otras || []).map(o => o.id)].join(',');
 
@@ -92,18 +79,11 @@ export async function POST(request) {
     return Response.json({ error: 'Faltan datos (rutaBlob).' }, { status: 400 });
   }
 
-  // Nunca dejar que un fallo aquí devuelva una respuesta vacía o HTML de
-  // error — la subida en lote necesita JSON siempre, incluso al fallar, para
-  // poder mostrar por qué falló esa factura en concreto en vez de un
-  // "Unexpected end of JSON input" genérico sin información real.
   try {
     const buffer = await descargarBlob(rutaBlob);
     const esPdf = /\.pdf($|\?)/i.test(nombreOriginal || rutaBlob) || rutaBlob.toLowerCase().includes('.pdf');
     const analisis = await analizarFactura(buffer, esPdf, nombreOriginal);
 
-    // Si quien sube la factura ya sabe el importe/fecha (a mano, cuando no
-    // se puede leer del PDF), esos datos mandan sobre lo que haya extraído
-    // el regex — evita depender de la lectura automática para poder emparejar.
     const importeManual = importe ? Number(importe) : null;
     if (importeManual) {
       analisis.totales = [importeManual];
@@ -121,9 +101,6 @@ export async function POST(request) {
   }
 }
 
-// Borra facturas sueltas (ej. duplicadas de una subida repetida). Si alguna
-// estaba emparejada con una línea del banco y era la única factura que la
-// resolvía, esa línea vuelve a quedar pendiente en vez de "resuelta a medias".
 export async function DELETE(request) {
   const { ids } = await request.json();
   if (!Array.isArray(ids) || ids.length === 0) {
@@ -155,7 +132,7 @@ export async function DELETE(request) {
   }
 
   for (const f of aBorrar) {
-    try { await eliminarBlob(f.ruta_blob); } catch { /* archivo ya no existe o falla el borrado — no bloquea */ }
+    try { await eliminarBlob(f.ruta_blob); } catch {  }
   }
 
   return Response.json({ ok: true, borradas: idsReales.length });

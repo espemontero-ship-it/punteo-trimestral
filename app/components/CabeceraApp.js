@@ -12,12 +12,6 @@ export const PESTANAS = [
   { id: 'ayuda', etiqueta: 'Ayuda' },
 ];
 
-// Cabecera compartida por la SPA de admin (app/page.js, cambia de pestaña sin
-// navegar) y por las páginas de detalle sueltas (/lotes/[id], /proyectos/[id]) --
-// antes esas páginas no tenían ninguna cabecera y entrar a ver un colaborador
-// o un proyecto sacaba por completo de la navegación del admin, solo con un
-// botón "Volver" para salir. Sin onCambiarPestana, las pestañas son enlaces a
-// "/?tab=x" en vez de botones -- vuelven a la SPA y la dejan en esa pestaña.
 export default function CabeceraApp({ pestanaActiva, onCambiarPestana, cerrarSesion }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const esSpa = typeof onCambiarPestana === 'function';

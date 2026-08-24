@@ -1,10 +1,6 @@
 const { obtenerSesion } = require('../../../../../lib/auth.cjs');
 const { corregirFacturaColaborador, retirarFacturaColaborador } = require('../../../../../lib/lotes.cjs');
 
-// El colaborador corrige o retira lo que ha subido, mientras esté sin revisar.
-// Quién es dueño de la factura y en qué estado está lo comprueba lib/lotes.cjs:
-// aquí no se decide nada de eso.
-
 export async function PATCH(request, { params }) {
   const sesion = await obtenerSesion(request);
   if (!sesion || sesion.rol !== 'colaborador') return Response.json({ error: 'No autorizado' }, { status: 403 });

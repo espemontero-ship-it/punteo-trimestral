@@ -5,11 +5,6 @@ const { analizarFactura } = require('../../../../lib/facturaMatcher.cjs');
 const { procesarFacturaSubida } = require('../../../../lib/facturaMatcher.cjs');
 const { buscarOCrearLote, subirFacturaLote } = require('../../../../lib/lotes.cjs');
 
-// Punto de entrada único para que un colaborador suba una factura eligiendo
-// proyecto libremente (ya no se le asigna uno fijo al alta). "Paga NOL" solo
-// está disponible con el permiso puede_subir_facturas_generales; "pago yo" lo
-// puede usar cualquier colaborador -- entra por su lote de ese proyecto (se
-// crea al vuelo si no existía, ver buscarOCrearLote).
 export const maxDuration = 60;
 
 export async function POST(request) {
@@ -30,22 +25,17 @@ export async function POST(request) {
   }
 
   try {
-    // Se lee SIEMPRE, pague quien pague: el colaborador tambien ve el importe,
-    // el proveedor y la fecha de lo que sube.
+
     const buffer = await descargarBlob(rutaBlob);
     const esPdf = /\.pdf($|\?)/i.test(nombreOriginal || rutaBlob) || rutaBlob.toLowerCase().includes('.pdf');
     const analisis = await analizarFactura(buffer, esPdf, nombreOriginal);
 
-    // Paga el propio colaborador: va a su lote de ese proyecto (se crea si no
-    // existe) y NO se cruza con el banco -- ese gasto no sale de la cuenta de
-    // NOL, de ahi sale el reembolso que se le hace.
     if (quienPaga === 'colaborador') {
       const loteId = await buscarOCrearLote(sesion.colaboradorId, proyectoId);
       const resultado = await subirFacturaLote({ loteId, rutaBlob, nombreOriginal, concepto, analisis });
       return Response.json({ tipo: 'lote', ...resultado });
     }
 
-    // Paga NOL: flujo normal, se le buscan lineas del banco.
     const resultado = await procesarFacturaSubida({
       rutaBlob, nombreOriginal, concepto, analisis, subidoPor: sesion.colaboradorId, proyectoId,
     });

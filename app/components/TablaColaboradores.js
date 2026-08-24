@@ -4,13 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '../lib/toast';
 import { Modal } from './Modal';
 
-// Una fila por colaborador (LEFT JOIN a lotes: quien todavía no ha subido
-// nada también aparece, sin proyecto) -- quien ya está en varios proyectos
-// aparece una fila por lote. El alta ya no asigna proyecto: cada colaborador
-// elige a qué proyecto sube cada factura él mismo (ver Ayuda). El alta vive
-// en un modal aparte (botón "+ Añadir colaborador"). Si la persona ya existe
-// (mismo correo), solo se actualiza el permiso de NOL sin pedirle otra
-// contraseña; si no existe, recibe una invitación por correo.
 export default function TablaColaboradores() {
   const [filas, setFilas] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);

@@ -5,8 +5,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { apiFetch, mostrarToast } from '../lib/toast';
 import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 import { parseImporte } from '../../lib/numero.cjs';
-// Cuanto vale una factura lo responde un unico sitio, el mismo que usa el
-// cruce y el paquete de la gestoria. Ver lib/importeFactura.cjs.
+
 import { importeDeFactura } from '../../lib/importeFactura.cjs';
 
 const ETIQUETAS_TIPO = {
@@ -23,15 +22,9 @@ const ETIQUETAS_TIPO = {
   error: 'Error al procesar el archivo',
 };
 
-// Mismo motor de columnas que TablaMovimientos.js (CSS Grid, no <table>): una
-// única plantilla de anchos se aplica a la cabecera y a cada fila, así que es
-// estructuralmente imposible que se desalineen, y cada columna tiene su
-// propio sitio fijo — nada se mete a compartir celda con otra cosa.
 const COLUMNAS = ['Fecha', 'Proveedor', 'Concepto', 'Importe', 'Nombre', 'Subida', 'Subido por', 'Vincular', 'Motivo', 'Movimiento'];
 const ANCHO_DEFECTO = { Fecha: 115, Proveedor: 140, Concepto: 150, Importe: 70, Nombre: 190, Subida: 100, 'Subido por': 90, Vincular: 120, Motivo: 175, Movimiento: 190 };
 const ANCHO_CHECKBOX = 30;
-
-
 
 function importeInicial(f) {
   const monto = importeDeFactura(f);
@@ -42,9 +35,6 @@ function fechaInicial(f) {
   return f.fechas && f.fechas[0] ? String(f.fechas[0]).slice(0, 10) : '';
 }
 
-// Fuera del componente a propósito: si se define dentro, React la trata como
-// un tipo de componente nuevo en cada render y desmonta/remonta todo lo de
-// dentro -- incluidos los <input>, que pierden el foco en cada tecla.
 function Celda({ className = '', cabecera, children, style }) {
   return (
     <div role={cabecera ? 'columnheader' : 'cell'} className={`celda ${className}`.trim()} style={style}>
@@ -56,13 +46,13 @@ function Celda({ className = '', cabecera, children, style }) {
 export default function FacturasTrimestre({ facturas, onCambio }) {
   const [seleccionadas, setSeleccionadas] = useState(new Set());
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
-  const [confirmarCopia, setConfirmarCopia] = useState(null); // factura a borrar desde el bloque de duplicados
+  const [confirmarCopia, setConfirmarCopia] = useState(null);
   const [borrando, setBorrando] = useState(false);
   const [edicionImporte, setEdicionImporte] = useState({});
   const [edicionFecha, setEdicionFecha] = useState({});
   const [edicionConcepto, setEdicionConcepto] = useState({});
   const [buscando, setBuscando] = useState(new Set());
-  const [resultadosFila, setResultadosFila] = useState({}); // { [facturaId]: resultado } — sobreescribe el motivo guardado hasta recargar
+  const [resultadosFila, setResultadosFila] = useState({});
   const [movimientosPendientes, setMovimientosPendientes] = useState([]);
   const [vinculandoManual, setVinculandoManual] = useState(new Set());
   const [movimientoElegido, setMovimientoElegido] = useState({});
@@ -71,17 +61,13 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [anchos, setAnchos] = useAnchosPersistidos('punteo-anchos-facturas');
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
-  // Sugerencias quitadas con la ✕. El Set solo sirve para que desaparezca al
-  // instante sin esperar al servidor: el rechazo de verdad se guarda, y es el
-  // mismo que el de Movimientos — descartarla aquí la descarta allí, porque es
-  // la misma sugerencia.
+
   const [descartadas, setDescartadas] = useState(new Set());
   const viva = k => !descartadas.has(k);
 
   async function descartar(k, f, c) {
     setDescartadas(prev => new Set(prev).add(k));
-    // La línea del banco a la que apunta la sugerencia viene con ella (la pega
-    // /api/facturas). Si no viniera, se queda en quitarla de la vista.
+
     const { hoja, clave } = c;
     if (!hoja || !clave) return;
     const valor = [f.id, ...(c.otrasFacturas || []).map(o => o.id)].join(',');
@@ -97,8 +83,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     return anchos[col] ?? ANCHO_DEFECTO[col] ?? 140;
   }
 
-  // Ver iniciarArrastre en TablaMovimientos.js para la explicación de por qué
-  // se escucha en window y por qué el try/catch alrededor de setPointerCapture.
   function iniciarArrastre(e, col) {
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
     const startX = e.clientX;
@@ -123,9 +107,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     });
   }
 
-  // Lista de movimientos pendientes para poder vincular una factura a mano
-  // cuando ya se sabe cuál es, sin depender de que el importe/fecha encajen
-  // solos (ej. facturas con varios importes dentro de un mismo archivo).
   useEffect(() => {
     let cancelado = false;
     apiFetch(`/api/movimientos-pendientes`, undefined, {
@@ -157,17 +138,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     URL.revokeObjectURL(url);
   }
 
-  // Guarda importe/fecha/concepto (si se han tocado) y relanza el matching --
-  // si hay varias líneas con el mismo importe o se sugiere una combinación,
-  // la fila se expande para elegir a mano (ver Motivo). Si no encuentra nada
-  // en absoluto, se abre directamente el selector de vincular a mano -- un
-  // único botón "Buscar" cubre las dos vías, sin un botón aparte para cada una.
-  // Guarda concepto/fecha/importe al salir del campo, SIN relanzar el
-  // emparejamiento -- eso se queda en el botón "Buscar", a propósito: pasar
-  // por encima de un campo no debe emparejar una factura sola. Antes estos
-  // tres campos no se guardaban de ninguna forma salvo pulsando "Buscar"
-  // (ni siquiera con Enter), así que escribir y hacer clic fuera tiraba lo
-  // escrito sin avisar.
   async function guardarCampoFactura(f) {
     const cambios = {};
     const concepto = edicionConcepto[f.id];
@@ -220,16 +190,13 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       mostrarToast('Emparejada', 'ok');
       onCambio();
     } else if (!['ambiguo', 'combo_sugerido'].includes(resultado.tipo)) {
-      // Nada encontrado -- se abre el selector manual directamente, sin
-      // esperar un segundo clic (los casos ambiguo/combo ya ofrecen su
-      // propia elección en la celda Motivo, no hace falta duplicarlo aquí).
+
       setVinculandoManual(prev => new Set(prev).add(f.id));
     }
   }
 
   async function elegirCandidato(f, opcion) {
-    // La nota es solo el concepto de la factura. Los números viven en la
-    // columna Factura, que es su sitio -- también los de una combinación.
+
     const nota = opcion.facturaConcepto || '';
     const facturaIds = opcion.esCombo ? [opcion.facturaId, ...opcion.otrasFacturas.map(o => o.id)] : [opcion.facturaId];
     const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
@@ -281,10 +248,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     return new Set(Object.keys(conteo).filter(n => conteo[n] > 1));
   }, [facturas]);
 
-  // El MISMO ARCHIVO subido dos veces, aunque se llame distinto: se compara la
-  // huella (sha256) del contenido. Por el nombre, "factura.pdf" y
-  // "factura (1).pdf" bajados del mismo correo pasaban por dos facturas
-  // distintas y nada avisaba.
   const huellasDuplicadas = useMemo(() => {
     const conteo = {};
     for (const f of facturas) {
@@ -294,10 +257,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     return new Set(Object.keys(conteo).filter(h => conteo[h] > 1));
   }, [facturas]);
 
-  // Las parejas (o tríos) de facturas que son EL MISMO ARCHIVO. Es lo que se
-  // enseña arriba de la tabla: con las columnas normales no se pueden comparar,
-  // porque las emparejadas están escondidas tras "Solo pendientes" y hay que ir
-  // a buscarlas una a una.
   const parejasMismoArchivo = useMemo(() => {
     const porHuella = {};
     for (const f of facturas) {
@@ -322,15 +281,10 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     });
   }
 
-  // Solo actúa sobre las filas visibles (si "solo pendientes" oculta las
-  // emparejadas, "seleccionar todas" no debe intentar marcar filas que no se ven).
   function alternarTodas(facturasVisibles) {
     setSeleccionadas(prev => (prev.size === facturasVisibles.length ? new Set() : new Set(facturasVisibles.map(f => f.id))));
   }
 
-  // Borra UNA copia desde el bloque de duplicados. Llama al mismo sitio que el
-  // botón Borrar de la tabla, con una sola factura: no hay dos formas de
-  // borrar, es la misma.
   async function borrarCopia(f) {
     setConfirmarCopia(null);
     const r = await apiFetch(`/api/facturas`, {
@@ -367,17 +321,12 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   function contenidoCelda(col, f) {
     const duplicada = estaRepetida(f);
     const resultadoLocal = resultadosFila[f.id];
-    // Si no se acaba de recalcular esta fila a mano en esta sesión (resultadoLocal),
-    // cae a lo que ya se calculó y se guardó en BD la última vez (subida de excel,
-    // subida de excel...) -- si no, los botones para elegir
-    // candidato solo aparecerían tras pulsar "Buscar" fila a fila, aunque el
-    // cruce ya estuviera hecho. Ver candidatosParaGuardar en facturaMatcher.cjs.
+
     const persistido = !resultadoLocal && f.estado !== 'matcheada' && f.motivo_candidatos
       ? { tipo: f.motivo_tipo, numero: f.numero, facturaConcepto: f.concepto, detalle: f.motivo_detalle, ...f.motivo_candidatos }
       : null;
     const activo = resultadoLocal || persistido;
-    // hoja y clave son la línea del banco a la que apunta la sugerencia: viajan
-    // con ella desde /api/facturas y sirven para poder descartarla de verdad.
+
     const candidatos = activo?.tipo === 'ambiguo' ? activo.candidatos.map(c => ({
       movimientoId: c.movimientoId, numero: activo.numero, facturaId: f.id, facturaConcepto: activo.facturaConcepto,
       concepto: c.concepto, importe: c.importe, fecha: c.fecha, hoja: c.hoja, clave: c.clave,
@@ -403,9 +352,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
           </a>
         );
 
-      // Quien emite la factura, tal y como lo lee la IA del documento. No es
-      // editable: es un dato leído, no una decisión. Vacío en las facturas
-      // que se subieron antes de que existiera esta columna.
       case 'Proveedor':
         return (
           <span title={f.proveedor || ''} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
@@ -442,10 +388,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
           return (
             <div>
               <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
-                {/* Se prefiere el detalle guardado: dice el caso concreto (mismo
-                    importe, o suma de varias facturas del mismo archivo). El
-                    texto genérico queda de reserva para filas antiguas que no
-                    lo tengan. */}
+
                 {activo.detalle || (activo.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:')}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -480,12 +423,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
             </div>
           );
         }
-        // "Ya cubierta" es el único motivo donde lo que hace falta saber está
-        // en el detalle (qué factura la cubre), no en la etiqueta corta: se
-        // enseña entero, en varias líneas si hace falta.
-        // "Ya cubierta" y el aviso de que un emparejamiento no cuadra se
-        // enseñan enteros: lo que hace falta saber está en la frase (qué
-        // factura la cubre, cuánto se desvía), no en la etiqueta corta.
+
         const largos = ['ya_cubierta', 'emparejada_no_cuadra'];
         if (largos.includes((resultadoLocal || f).motivo_tipo) || largos.includes(resultadoLocal?.tipo)) {
           return <span className="muted" style={{ whiteSpace: 'normal' }}>{(resultadoLocal || f).motivo_detalle || resultadoLocal?.detalle}</span>;
@@ -536,7 +474,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         );
 
       case 'Fecha':
-        // Igual que el importe: emparejada no es lo mismo que vacía.
+
         if (bloqueada) {
           const dia = fechaInicial(f);
           return <span>{dia ? new Date(dia).toLocaleDateString('es-ES') : <span className="muted">—</span>}</span>;
@@ -552,8 +490,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         );
 
       case 'Importe':
-        // Emparejada: no se puede tocar, pero SE VE. Antes salía un guión y
-        // parecía que la factura no tenía importe.
+
         if (bloqueada) {
           const monto = importeDeFactura(f);
           return <span>{monto !== null ? `${Number(monto).toFixed(2)}€` : <span className="muted">—</span>}</span>;
@@ -581,10 +518,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       <div className="fila" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
         <p className="muted" style={{ margin: 0 }}>
           {sinResolver} factura(s) sin resolver todavía.
-          {/* Cada factura la leen los dos: la IA y el lector de texto de
-              siempre. Manda la IA, pero donde no coinciden hay un fallo del
-              lector que se puede arreglar mirando el documento. El aviso vive
-              aquí, donde se trabaja, y no en un recordatorio que se olvida. */}
+
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <label className="toggle-pendientes">

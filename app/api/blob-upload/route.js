@@ -1,8 +1,6 @@
 const { issueSignedToken } = require('@vercel/blob');
 const { handleUploadPresigned } = require('@vercel/blob/client');
 
-// Genera una URL de subida firmada (autenticada por OIDC, sin token estático)
-// para que el navegador suba el archivo directo a Vercel Blob.
 export async function POST(request) {
   const body = await request.json();
 

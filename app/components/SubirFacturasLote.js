@@ -4,12 +4,9 @@ import { useRef, useState } from 'react';
 import { uploadPresigned } from '@vercel/blob/client';
 import { huellaDeArchivo, facturaConEseArchivo } from '../lib/huella';
 
-// Sube varios archivos de golpe, uno a uno (misma lógica de siempre por
-// archivo, sin cambios de backend), y al terminar entrega la lista completa
-// de resultados para que la pantalla que la use decida qué mostrar.
 export default function SubirFacturasLote({ onCompletado, endpoint = '/api/facturas' }) {
   const inputRef = useRef(null);
-  const [progreso, setProgreso] = useState(null); // { actual, total, nombre } | null
+  const [progreso, setProgreso] = useState(null);
 
   async function onFilesChange(e) {
     const files = [...e.target.files];
@@ -21,8 +18,7 @@ export default function SubirFacturasLote({ onCompletado, endpoint = '/api/factu
       const file = files[i];
       setProgreso({ actual: i + 1, total: files.length, nombre: file.name });
       try {
-        // Si ese archivo ya está guardado, ese no se sube y se sigue con
-        // el siguiente. La huella se calcula aquí, gratis.
+
         const ya = await facturaConEseArchivo(await huellaDeArchivo(file));
         if (ya) {
           resultados.push({ nombreArchivo: file.name, resultado: {

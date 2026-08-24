@@ -1,7 +1,5 @@
 const { previsualizarEnvio, confirmarEnvio } = require('../../../lib/exportar.cjs');
 
-// ?hasta=YYYY-MM-DD -- qué entraría si se confirmara el envío ahora mismo,
-// para revisar antes de generar de verdad.
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const hasta = searchParams.get('hasta');
