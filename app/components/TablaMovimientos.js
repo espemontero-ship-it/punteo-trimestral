@@ -595,10 +595,13 @@ export default function TablaMovimientos({
         )}
         {combos.map((c, i) => {
           const partes = [
-            { numero: c.numero, proveedor: c.proveedor },
-            ...(c.otras || []).map(o => ({ numero: o.numero, proveedor: o.proveedor })),
+            { numero: c.numero, importe: c.importe, proveedor: c.proveedor },
+            ...(c.otras || []).map(o => ({ numero: o.numero, importe: o.monto, proveedor: o.proveedor })),
           ];
-          const numeros = partes.map(p => `${p.numero}${p.proveedor ? ` (${p.proveedor})` : ''}`).join(' + ');
+          const numeros = partes
+            .map(p => `${p.numero} (${p.importe != null ? `${Number(p.importe).toFixed(2)}€` : '?'}${p.proveedor ? `, ${p.proveedor}` : ''})`)
+            .join(' + ');
+          const suma = partes.reduce((acc, p) => acc + (Number(p.importe) || 0), 0);
           const ids = [c.facturaId, ...(c.otras || []).map(o => o.id)].join(',');
 
           const falla = c.exacto === false && typeof c.diferencia === 'number';
@@ -608,7 +611,7 @@ export default function TablaMovimientos({
           return (
             <Sugerencia
               key={c.facturaId}
-              texto={`facturas ${numeros}${desvio}`}
+              texto={`facturas ${numeros} = ${suma.toFixed(2)}€${desvio}`}
               onAplicar={() => aplicarComboFacturas(m, c)}
               onDescartar={() => rechazar(`combo:${m.id}:${i}`, [{ hoja: m.hoja, clave: m.clave }], 'combo', ids)}
             />
