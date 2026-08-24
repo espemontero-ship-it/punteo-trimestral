@@ -590,8 +590,15 @@ export default function TablaMovimientos({
     const combos = (m.combos_factura || []).filter((c, i) => viva(`combo:${m.id}:${i}`));
     return (
       <div className="celda-estado">
+        {combos.length > 0 && (
+          <p className="muted" style={{ margin: '0 0 4px', fontSize: 12 }}>Banco: "{m.concepto}"</p>
+        )}
         {combos.map((c, i) => {
-          const numeros = [c.numero, ...(c.otras || []).map(o => o.numero)].join(' + ');
+          const partes = [
+            { numero: c.numero, proveedor: c.proveedor },
+            ...(c.otras || []).map(o => ({ numero: o.numero, proveedor: o.proveedor })),
+          ];
+          const numeros = partes.map(p => `${p.numero}${p.proveedor ? ` (${p.proveedor})` : ''}`).join(' + ');
           const ids = [c.facturaId, ...(c.otras || []).map(o => o.id)].join(',');
 
           const falla = c.exacto === false && typeof c.diferencia === 'number';
