@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { importeDeFactura } from '../../lib/importeFactura.cjs';
+import { Modal } from './Modal';
 
 const FMT = n => `${Number(n || 0).toFixed(2)}€`;
 
@@ -21,10 +22,10 @@ export default function TablaCuentas({
 }) {
   const [editando, setEditando] = useState(null);
   const [retirando, setRetirando] = useState(null);
-  const [nuevoAnticipo, setNuevoAnticipo] = useState({ importe: '', fecha: '', esEfectivo: false });
-  const [seleccionadas, setSeleccionadas] = useState(new Set());
-  const [fechaPago, setFechaPago] = useState('');
+  const [nuevoAnticipo, setNuevoAnticipo] = useState({ importe: '', esEfectivo: false });
   const [pagando, setPagando] = useState(false);
+  const [modalAnticipoAbierto, setModalAnticipoAbierto] = useState(false);
+  const [enviandoAnticipo, setEnviandoAnticipo] = useState(false);
 
   function onCambiarEstado(f, valor) {
     if (valor === f.estado_revision) return;
@@ -60,42 +61,34 @@ export default function TablaCuentas({
   async function crearAnticipo(e) {
     e.preventDefault();
     if (!nuevoAnticipo.importe) return;
-    await onCrearAnticipo(nuevoAnticipo);
-    setNuevoAnticipo({ importe: '', fecha: '', esEfectivo: false });
+    setEnviandoAnticipo(true);
+    try {
+      await onCrearAnticipo({ ...nuevoAnticipo, fecha: PARA_INPUT(new Date()) });
+      setNuevoAnticipo({ importe: '', esEfectivo: false });
+      setModalAnticipoAbierto(false);
+    } finally {
+      setEnviandoAnticipo(false);
+    }
   }
 
-  function alternarSeleccion(id) {
-    setSeleccionadas(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }
+  const facturasAceptadas = facturas.filter(f => f.estado_revision === 'aceptada');
 
   async function pagar() {
-    if (seleccionadas.size === 0) return;
+    if (facturasAceptadas.length === 0) return;
     setPagando(true);
     try {
-      await onPagar({ facturaIds: [...seleccionadas], fecha: fechaPago || null });
-      setSeleccionadas(new Set());
-      setFechaPago('');
+      await onPagar({ facturaIds: facturasAceptadas.map(f => f.id), fecha: PARA_INPUT(new Date()) });
     } finally {
       setPagando(false);
     }
   }
 
-  const totalSeleccion = facturas
-    .filter(f => seleccionadas.has(f.id))
-    .reduce((acc, f) => acc + (IMPORTE(f) || 0), 0);
-
-  const cols = soloLectura
-    ? '1fr 120px 50px 100px 100px 100px 100px 100px 220px'
-    : '30px 1fr 120px 50px 100px 100px 100px 100px 100px 220px';
+  const cols = '1fr 120px 50px 100px 100px 100px 100px 100px 100px 220px';
 
   const locale = soloLectura ? 'en-GB' : 'es-ES';
   const t = soloLectura ? {
     cuentas: 'Accounts', concepto: 'Description', proveedor: 'Supplier', ver: 'View', fecha: 'Date',
-    aceptada: 'Accepted', pagada: 'Paid', rechazada: 'Rejected', pagos: 'Payments', estado: 'Status',
+    aceptada: 'Accepted', pagada: 'Paid', rechazada: 'Rejected', pagos: 'Payments', pendiente: 'Pending', estado: 'Status',
     sinConcepto: '(no description)', verLink: 'view', sinNada: 'No invoices or payments yet.',
     total: 'Total',
     estadoTexto: { aceptada: 'accepted', rechazada: 'rejected', pagada: 'paid' },
@@ -104,7 +97,7 @@ export default function TablaCuentas({
     anticipo: 'Advance', pago: 'Payment', esperandoLinea: 'awaiting bank line', efectivo: 'cash',
   } : {
     cuentas: 'Cuentas', concepto: 'Concepto', proveedor: 'Proveedor', ver: 'Ver', fecha: 'Fecha',
-    aceptada: 'Aceptada', pagada: 'Pagada', rechazada: 'Rechazada', pagos: 'Pagos', estado: 'Estado',
+    aceptada: 'Aceptada', pagada: 'Pagada', rechazada: 'Rechazada', pagos: 'Pagos', pendiente: 'Pendiente', estado: 'Estado',
     sinConcepto: '(sin concepto)', verLink: 'ver', sinNada: 'Todavía no hay facturas ni pagos.',
     total: 'Total',
     estadoTexto: { aceptada: 'aceptada', rechazada: 'rechazada', pagada: 'pagada' },
@@ -126,7 +119,6 @@ export default function TablaCuentas({
       <div className="tabla-movimientos-envoltura" role="table" style={{ marginTop: 8 }}>
         <div role="rowgroup">
           <div role="row" className="fila-tabla-cabecera" style={{ gridTemplateColumns: cols }}>
-            {!soloLectura && <div role="columnheader" className="celda"></div>}
             <div role="columnheader" className="celda">{t.concepto}</div>
             <div role="columnheader" className="celda">{t.proveedor}</div>
             <div role="columnheader" className="celda">{t.ver}</div>
@@ -135,14 +127,15 @@ export default function TablaCuentas({
             <div role="columnheader" className="celda">{t.pagada}</div>
             <div role="columnheader" className="celda">{t.rechazada}</div>
             <div role="columnheader" className="celda">{t.pagos}</div>
+            <div role="columnheader" className="celda">{t.pendiente}</div>
             <div role="columnheader" className="celda">{t.estado}</div>
           </div>
         </div>
         <div role="rowgroup">
           {lote && (
             <div role="row" className="fila-tabla fila-grupo" style={{ gridTemplateColumns: cols }}>
-              {!soloLectura && <div role="cell" className="celda"></div>}
               <div role="cell" className="celda"><div className="grupo-nombre">{lote.colaborador_nombre} — {lote.evento}</div></div>
+              <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
@@ -170,13 +163,6 @@ export default function TablaCuentas({
             const puedeTocarla = soloLectura && enAceptada && !cerrado && onCorregir && onRetirar;
             return (
               <div key={f.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
-                {!soloLectura && (
-                  <div role="cell" className="celda">
-                    {enAceptada && (
-                      <input type="checkbox" checked={seleccionadas.has(f.id)} onChange={() => alternarSeleccion(f.id)} />
-                    )}
-                  </div>
-                )}
                 <div role="cell" className="celda concepto">
                   {enEdicion
                     ? <input type="text" value={editando.concepto} onChange={e => setEditando({ ...editando, concepto: e.target.value })} style={{ fontSize: 12, padding: '5px 6px' }} autoFocus />
@@ -201,21 +187,22 @@ export default function TablaCuentas({
                 <div role="cell" className="celda col-importe importe">{enPagada && importe !== null && importe !== undefined ? FMT(importe) : vacia}</div>
                 <div role="cell" className="celda col-importe importe">{enRechazada && importe !== null && importe !== undefined ? FMT(importe) : vacia}</div>
                 <div role="cell" className="celda col-importe importe">{vacia}</div>
+                <div role="cell" className="celda col-importe importe">{vacia}</div>
                 <div role="cell" className="celda">
                   {soloLectura ? (
                     enEdicion ? (
                       <div className="celda-estado">
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={guardarEdicion}>{t.guardar}</button>
-                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => setEditando(null)}>{t.cancelar}</button>
+                          <button type="button" className="secundario" style={{ fontSize: 12, padding: '4px 8px' }} onClick={guardarEdicion}>{t.guardar}</button>
+                          <button type="button" className="secundario" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => setEditando(null)}>{t.cancelar}</button>
                         </div>
                       </div>
                     ) : retirando === f.id ? (
                       <div className="celda-estado">
                         <span className="nota-texto">{t.seguro}</span>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => confirmarRetirada(f.id)}>{t.si}</button>
-                          <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => setRetirando(null)}>{t.no}</button>
+                          <button type="button" className="secundario" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => confirmarRetirada(f.id)}>{t.si}</button>
+                          <button type="button" className="secundario" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => setRetirando(null)}>{t.no}</button>
                         </div>
                       </div>
                     ) : (
@@ -227,8 +214,8 @@ export default function TablaCuentas({
                         </span>
                         {puedeTocarla && (
                           <div style={{ display: 'flex', gap: 4 }}>
-                            <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => empezarEdicion(f)}>{t.editar}</button>
-                            <button type="button" className="secundario" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => { setEditando(null); setRetirando(f.id); }}>{t.retirar}</button>
+                            <button type="button" className="secundario" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => empezarEdicion(f)}>{t.editar}</button>
+                            <button type="button" className="secundario" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => { setEditando(null); setRetirando(f.id); }}>{t.retirar}</button>
                           </div>
                         )}
                       </div>
@@ -238,11 +225,10 @@ export default function TablaCuentas({
                       <select className="select-estado" value={f.estado_revision} disabled={f.estado_revision !== 'aceptada'} onChange={e => onCambiarEstado(f, e.target.value)}>
                         <option value="aceptada">aceptada</option>
                         <option value="rechazada">rechazada</option>
-                        <option value="pagada">pagada</option>
                         <option value="borrada">borrada</option>
                       </select>
-                      {f.motivo_rechazo && <span className="muted" style={{ fontSize: 11 }}>{f.motivo_rechazo}</span>}
-                      {f.importe_a_mano && <span className="muted" style={{ fontSize: 11 }}>{t.aMano}</span>}
+                      {f.motivo_rechazo && <span className="muted" style={{ fontSize: 12 }}>{f.motivo_rechazo}</span>}
+                      {f.importe_a_mano && <span className="muted" style={{ fontSize: 12 }}>{t.aMano}</span>}
                     </div>
                   )}
                 </div>
@@ -255,11 +241,7 @@ export default function TablaCuentas({
             const etiqueta = esAnticipo ? t.anticipo : t.pago;
             return (
               <div key={p.id} role="row" className="fila-tabla" style={{ gridTemplateColumns: cols }}>
-                {!soloLectura && <div role="cell" className="celda"></div>}
-                <div role="cell" className="celda concepto">
-                  {etiqueta}
-                  {!esAnticipo && p.facturas_numeros?.length ? ` — #${p.facturas_numeros.join(', #')}` : ''}
-                </div>
+                <div role="cell" className="celda concepto">{etiqueta}</div>
                 <div role="cell" className="celda">{vacia}</div>
                 <div role="cell" className="celda">{vacia}</div>
                 <div role="cell" className="celda">{p.fecha ? new Date(p.fecha).toLocaleDateString(locale) : vacia}</div>
@@ -267,6 +249,7 @@ export default function TablaCuentas({
                 <div role="cell" className="celda col-importe importe">{vacia}</div>
                 <div role="cell" className="celda col-importe importe">{vacia}</div>
                 <div role="cell" className="celda col-importe importe">{FMT(Math.abs(Number(p.importe)))}</div>
+                <div role="cell" className="celda col-importe importe">{vacia}</div>
                 <div role="cell" className="celda">
                   <span className="nota-texto muted">
                     {p.es_efectivo
@@ -282,7 +265,6 @@ export default function TablaCuentas({
 
           {totales && (
             <div role="row" className="fila-tabla fila-total" style={{ gridTemplateColumns: cols }}>
-              {!soloLectura && <div role="cell" className="celda"></div>}
               <div role="cell" className="celda">{t.total}</div>
               <div role="cell" className="celda"></div>
               <div role="cell" className="celda"></div>
@@ -291,35 +273,49 @@ export default function TablaCuentas({
               <div role="cell" className="celda col-importe importe">{FMT(totales.totalPagado)}</div>
               <div role="cell" className="celda col-importe importe">{FMT(totales.totalRechazado)}</div>
               <div role="cell" className="celda col-importe importe">{FMT(totales.totalConciliado)}</div>
+              <div role="cell" className="celda col-importe importe">{FMT(totales.pendienteDePagar)}</div>
               <div role="cell" className="celda"></div>
             </div>
           )}
         </div>
       </div>
 
-      {!soloLectura && !cerrado && seleccionadas.size > 0 && (
-        <div className="fila" style={{ marginTop: 12, alignItems: 'center' }}>
-          <span className="muted">{seleccionadas.size} factura(s) seleccionadas · {FMT(totalSeleccion)}</span>
-          <input type="date" value={fechaPago} onChange={e => setFechaPago(e.target.value)} />
-          <button type="button" className="secundario" disabled={pagando} onClick={pagar}>{pagando ? 'Pagando...' : 'Pagar'}</button>
+      {!soloLectura && !cerrado && (
+        <div className="fila" style={{ marginTop: 12 }}>
+          <button type="button" className="secundario" disabled={pagando || facturasAceptadas.length === 0} onClick={pagar}>
+            {pagando ? 'Pagando...' : 'Pagar'}
+          </button>
         </div>
       )}
 
       {!soloLectura && !cerrado && (
-        <form onSubmit={crearAnticipo} style={{ marginTop: 12 }}>
-          <div className="fila">
-            <input type="number" step="0.01" placeholder="Importe del anticipo" value={nuevoAnticipo.importe} onChange={e => setNuevoAnticipo({ ...nuevoAnticipo, importe: e.target.value })} />
-            <input type="date" value={nuevoAnticipo.fecha} onChange={e => setNuevoAnticipo({ ...nuevoAnticipo, fecha: e.target.value })} />
+        <div className="fila" style={{ marginTop: 12 }}>
+          <button type="button" className="secundario" onClick={() => setModalAnticipoAbierto(true)}>+ Añadir anticipo</button>
+        </div>
+      )}
+
+      <Modal abierto={modalAnticipoAbierto} titulo="Añadir anticipo" onCerrar={() => setModalAnticipoAbierto(false)}>
+        <form onSubmit={crearAnticipo}>
+          <div style={{ marginBottom: 14 }}>
+            <span className="etiqueta">Importe</span>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Ej. 50"
+              value={nuevoAnticipo.importe}
+              onChange={e => setNuevoAnticipo({ ...nuevoAnticipo, importe: e.target.value })}
+            />
           </div>
-          <div style={{ height: 8 }} />
-          <label className="fila-checkbox">
-            <input type="checkbox" checked={nuevoAnticipo.esEfectivo} onChange={e => setNuevoAnticipo({ ...nuevoAnticipo, esEfectivo: e.target.checked })} />
+          <label className="fila dialogo-cuerpo" style={{ gap: 8, cursor: 'pointer', marginBottom: 14, justifyContent: 'flex-start' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={nuevoAnticipo.esEfectivo}
+              onChange={e => setNuevoAnticipo({ ...nuevoAnticipo, esEfectivo: e.target.checked })} />
             En efectivo (no sale del banco)
           </label>
-          <div style={{ height: 8 }} />
-          <button type="submit" className="secundario">+ Añadir anticipo</button>
+          <button type="submit" className="secundario" style={{ width: '100%' }} disabled={enviandoAnticipo}>
+            {enviandoAnticipo ? 'Añadiendo...' : 'Añadir'}
+          </button>
         </form>
-      )}
+      </Modal>
     </div>
   );
 }

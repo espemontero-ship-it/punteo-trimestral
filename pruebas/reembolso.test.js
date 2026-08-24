@@ -5,7 +5,7 @@ import {
   buscarOCrearLote, subirFacturaLote, corregirFacturaColaborador, retirarFacturaColaborador,
   calcularTotales,
 } from '../lib/lotes.cjs';
-import { crearAnticipo, pagarFacturas, listarPagosDeLote, vincularPago, pagosSinConciliar, pagosParaEnvio } from '../lib/pagos.cjs';
+import { crearAnticipo, pagarFacturas, listarPagosDeLote, vincularPago, desvincularPago, pagosSinConciliar, pagosParaEnvio } from '../lib/pagos.cjs';
 import { cerrarProyecto } from '../lib/proyectos.cjs';
 import { analizarFactura } from '../lib/facturaMatcher.cjs';
 import { construirProveedores } from '../lib/agrupador.cjs';
@@ -169,6 +169,15 @@ describe('los anticipos', () => {
     const id = await crearAnticipo(loteId, { importe: 30, fecha: '2026-07-01', esEfectivo: true });
     expect(id).toBeTruthy();
   });
+
+  it('9b. calcularTotales enseña lo que se le debe de verdad, ya descontado el anticipo', async () => {
+    await crearAnticipo(loteId, { importe: 20, fecha: '2026-07-01', esEfectivo: true });
+    await subirFactura(loteId, 45.60);
+    await subirFactura(loteId, 12.30);
+
+    const totales = await calcularTotales(loteId);
+    expect(totales.pendienteDePagar).toBe(37.9);
+  });
 });
 
 describe('el pago', () => {
@@ -270,6 +279,24 @@ describe('el pago', () => {
 
     await expect(vincularPago(pago2.id, linea2.id)).rejects.toThrow();
     expect((await lineaPorId(linea2.id)).estado).toBe('sin_resolver');
+  });
+});
+
+describe('deshacer un pago', () => {
+  it('16b. un pago se puede desvincular: la línea vuelve a pendiente y sus facturas siguen pagadas', async () => {
+    const { id: f1 } = await subirFactura(loteId, 45);
+    const pago = await pagarFacturas(loteId, { facturaIds: [f1], fecha: '2026-07-20' });
+    const linea = await sembrarLinea({ importe: -45, fecha: '2026-07-21' });
+    await query(`UPDATE movimientos SET hoja = 'pruebas', clave = 'reembolso' WHERE id = $1`, [linea.id]);
+    await vincularPago(pago.id, linea.id);
+
+    await desvincularPago(pago.id);
+
+    expect((await pagoPorId(pago.id)).movimiento_id).toBeNull();
+    expect((await lineaPorId(linea.id)).estado).toBe('sin_resolver');
+    expect((await facturaPorId(f1)).estado_revision).toBe('pagada');
+    const { rows } = await query(`SELECT COUNT(*) AS n FROM movimiento_facturas WHERE movimiento_id = $1`, [linea.id]);
+    expect(Number(rows[0].n)).toBe(0);
   });
 });
 
