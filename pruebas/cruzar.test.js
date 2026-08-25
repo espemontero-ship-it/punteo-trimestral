@@ -133,6 +133,28 @@ describe('cruzar facturas con el banco', () => {
     expect(String(f.motivo_candidatos.movimientoId)).toBe(String(linea.id));
   });
 
+  it('16c. la propuesta de combinar dos facturas dice el proveedor de cada una y el concepto del banco', async () => {
+    const linea = await sembrarLinea({ importe: -137.53, concepto: 'COMPRA TARJETA COMERCIO' });
+    const { archivo: primera } = await subir({
+      leer: lector([{ importe: 100.02, fecha: '2026-07-19', proveedor: 'Amazon' }]),
+    });
+    const { archivo: segunda } = await subir({
+      leer: lector([{ importe: 37.51, fecha: '2026-07-19', proveedor: 'Correos' }]),
+    });
+    await query('UPDATE facturas SET proveedor_clave = NULL WHERE nombre_original IN ($1, $2)', [primera, segunda]);
+
+    await reintentarPendientes();
+
+    const a = await facturaPorNombre(primera);
+    const b = await facturaPorNombre(segunda);
+    expect(a.motivo_tipo).toBe('combo_sugerido');
+    expect(String(a.motivo_candidatos.movimientoId)).toBe(String(linea.id));
+    expect(a.motivo_detalle).toBe(
+      `Esta factura (100.02€, Amazon) + la factura ${b.numero} (37.51€, Correos) suman 137.53€,`
+      + ` contra la línea de 137.53€ ("COMPRA TARJETA COMERCIO").`
+    );
+  });
+
   it('17. la factura que paga un colaborador de su bolsillo no se cruza', async () => {
     const linea = await sembrarLinea({ importe: -45 });
 

@@ -7,6 +7,7 @@ import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 import { parseImporte } from '../../lib/numero.cjs';
 
 import { importeDeFactura } from '../../lib/importeFactura.cjs';
+import { textoComboFacturas } from '../../lib/textoCombo.cjs';
 
 const ETIQUETAS_TIPO = {
   emparejada_ok: 'Emparejada y cuadra',
@@ -115,6 +116,26 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     return () => { cancelado = true; };
   }, []);
 
+  const proveedorPorFactura = useMemo(
+    () => new Map(facturas.map(f => [String(f.id), f.proveedor || null])),
+    [facturas]
+  );
+
+  function detalleDe(activo, f) {
+    if (!activo) return null;
+    if (activo.tipo !== 'combo_sugerido') return activo.detalle;
+    const otras = activo.otrasFacturas || [];
+    const monto = importeDeFactura(f);
+    if (otras.length === 0 || activo.lineaImporte == null || monto === null) return activo.detalle;
+    return textoComboFacturas({
+      propia: { monto, proveedor: f.proveedor },
+      otras: otras.map(o => ({
+        numero: o.numero, monto: o.monto, proveedor: proveedorPorFactura.get(String(o.id)) ?? null,
+      })),
+      linea: { importe: activo.lineaImporte, concepto: activo.lineaConcepto },
+    });
+  }
+
   const sinResolver = useMemo(() => facturas.filter(f => f.estado !== 'matcheada').length, [facturas]);
   const sinImporte = useMemo(
     () => facturas.filter(f => f.estado !== 'matcheada' && !(f.totales?.length || f.importes?.length)).length,
@@ -127,7 +148,12 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     const escapar = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const filas = [
       ['Archivo', 'Motivo', 'Detalle'].map(escapar).join(','),
-      ...pendientes.map(f => [f.nombre_original, ETIQUETAS_TIPO[f.motivo_tipo] || f.motivo_tipo || '', f.motivo_detalle].map(escapar).join(',')),
+      ...pendientes.map(f => {
+        const c = f.motivo_candidatos;
+        const activo = c ? { tipo: f.motivo_tipo, detalle: f.motivo_detalle, ...c } : null;
+        const detalle = detalleDe(activo, f) ?? f.motivo_detalle;
+        return [f.nombre_original, ETIQUETAS_TIPO[f.motivo_tipo] || f.motivo_tipo || '', detalle].map(escapar).join(',');
+      }),
     ];
     const blob = new Blob(['﻿' + filas.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -326,6 +352,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       ? { tipo: f.motivo_tipo, numero: f.numero, facturaConcepto: f.concepto, detalle: f.motivo_detalle, ...f.motivo_candidatos }
       : null;
     const activo = resultadoLocal || persistido;
+    const detalleActivo = detalleDe(activo, f);
 
     const candidatos = activo?.tipo === 'ambiguo' ? activo.candidatos.map(c => ({
       movimientoId: c.movimientoId, numero: activo.numero, facturaId: f.id, facturaConcepto: activo.facturaConcepto,
@@ -333,7 +360,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     })) : activo?.tipo === 'combo_sugerido' ? [{
       movimientoId: activo.movimientoId, esCombo: true, numero: activo.numero,
       otrasFacturas: activo.otrasFacturas, facturaId: f.id,
-      facturaConcepto: activo.facturaConcepto, detalle: activo.detalle,
+      facturaConcepto: activo.facturaConcepto, detalle: detalleActivo,
       hoja: activo.hoja, clave: activo.clave,
     }] : null;
     const bloqueada = f.estado === 'matcheada' || !!candidatos;
@@ -389,7 +416,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
             <div>
               <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
 
-                {activo.detalle || (activo.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:')}
+                {detalleActivo || (activo.tipo === 'ambiguo' ? `${candidatos.length} líneas con el mismo importe — elige cuál es:` : 'Combinación sugerida — confirma si es correcta:')}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {candidatos.map((c, i) => ({ c, i })).filter(({ i }) => viva(`sug:${f.id}:${i}`)).map(({ c, i }) => (
