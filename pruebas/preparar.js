@@ -13,5 +13,7 @@ if (produccion && process.env.DATABASE_URL === produccion) {
   throw new Error('PARADO: las pruebas están apuntando a la base de PRODUCCIÓN.');
 }
 
+delete process.env.ANTHROPIC_API_KEY;
+
 const { asegurarEsquemaReembolso } = await import('../lib/lotes.cjs');
 await asegurarEsquemaReembolso();
