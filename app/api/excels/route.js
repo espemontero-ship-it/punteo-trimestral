@@ -1,5 +1,7 @@
 const { importarMovimientos } = require('../../../lib/importarExcel.cjs');
 
+export const maxDuration = 60;
+
 export async function POST(request) {
   const formData = await request.formData();
   const file = formData.get('file');
