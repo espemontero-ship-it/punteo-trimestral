@@ -4,6 +4,7 @@
     {
       "nombre": "bbva",
       "modo": "nombres",
+      "saldoIdentifica": true,
       "cabeceraContiene": ["CONCEPTO", "IMPORTE"],
       "columnas": {
         "fecha": ["F. CONTABLE", "FECHA CONTABLE"],
