@@ -300,6 +300,16 @@ const SECCIONES_ADMIN = [
 
         <h4>Los botones de arriba</h4>
         <ul>
+          <li>
+            <strong>Buscar en cualquier columna</strong> — filtra la lista mientras escribes: busca en el proveedor, el
+            concepto, el importe, el nombre del archivo, la fecha, quién la subió, el motivo y la línea del banco a la
+            que está emparejada. Se combina con Solo pendientes.
+          </li>
+          <li>
+            <strong>Los títulos de las columnas</strong> — al pulsar uno, la lista se ordena por esa columna (▲); si
+            pulsas otra vez, al revés (▼); a la tercera vuelve al orden de antes. Las facturas sin dato en esa columna
+            quedan siempre al final. <strong>Vincular</strong> no se ordena.
+          </li>
           <li><strong>Solo pendientes</strong> — oculta las ya emparejadas.</li>
           <li><strong>Columnas</strong> — para ocultar las que no te interesen.</li>
           <li><strong>Descargar CSV</strong> — la lista de lo que queda sin resolver, para trabajarla fuera.</li>

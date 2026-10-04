@@ -38,6 +38,61 @@ function fechaInicial(f) {
   return f.fechas && f.fechas[0] ? String(f.fechas[0]).slice(0, 10) : '';
 }
 
+const TIPOS_DE_SUGERENCIA = ['ambiguo', 'combo_sugerido', 'cubre_varios'];
+
+function fechaLocal(valor) {
+  return valor ? new Date(valor).toLocaleDateString('es-ES') : '';
+}
+
+function textoDelMotivo(f) {
+  if (f.estado === 'matcheada') return 'Emparejada';
+  const tipo = f.motivo_tipo;
+  if (TIPOS_DE_SUGERENCIA.includes(tipo)) {
+    const c = f.motivo_candidatos;
+    if (!c) return '';
+    const conceptos = (c.candidatos || []).map(x => x.concepto).filter(Boolean);
+    return [f.motivo_detalle, c.detalle, ...conceptos].filter(Boolean).join(' ');
+  }
+  if (['ya_cubierta', 'emparejada_no_cuadra'].includes(tipo)) return f.motivo_detalle || ETIQUETAS_TIPO[tipo] || '';
+  return ETIQUETAS_TIPO[tipo] || f.motivo_detalle || '';
+}
+
+function textoDelMovimiento(f) {
+  if (f.estado !== 'matcheada') return '';
+  if (Number(f.movimientos_cubiertos) > 1) return `${Number(f.movimientos_cubiertos)} movimientos ${Number(f.movimientos_suma).toFixed(2)}`;
+  const importe = f.movimiento_importe !== undefined && f.movimiento_importe !== null ? Number(f.movimiento_importe).toFixed(2) : '';
+  return [fechaLocal(f.movimiento_fecha), f.movimiento_concepto, importe].filter(Boolean).join(' ');
+}
+
+function textoBuscable(f) {
+  const monto = importeDeFactura(f);
+  const importe = monto === null ? '' : `${Number(monto).toFixed(2)} ${Number(monto).toFixed(2).replace('.', ',')}`;
+  return [
+    f.numero, f.proveedor, f.concepto, f.nombre_original, fechaInicial(f), fechaLocal(fechaInicial(f)), importe,
+    fechaLocal(f.creado_en), f.subido_por_nombre, textoDelMotivo(f), textoDelMovimiento(f),
+  ].filter(v => v !== null && v !== undefined && v !== '').join(' ').toLowerCase();
+}
+
+function valorDeOrden(f, campo) {
+  switch (campo) {
+    case 'Fecha': return fechaInicial(f) || null;
+    case 'Proveedor': return f.proveedor || null;
+    case 'Concepto': return f.concepto || null;
+    case 'Importe': { const monto = importeDeFactura(f); return monto === null ? null : Number(monto); }
+    case 'Nombre': return f.nombre_original || null;
+    case 'Subida': return f.creado_en ? new Date(f.creado_en).getTime() : null;
+    case 'Subido por': return f.subido_por_nombre || null;
+    case 'Movimiento': return f.estado === 'matcheada' && f.movimiento_fecha ? new Date(f.movimiento_fecha).getTime() : null;
+    case 'Motivo': return textoDelMotivo(f) || null;
+    default: return null;
+  }
+}
+
+function compararValores(a, b) {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' });
+}
+
 function Celda({ className = '', cabecera, children, style }) {
   return (
     <div role={cabecera ? 'columnheader' : 'cell'} className={`celda ${className}`.trim()} style={style}>
@@ -66,6 +121,8 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
 
   const [recalculando, setRecalculando] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [ordenPor, setOrdenPor] = useState(null);
 
   const [descartadas, setDescartadas] = useState(new Set());
   const viva = k => !descartadas.has(k);
@@ -300,6 +357,33 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
     [facturas, seleccionadas]
   );
 
+  const facturasVisibles = useMemo(() => {
+    const texto = busqueda.trim().toLowerCase();
+    const filtradas = facturas.filter(f => (!soloPendientes || f.estado !== 'matcheada') && (!texto || textoBuscable(f).includes(texto)));
+    if (!ordenPor) return filtradas;
+    const factor = ordenPor.dir === 'desc' ? -1 : 1;
+    const conValor = filtradas.map(f => ({ f, v: valorDeOrden(f, ordenPor.campo) }));
+    const conDato = conValor.filter(x => x.v !== null).sort((a, b) => compararValores(a.v, b.v) * factor);
+    const sinDato = conValor.filter(x => x.v === null);
+    return [...conDato, ...sinDato].map(x => x.f);
+  }, [facturas, soloPendientes, busqueda, ordenPor]);
+
+  useEffect(() => {
+    const visibles = new Set(facturasVisibles.map(f => f.id));
+    setSeleccionadas(prev => {
+      const quedan = [...prev].filter(id => visibles.has(id));
+      return quedan.length === prev.size ? prev : new Set(quedan);
+    });
+  }, [facturasVisibles]);
+
+  function alternarOrden(campo) {
+    setOrdenPor(prev => {
+      if (!prev || prev.campo !== campo) return { campo, dir: 'asc' };
+      if (prev.dir === 'asc') return { campo, dir: 'desc' };
+      return null;
+    });
+  }
+
   const nombresDuplicados = useMemo(() => {
     const conteo = {};
     for (const f of facturas) {
@@ -377,7 +461,6 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
 
   const columnasMostradas = COLUMNAS.filter(c => columnasVisibles.has(c));
   const plantillaColumnas = [`${ANCHO_CHECKBOX}px`, ...columnasMostradas.map(c => `${anchoDe(c)}px`)].join(' ');
-  const facturasVisibles = soloPendientes ? facturas.filter(f => f.estado !== 'matcheada') : facturas;
 
   function contenidoCelda(col, f) {
     const duplicada = estaRepetida(f);
@@ -592,6 +675,9 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
 
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="grupo-tb">
+            <input type="text" placeholder="Buscar en cualquier columna..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          </div>
           <label className="toggle-pendientes">
             <input type="checkbox" checked={soloPendientes} onChange={e => setSoloPendientes(e.target.checked)} />
             Solo pendientes
@@ -617,6 +703,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
           </button>
         </div>
       </div>
+      {busqueda.trim() && facturasVisibles.length === 0 && <p className="muted">Nada que coincida con este filtro.</p>}
       {parejasMismoArchivo.length > 0 && (
         <div className="aviso-duplicados">
           <p className="aviso-duplicados-titulo">⚠ El mismo archivo está subido más de una vez</p>
@@ -657,7 +744,13 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
             </Celda>
             {columnasMostradas.map(c => (
               <Celda key={c} cabecera>
-                <span className="etiqueta-orden">{c}</span>
+                {c === 'Vincular'
+                  ? <span className="etiqueta-orden fija">{c}</span>
+                  : (
+                    <span className="etiqueta-orden" onClick={() => alternarOrden(c)}>
+                      {c}{ordenPor?.campo === c ? (ordenPor.dir === 'asc' ? ' ▲' : ' ▼') : ''}
+                    </span>
+                  )}
                 <span className="resize-handle" onPointerDown={e => iniciarArrastre(e, c)} />
               </Celda>
             ))}
