@@ -65,8 +65,19 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [mostrarColumnas, setMostrarColumnas] = useState(false);
   const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
 
+  const [recalculando, setRecalculando] = useState(false);
+
   const [descartadas, setDescartadas] = useState(new Set());
   const viva = k => !descartadas.has(k);
+
+  async function recalcularSugerencias() {
+    setRecalculando(true);
+    const r = await apiFetch('/api/facturas/recalcular', { method: 'POST' }, { mensajeError: 'No se pudo recalcular.' });
+    setRecalculando(false);
+    if (!r) return;
+    mostrarToast(`Sugerencias recalculadas: ${r.revisadas} factura${r.revisadas === 1 ? '' : 's'} pendiente${r.revisadas === 1 ? '' : 's'}.`, 'ok');
+    onCambio();
+  }
 
   async function descartar(k, f, c) {
     setDescartadas(prev => new Set(prev).add(k));
@@ -595,6 +606,9 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
               </div>
             )}
           </div>
+          <button type="button" className="secundario" onClick={recalcularSugerencias} disabled={recalculando || sinResolver === 0}>
+            {recalculando ? 'Recalculando...' : 'Recalcular sugerencias'}
+          </button>
           <button type="button" className="secundario" onClick={descargarInformeCsv} disabled={sinResolver === 0}>
             Descargar CSV
           </button>

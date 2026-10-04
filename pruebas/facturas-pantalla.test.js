@@ -160,3 +160,31 @@ describe('la factura que cubre varios movimientos', () => {
     expect(screen.getByText('5 movimientos · 57.51€')).toBeTruthy();
   });
 });
+
+describe('recalcular las sugerencias', () => {
+  it('15. el botón llama a la ruta de recalcular y recarga la lista al terminar', async () => {
+    red = fetchDeMentira({ '/api/facturas/recalcular': { ok: true, revisadas: 3 } });
+    const { props } = pintarFacturasTrimestre({ facturas: [unaFacturaSuelta()] });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Recalcular sugerencias' }));
+
+    await waitFor(() => expect(red.hacia('/api/facturas/recalcular')).toHaveLength(1));
+    expect(red.hacia('/api/facturas/recalcular')[0].metodo).toBe('POST');
+    await waitFor(() => expect(props.onCambio).toHaveBeenCalledTimes(1));
+  });
+
+  it('15b. mientras recalcula el botón no se puede volver a pulsar', async () => {
+    let terminar;
+    vi.stubGlobal('fetch', vi.fn(url => (String(url).includes('/api/facturas/recalcular')
+      ? new Promise(resolver => { terminar = () => resolver({ ok: true, status: 200, json: async () => ({ ok: true, revisadas: 1 }) }); })
+      : Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true }) }))));
+    pintarFacturasTrimestre({ facturas: [unaFacturaSuelta()] });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Recalcular sugerencias' }));
+
+    const boton = await screen.findByRole('button', { name: 'Recalculando...' });
+    expect(boton.disabled).toBe(true);
+    terminar();
+    await screen.findByRole('button', { name: 'Recalcular sugerencias' });
+  });
+});

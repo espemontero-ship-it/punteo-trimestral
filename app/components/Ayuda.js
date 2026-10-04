@@ -291,7 +291,12 @@ const SECCIONES_ADMIN = [
           <li><strong>Solo pendientes</strong> — oculta las ya emparejadas.</li>
           <li><strong>Columnas</strong> — para ocultar las que no te interesen.</li>
           <li><strong>Descargar CSV</strong> — la lista de lo que queda sin resolver, para trabajarla fuera.</li>
-          <li><strong>Recalcular facturas sin resolver</strong> — vuelve a intentar el cruce de todas de golpe. Es lo que hay que pulsar después de subir un excel del banco nuevo.</li>
+          <li>
+            <strong>Recalcular sugerencias</strong> — vuelve a buscar, para todas las facturas pendientes, con los importes
+            que ya tienen guardados, qué movimiento les corresponde. No lee las facturas otra vez ni usa IA. Al subir un
+            excel del banco ya se hace solo; este botón sirve cuando la app aprende una regla nueva y quieres que la
+            aplique a facturas que ya estaban subidas.
+          </li>
           <li>
             <strong>Leer con IA (N)</strong> — para las que no tienen importe porque son fotos o PDFs ilegibles. El número
             dice cuántas hay en ese caso.
