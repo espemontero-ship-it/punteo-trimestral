@@ -164,7 +164,10 @@ const SECCIONES_ADMIN = [
           típico de un pago que trae dos tickets. Aceptarla adjunta las dos y deja la línea resuelta — exactamente lo
           mismo que aceptarla desde la pestaña Facturas, donde sale la explicación con los importes de cada una. Su ✕
           también es para siempre, y va por esas facturas concretas: rechazar &quot;17 + 16&quot; no rechaza otras
-          combinaciones futuras.
+          combinaciones futuras. Las facturas pueden ser de proveedores distintos (por ejemplo la de Amazon y la del
+          vendedor que le vende a través de Amazon). Si la suma coincide al céntimo con una línea, sale esa combinación
+          aunque haya otras líneas que se parezcan; las parecidas, con su aviso de que no cuadran, solo salen cuando no
+          hay nada exacto.
         </p>
         <h4>Una factura para varios movimientos</h4>
         <p>
