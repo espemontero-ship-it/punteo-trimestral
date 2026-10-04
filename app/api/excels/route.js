@@ -10,7 +10,13 @@ export async function POST(request) {
   if (!file) return Response.json({ error: 'Falta el archivo (campo "file").' }, { status: 400 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const hojasEncontradas = await importarMovimientos(buffer, file.name, hoja);
+  let hojasEncontradas;
+  try {
+    hojasEncontradas = await importarMovimientos(buffer, file.name, hoja);
+  } catch (err) {
+    console.error('Error importando el excel', err);
+    return Response.json({ error: err.message || 'No se pudo importar el excel.' }, { status: 422 });
+  }
 
   if (hojasEncontradas.length === 0) {
     return Response.json({

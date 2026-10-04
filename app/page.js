@@ -433,7 +433,7 @@ export default function Home() {
       <Modal abierto={modalAbierto === 'excel'} titulo="Añadir excel del banco / paypal" onCerrar={() => setModalAbierto(null)}>
         <p className="muted">Si es el excel combinado (bbva/openbank/paypal en pestañas), déjalo en "Detectar automáticamente". Si es un export suelto de un solo banco, indícalo.</p>
         <form onSubmit={subirExcel}>
-          <input type="file" name="file" accept=".xlsx" />
+          <input type="file" name="file" accept=".xlsx,.xls" />
           <div style={{ height: 12 }} />
           <select name="hoja" defaultValue="">
             <option value="">Detectar automáticamente (excel combinado)</option>

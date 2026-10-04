@@ -15,10 +15,11 @@ export const dia = (mes, d) => new Date(Date.UTC(2026, mes - 1, d));
 export const CABECERA_BBVA = ['F. CONTABLE', 'CONCEPTO', 'IMPORTE', 'SALDO'];
 export const CABECERA_PAYPAL = ['FECHA', 'NOMBRE', 'NETO'];
 
-async function libroDe({ hoja, cabecera, filas, titulo }) {
+async function libroDe({ hoja, cabecera, filas, titulo, combinarTitulo }) {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet(hoja);
   if (titulo) ws.addRow([titulo]);
+  if (titulo && combinarTitulo) ws.mergeCells('A1:D1');
   ws.addRow(cabecera);
   for (const f of filas) ws.addRow(f).getCell(1).numFmt = 'dd/mm/yyyy';
   ws.getColumn(2).width = 40;
@@ -28,10 +29,10 @@ async function libroDe({ hoja, cabecera, filas, titulo }) {
 let contador = 0;
 export const archivos = {};
 
-export async function subida({ hoja = 'bbva', cabecera = CABECERA_BBVA, titulo = 'Movimientos', lineas }) {
+export async function subida({ hoja = 'bbva', cabecera = CABECERA_BBVA, titulo = 'Movimientos', combinarTitulo = false, lineas }) {
   contador++;
   const ruta = `https://ejemplo/${PREFIJO}-${contador}.xlsx`;
-  archivos[ruta] = await libroDe({ hoja, cabecera, titulo, filas: lineas.map(l => [dia(...l.fecha), l.concepto, l.importe, l.saldo ?? 100]) });
+  archivos[ruta] = await libroDe({ hoja, cabecera, titulo, combinarTitulo, filas: lineas.map(l => [dia(...l.fecha), l.concepto, l.importe, l.saldo ?? 100]) });
   const { rows: [imp] } = await query(
     `INSERT INTO importaciones (hoja, ruta_blob, nombre_archivo) VALUES ($1, $2, $3) RETURNING id`,
     [hoja, ruta, `${PREFIJO}-${contador}.xlsx`]

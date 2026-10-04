@@ -53,7 +53,8 @@ const SECCIONES_ADMIN = [
           <li>
             <strong>Excel del banco</strong> — el extracto. Si subes el combinado con las tres pestañas (bbva, openbank,
             paypal), déjalo en &quot;Detectar automáticamente&quot;; si es el export suelto de un banco, dilo en el desplegable.
-            Volver a subir el mismo excel no borra nada de lo que ya hayas resuelto: fusiona.
+            Volver a subir el mismo excel no borra nada de lo que ya hayas resuelto: fusiona. Vale tanto el formato
+            moderno (<strong>.xlsx</strong>) como el antiguo (<strong>.xls</strong>), que la app convierte sola al subirlo.
           </li>
           <li>
             <strong>Devoluciones</strong> — las que todavía no se han mandado. Van como pestaña propia en el excel del

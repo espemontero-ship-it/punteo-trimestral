@@ -85,6 +85,15 @@ describe('el excel de la gestoría tiene una sola pestaña por banco', () => {
     expect(columna(wb.getWorksheet('bbva'), 2, 3)).toEqual(['FORMATO NORMAL']);
   });
 
+  it('70b. el título combinado del extracto sigue combinado, no repetido en cada columna', async () => {
+    const a = await subida({ combinarTitulo: true, lineas: [{ fecha: [7, 1], concepto: 'CON TITULO COMBINADO', importe: -10, nota: 'n' }] });
+
+    const ws = (await leer(await generarExcelFinal(a, null, { descargar }))).getWorksheet('bbva');
+
+    expect(ws.model.merges).toEqual(['A1:D1']);
+    expect(ws.getRow(1).getCell(1).value).toBe('Movimientos');
+  });
+
   it('70. se conservan el formato de las fechas y el ancho de las columnas', async () => {
     const a = await subida({ lineas: [{ fecha: [7, 1], concepto: 'CON FORMATO', importe: -10, nota: 'n' }] });
 
