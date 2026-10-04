@@ -188,3 +188,25 @@ describe('recalcular las sugerencias', () => {
     await screen.findByRole('button', { name: 'Recalcular sugerencias' });
   });
 });
+
+describe('una sugerencia que ya no está viva no deja nada escrito', () => {
+  const sinSugerencia = tipo => unaFacturaSuelta({
+    estado: tipo === 'sin_match' ? 'sin_match' : 'revisar', motivo_tipo: tipo, motivo_detalle: null, motivo_candidatos: null,
+  });
+
+  it('16. combo, ambiguo y varios movimientos rechazados no dejan su título en la celda Motivo', () => {
+    pintarFacturasTrimestre({
+      facturas: [sinSugerencia('combo_sugerido'), sinSugerencia('ambiguo'), sinSugerencia('cubre_varios')],
+    });
+
+    expect(screen.queryByText('Combinación de facturas sugerida')).toBeNull();
+    expect(screen.queryByText('Varias líneas con el mismo importe')).toBeNull();
+    expect(screen.queryByText('Posible factura de varios movimientos')).toBeNull();
+  });
+
+  it('16b. lo que no es una sugerencia sigue diciendo por qué no está emparejada', () => {
+    pintarFacturasTrimestre({ facturas: [sinSugerencia('sin_match')] });
+
+    expect(screen.getByText('Importe no coincide con ninguna línea')).toBeTruthy();
+  });
+});

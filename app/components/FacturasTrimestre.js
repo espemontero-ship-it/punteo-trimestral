@@ -490,6 +490,9 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
           );
         }
 
+        const tipoActual = (resultadoLocal || f).motivo_tipo || resultadoLocal?.tipo;
+        if (f.estado !== 'matcheada' && ['ambiguo', 'combo_sugerido', 'cubre_varios'].includes(tipoActual)) return null;
+
         const largos = ['ya_cubierta', 'emparejada_no_cuadra'];
         if (largos.includes((resultadoLocal || f).motivo_tipo) || largos.includes(resultadoLocal?.tipo)) {
           return <span className="muted" style={{ whiteSpace: 'normal' }}>{(resultadoLocal || f).motivo_detalle || resultadoLocal?.detalle}</span>;
