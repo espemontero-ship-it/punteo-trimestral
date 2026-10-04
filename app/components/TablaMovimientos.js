@@ -3,7 +3,6 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { apiFetch, mostrarToast } from '../lib/toast';
 import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
-import SubirFactura from './SubirFactura';
 import { ConfirmDialog } from './ConfirmDialog';
 
 const ETIQUETAS = {
@@ -178,11 +177,6 @@ export default function TablaMovimientos({
     }
     return [...nombres].sort();
   }, [proveedores]);
-
-  async function subirFacturaDesdeFila(g, resultado) {
-    mostrarToast(resultado.detalle, resultado.tipo === 'match_directo' ? 'ok' : 'error');
-    onCambio();
-  }
 
   const grupos = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -662,13 +656,6 @@ export default function TablaMovimientos({
             />
           );
         })}
-        <SubirFactura
-          hoja={g.hoja}
-          clave={g.clave}
-          etiqueta="Subir"
-          conIcono={false}
-          onResultado={r => subirFacturaDesdeFila(g, r)}
-        />
       </div>
     );
   }

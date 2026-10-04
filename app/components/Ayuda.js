@@ -62,7 +62,7 @@ const SECCIONES_ADMIN = [
             <strong>📎 Subir facturas</strong> — junto al excel del banco, para subir varias facturas de golpe (PDF o
             foto) sin salir de Movimientos. Es el mismo botón que hay en la pestaña Facturas y hace lo mismo: avisa si
             alguna ya estaba subida y, cuando una encaja con una línea, la propone en la columna Factura. Nunca la
-            aplica sola.
+            aplica sola. Es la forma de subir facturas desde Movimientos: las líneas ya no llevan un botón Subir cada una.
           </li>
           <li>
             <strong>Devoluciones</strong> — las que todavía no se han mandado. Van como pestaña propia en el excel del
@@ -110,7 +110,7 @@ const SECCIONES_ADMIN = [
           <li><strong>Proveedor</strong> — quién cobró. <em>Es el campo que agrupa</em>: dos líneas con el mismo proveedor se juntan aunque el banco las escriba distinto y aunque sean de bancos distintos. Borrarlo desagrupa la línea y además hace que la app olvide lo que había aprendido de ahí.</li>
           <li><strong>Importe</strong> — el del movimiento.</li>
           <li><strong>Estado</strong> — ver la tabla de abajo.</li>
-          <li><strong>Factura</strong> — el número de cada factura vinculada, no la palabra &quot;ver&quot;. Es el mismo nombre que lleva el archivo dentro del zip de la gestoría, y cada número abre el suyo. Si no hay ninguna y la línea sigue esperando factura, aquí sale el botón <strong>Subir</strong>.</li>
+          <li><strong>Factura</strong> — el número de cada factura vinculada, no la palabra &quot;ver&quot;. Es el mismo nombre que lleva el archivo dentro del zip de la gestoría, y cada número abre el suyo. Las facturas se suben con <strong>📎 Subir facturas</strong>, en la barra de arriba.</li>
           <li><strong>Nota</strong> — ver más abajo, tiene su propio apartado.</li>
           <li><strong>Proyecto</strong> — a qué proyecto se imputa.</li>
         </ul>
@@ -191,8 +191,10 @@ const SECCIONES_ADMIN = [
 
         <h4>Desvincular una factura</h4>
         <p>
-          Si una factura quedó enlazada a la línea equivocada, en Movimientos, columna <strong>Factura</strong>, hay un
-          <strong> ✎</strong> al lado de su número (al pasar el ratón dice <em>Desvincular factura</em>). Pide
+          Si una factura quedó enlazada a la línea equivocada, hay un <strong>✎</strong> para desvincularla en dos sitios:
+          en Movimientos, columna <strong>Factura</strong>, al lado de su número, y en la pestaña Facturas, columna
+          <strong> Movimiento</strong>, al lado de la línea con la que está emparejada (al pasar el ratón dice
+          <em>Desvincular factura</em>). Pide
           confirmación, deja la línea sin resolver y la factura se queda en la pestaña Facturas, con su archivo, y la
           app vuelve a buscarle línea. Si la factura cubre varios movimientos (el caso de Bolt), se desvinculan todos a
           la vez. Si la línea tiene dos facturas, solo se quita la que eliges y la otra sigue enlazada.
@@ -291,9 +293,8 @@ const SECCIONES_ADMIN = [
     cuerpo: (
       <>
         <p>
-          Una fila por factura, venga de donde venga: de Inicio, de una línea de Movimientos o de un colaborador. El
-          botón <strong>📎 Subir facturas</strong> admite varios archivos a la vez — es el único sitio donde se sube en
-          lote.
+          Una fila por factura, venga de donde venga: de Inicio, de Movimientos o de un colaborador. El botón
+          <strong>📎 Subir facturas</strong> admite varios archivos a la vez, y está aquí y en la barra de Movimientos.
         </p>
 
         <h4>Las columnas</h4>
@@ -303,7 +304,7 @@ const SECCIONES_ADMIN = [
           <li><strong>Subida</strong> y <strong>Subido por</strong> — cuándo y quién.</li>
           <li><strong>Vincular</strong> — el botón <strong>Buscar</strong> vuelve a intentar el cruce solo de esa factura. Si no hay manera, se elige a mano en <strong>Elige movimiento...</strong> y se pulsa <strong>Vincular</strong>.</li>
           <li><strong>Motivo</strong> — por qué no está emparejada. Es la columna que dice qué hacer.</li>
-          <li><strong>Movimiento</strong> — el movimiento con el que quedó emparejada.</li>
+          <li><strong>Movimiento</strong> — el movimiento con el que quedó emparejada, con un ✎ para desvincularla si se enlazó mal.</li>
         </ul>
 
         <h4>Qué te puede decir el Motivo</h4>

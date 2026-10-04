@@ -64,6 +64,15 @@ function textoDelMovimiento(f) {
   return [fechaLocal(f.movimiento_fecha), f.movimiento_concepto, importe].filter(Boolean).join(' ');
 }
 
+function textoDesvincular(f) {
+  const cubre = Number(f.movimientos_cubiertos) || 0;
+  if (cubre > 1) {
+    return `La factura ${f.numero} cubre ${cubre} movimientos. Al desvincularla, esos ${cubre} movimientos vuelven a quedar sin resolver. La factura sigue aquí, con su archivo.`;
+  }
+  const linea = `la línea del ${f.movimiento_fecha ? fechaLocal(f.movimiento_fecha) : 'sin fecha'} de ${Math.abs(Number(f.movimiento_importe)).toFixed(2)}€`;
+  return `La factura ${f.numero} dejará de estar enlazada a ${linea}. Si esa línea no tiene otra factura, vuelve a quedar sin resolver. La factura sigue aquí, con su archivo.`;
+}
+
 function textoBuscable(f) {
   const monto = importeDeFactura(f);
   const importe = monto === null ? '' : `${Number(monto).toFixed(2)} ${Number(monto).toFixed(2).replace('.', ',')}`;
@@ -121,11 +130,27 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   const [columnasVisibles, setColumnasVisibles] = useState(() => new Set(COLUMNAS));
 
   const [recalculando, setRecalculando] = useState(false);
+  const [confirmarDesvincular, setConfirmarDesvincular] = useState(null);
+  const [desvinculando, setDesvinculando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [ordenPor, setOrdenPor] = useState(null);
 
   const [descartadas, setDescartadas] = useState(new Set());
   const viva = k => !descartadas.has(k);
+
+  async function desvincularConfirmada() {
+    if (!confirmarDesvincular) return;
+    const f = confirmarDesvincular;
+    setDesvinculando(true);
+    const r = await apiFetch(`/api/facturas/${f.id}/desvincular`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movimientoId: f.movimiento_id }),
+    }, { mensajeOk: 'Factura desvinculada', mensajeError: 'No se pudo desvincular.' });
+    setDesvinculando(false);
+    setConfirmarDesvincular(null);
+    if (r) onCambio();
+  }
 
   async function recalcularSugerencias() {
     setRecalculando(true);
@@ -618,13 +643,18 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
 
       case 'Movimiento':
         return (
-          <span className="muted">
-            {f.estado === 'matcheada' && Number(f.movimientos_cubiertos) > 1
-              ? `${Number(f.movimientos_cubiertos)} movimientos · ${Number(f.movimientos_suma).toFixed(2)}€`
-              : f.estado === 'matcheada'
-                ? `${f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') + ' · ' : ''}${f.movimiento_concepto?.slice(0, 40) || ''} · ${f.movimiento_importe !== undefined && f.movimiento_importe !== null ? `${Number(f.movimiento_importe).toFixed(2)}€` : ''}`
-                : '—'}
-          </span>
+          <>
+            <span className="muted">
+              {f.estado === 'matcheada' && Number(f.movimientos_cubiertos) > 1
+                ? `${Number(f.movimientos_cubiertos)} movimientos · ${Number(f.movimientos_suma).toFixed(2)}€`
+                : f.estado === 'matcheada'
+                  ? `${f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') + ' · ' : ''}${f.movimiento_concepto?.slice(0, 40) || ''} · ${f.movimiento_importe !== undefined && f.movimiento_importe !== null ? `${Number(f.movimiento_importe).toFixed(2)}€` : ''}`
+                  : '—'}
+            </span>
+            {f.estado === 'matcheada' && f.movimiento_id && (
+              <button type="button" className="btn-editar-mini" title="Desvincular factura" onClick={() => setConfirmarDesvincular(f)}>✎</button>
+            )}
+          </>
         );
 
       case 'Fecha':
@@ -796,6 +826,15 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         peligroso
         onConfirmar={() => borrarCopia(confirmarCopia)}
         onCancelar={() => setConfirmarCopia(null)}
+      />
+      <ConfirmDialog
+        abierto={!!confirmarDesvincular}
+        titulo="¿Desvincular esta factura?"
+        mensaje={confirmarDesvincular ? textoDesvincular(confirmarDesvincular) : ''}
+        textoConfirmar={desvinculando ? 'Desvinculando...' : 'Desvincular'}
+        peligroso
+        onConfirmar={desvincularConfirmada}
+        onCancelar={() => setConfirmarDesvincular(null)}
       />
       <ConfirmDialog
         abierto={confirmarBorrado}
