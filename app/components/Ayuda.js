@@ -55,6 +55,8 @@ const SECCIONES_ADMIN = [
             paypal), déjalo en &quot;Detectar automáticamente&quot;; si es el export suelto de un banco, dilo en el desplegable.
             Volver a subir el mismo excel no borra nada de lo que ya hayas resuelto: fusiona. Vale tanto el formato
             moderno (<strong>.xlsx</strong>) como el antiguo (<strong>.xls</strong>), que la app convierte sola al subirlo.
+            El export de PayPal, que es un <strong>.csv</strong>, también vale: en el desplegable elige
+            &quot;Es un export suelto de paypal&quot;.
           </li>
           <li>
             <strong>📎 Subir facturas</strong> — junto al excel del banco, para subir varias facturas de golpe (PDF o
