@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, render } from '@testing-library/react';
+import ToastHost from '../app/components/ToastHost.js';
 import { pintarMovimientos, unGrupo, unMovimiento, fetchDeMentira } from './ayuda-pantalla.js';
 
 const COLUMNAS = ['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Factura', 'Nota', 'Proyecto'];
@@ -193,6 +194,25 @@ describe('lo que se puede hacer en una fila', () => {
 
     await waitFor(() => expect(red.hacia(`/api/movimientos/${m.id}/confirmar`)).toHaveLength(1));
     expect(red.hacia(`/api/movimientos/${m.id}/confirmar`)[0].cuerpo).toMatchObject({ nota: 'material de atrezzo' });
+  });
+});
+
+describe('confirmar un grupo entero', () => {
+  it('11b. el aviso cuenta solo las líneas pendientes, no las que ya estaban resueltas', async () => {
+    const movimientos = [
+      unMovimiento({ concepto: 'PENDIENTE UNO' }),
+      unMovimiento({ concepto: 'PENDIENTE DOS', estado: 'pedida_pendiente' }),
+      unMovimiento({ concepto: 'YA RESUELTA', estado: 'resuelta' }),
+    ];
+    render(<ToastHost />);
+    pintarMovimientos({ proveedores: [unGrupo(movimientos, { clave: 'amazon', proveedor: 'Amazon' })] });
+
+    const campo = document.querySelector('.fila-grupo .campo-nota');
+    fireEvent.change(campo, { target: { value: 'material' } });
+    fireEvent.keyDown(campo, { key: 'Enter' });
+
+    expect(await screen.findByText('2 línea(s) confirmadas')).toBeTruthy();
+    expect(red.hacia('/api/proveedores/confirmar-grupo')).toHaveLength(1);
   });
 });
 

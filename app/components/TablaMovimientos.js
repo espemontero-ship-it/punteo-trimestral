@@ -300,7 +300,7 @@ export default function TablaMovimientos({
   async function confirmarNotaGrupo(g, nota) {
     const limpia = (nota ?? '').trim();
     const ok = await porCadaClave(g, `/api/proveedores/confirmar-grupo`, { nota: limpia }, {
-      mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`,
+      mensajeOk: `${g.sinResolver + g.pedidaPendiente} línea(s) confirmadas`,
       mensajeError: 'No se pudo confirmar el grupo.',
     });
 
@@ -315,7 +315,7 @@ export default function TablaMovimientos({
 
       const nota = (notasGrupo[g.id] ?? '').trim();
       const ok = await porCadaClave(g, `/api/proveedores/confirmar-grupo`, { nota }, {
-        mensajeOk: `${g.total - g.resueltas} línea(s) confirmadas`,
+        mensajeOk: `${g.sinResolver + g.pedidaPendiente} línea(s) confirmadas`,
         mensajeError: 'No se pudo confirmar el grupo.',
       });
       if (ok) onCambio();

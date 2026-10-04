@@ -20,5 +20,6 @@ export default defineConfig({
     include: ['pruebas/**/*-pantalla.test.js'],
     environment: 'happy-dom',
     setupFiles: ['./pruebas/preparar-pantalla.js'],
+    sequence: { hooks: 'list' },
   },
 });

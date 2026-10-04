@@ -7,9 +7,10 @@ const SECCIONES_ADMIN = [
     titulo: 'Entrar',
     cuerpo: (
       <p>
-        <strong>Deja el campo de usuario en blanco</strong> y escribe solo la contraseña de administración.
-        Ese campo (&quot;Username (collaborators only)&quot;) es únicamente para colaboradores: si escribes algo ahí,
-        la app intenta entrar como colaborador y no te deja pasar.
+        Escribe tu <strong>correo</strong> y tu <strong>contraseña</strong> y pulsa <strong>Log in</strong>. La
+        administración entra igual que cualquier otra cuenta: lo único que cambia es lo que ve al entrar. Si no
+        recuerdas la contraseña, el enlace <strong>Forgot your password?</strong> de debajo manda un correo para
+        elegir otra.
       </p>
     ),
   },
@@ -30,8 +31,9 @@ const SECCIONES_ADMIN = [
           arregla después desde Facturas, donde esos mismos campos se pueden escribir a mano.
         </p>
         <p>
-          No hay que decir a qué movimiento pertenece. La factura se guarda y se empareja sola cuando aparezca su
-          línea — puede ser hoy o puede ser cuando subas el excel del banco dentro de dos meses.
+          No hay que decir a qué movimiento pertenece. La factura se guarda y la app le busca su línea: cuando
+          aparece —hoy, o cuando subas el excel del banco dentro de dos meses— te la propone, en Movimientos y en
+          Facturas, y tú la aceptas. Nunca se enlaza sola.
         </p>
       </>
     ),
@@ -51,12 +53,12 @@ const SECCIONES_ADMIN = [
         <p>Son tres grupos separados por una raya vertical, y cada uno es un momento distinto:</p>
         <ul>
           <li>
-            <strong>Excel del banco</strong> — el extracto. Si subes el combinado con las tres pestañas (bbva, openbank,
-            paypal), déjalo en &quot;Detectar automáticamente&quot;; si es el export suelto de un banco, dilo en el desplegable.
+            <strong>Excel del banco</strong> — el extracto. Déjalo en &quot;Detectar automáticamente&quot;: tanto el
+            combinado con las tres pestañas (bbva, openbank, paypal) como el export suelto de un banco se reconocen solos
+            por sus cabeceras. Si alguno no lo reconoce, dile el banco en el desplegable.
             Volver a subir el mismo excel no borra nada de lo que ya hayas resuelto: fusiona. Vale tanto el formato
-            moderno (<strong>.xlsx</strong>) como el antiguo (<strong>.xls</strong>), que la app convierte sola al subirlo.
-            El export de PayPal, que es un <strong>.csv</strong>, también vale: en el desplegable elige
-            &quot;Es un export suelto de paypal&quot;.
+            moderno (<strong>.xlsx</strong>) como el antiguo (<strong>.xls</strong>), que la app convierte sola al subirlo,
+            y el <strong>.csv</strong> de PayPal.
           </li>
           <li>
             <strong>📎 Subir facturas</strong> — junto al excel del banco, para subir varias facturas de golpe (PDF o
@@ -216,6 +218,12 @@ const SECCIONES_ADMIN = [
           Si hay una nota aprendida para el grupo, la píldora dice cuántas líneas cerraría de golpe
           (<em>ticket · 5 líneas</em>).
         </p>
+        <p>
+          <strong>Confirmar un grupo solo toca las líneas pendientes</strong> (las sin resolver y las pedidas): las que
+          ya estaban resueltas conservan su nota, y las ignoradas y las de factura futura no cambian. El aviso dice
+          cuántas se han confirmado de verdad. Si al grupo ya no le queda nada pendiente, escribir o borrar su nota
+          corrige la de sus líneas resueltas; las ignoradas y las de factura futura siguen sin cambiar.
+        </p>
 
         <h4>La columna de LarpManager</h4>
         <p>
@@ -233,6 +241,12 @@ const SECCIONES_ADMIN = [
           Cuando una línea ya tiene su pago, aparece un <strong>✎</strong> al lado para <strong>quitar el vínculo</strong>
           si te has equivocado. El pago vuelve a la pestaña LarpManager y la línea deja de decir de quién es — pero
           <em> no cambia de estado</em>: si estaba resuelta sigue resuelta, y eso se cambia a mano en Estado.
+        </p>
+        <p>
+          Hay una excepción: si el ingreso del banco ya estaba <strong>resuelto</strong> cuando subes el CSV, el pago
+          que le corresponde se enlaza solo a esa línea. No le cambia el estado ni la nota, solo pone de quién es, y el
+          <strong> ✎</strong> sirve para quitarlo si no era ese. A las líneas pendientes, en cambio, solo se les
+          propone.
         </p>
         <p>
           Y si no tiene pago, hay un <strong>Vincular</strong> para ponérselo desde aquí, sin ir a la otra pestaña. Abre
@@ -299,7 +313,7 @@ const SECCIONES_ADMIN = [
 
         <h4>Las columnas</h4>
         <ul>
-          <li><strong>Fecha</strong>, <strong>Concepto</strong> e <strong>Importe</strong> — lo que la app leyó del archivo, y se pueden corregir a mano mientras la factura no esté emparejada. El importe se escribe como se escribe aquí: 2.183,18 se entiende bien.</li>
+          <li><strong>Fecha</strong>, <strong>Proveedor</strong>, <strong>Concepto</strong> e <strong>Importe</strong> — lo que la app leyó del archivo. Fecha, Concepto e Importe se pueden corregir a mano mientras la factura no esté emparejada (el importe se escribe como se escribe aquí: 2.183,18 se entiende bien); el Proveedor solo se lee.</li>
           <li><strong>Nombre</strong> — el archivo; el enlace lo abre. Un ⚠ al lado significa que hay otro archivo subido con ese mismo nombre.</li>
           <li><strong>Subida</strong> y <strong>Subido por</strong> — cuándo y quién.</li>
           <li><strong>Vincular</strong> — el botón <strong>Buscar</strong> vuelve a intentar el cruce solo de esa factura. Si no hay manera, se elige a mano en <strong>Elige movimiento...</strong> y se pulsa <strong>Vincular</strong>.</li>
@@ -310,13 +324,16 @@ const SECCIONES_ADMIN = [
         <h4>Qué te puede decir el Motivo</h4>
         <TablaEstados filas={[
           ['Emparejada', 'Tiene su movimiento. No hay nada que hacer.'],
+          ['Emparejada y cuadra', 'Tiene su movimiento y los importes coinciden. No hay nada que hacer.'],
+          ['Emparejada pero NO cuadra', 'Está enlazada a un movimiento cuyo importe no es el de la factura, y el texto dice cuánto falta o sobra. La app no cambia nada sola: si está mal, desvincúlala con el ✎ de la columna Movimiento.'],
+          ['Factura de un colaborador', 'La paga él y se le reembolsa, así que no se le busca línea del banco.'],
           ['Varias líneas con el mismo importe', 'Hay más de una candidata y la app no elige por ti: salen los botones con fecha, importe y concepto de cada una para que elijas.'],
           ['Combinación de facturas sugerida', 'Varias facturas suman el importe de una línea (típico de un PDF con dos facturas dentro). Se propone, nunca se aplica sola.'],
           ['Posible factura de varios movimientos', 'El total de la factura coincide al céntimo con la suma de varios movimientos pendientes de un mismo grupo. Se propone, nunca se aplica sola.'],
           ['Ya cubierta por otra factura', 'Ese gasto ya tiene su justificante. No falta nada.'],
           ['Importe no coincide con ninguna línea', 'El importe está leído pero no cuadra con nada pendiente. Puede que falte subir el excel de esas fechas.'],
           ['No se reconoció ningún importe', 'No se pudo leer la cifra. Escríbela a mano en la columna Importe.'],
-          ['Es una imagen, no se puede leer', 'Una foto sin texto dentro. O escribes el importe a mano, o usas "Leer con IA".'],
+          ['La IA no está funcionando (...)', 'No se pudo leer la factura al subirla (cuenta sin saldo, clave sin configurar, servicio saturado). Se guarda igualmente, sin importe: escríbelo a mano en la columna Importe.'],
           ['Aún no hay movimientos con los que comparar', 'Todavía no se ha subido ningún excel del banco.'],
           ['Error al procesar el archivo', 'El archivo no se pudo abrir.'],
         ]} />
@@ -342,14 +359,12 @@ const SECCIONES_ADMIN = [
             excel del banco ya se hace solo; este botón sirve cuando la app aprende una regla nueva y quieres que la
             aplique a facturas que ya estaban subidas.
           </li>
-          <li>
-            <strong>Leer con IA (N)</strong> — para las que no tienen importe porque son fotos o PDFs ilegibles. El número
-            dice cuántas hay en ese caso.
-            <br />
-            <span className="muted">Ojo: esto no es gratis. Tiene un coste pequeño por cada factura que lee, así que no
-            conviene pulsarlo por costumbre — solo cuando de verdad no se pueda leer a mano.</span>
-          </li>
         </ul>
+        <p className="muted">
+          Cada factura se lee una sola vez, al subirla, con IA (importe, fecha y proveedor). Tiene un pequeño coste por
+          factura, y por eso Recalcular sugerencias no vuelve a leerlas. Si no se pudo leer, el Motivo lo dice y el
+          importe se escribe a mano.
+        </p>
         <p>
           Abajo del todo se pueden marcar varias con la casilla y usar <strong>Borrar seleccionadas</strong>. Si alguna
           estaba emparejada, el aviso te dice cuántas y que su movimiento volverá a quedar pendiente.
@@ -368,16 +383,18 @@ const SECCIONES_ADMIN = [
           cruza otra vez, así que lo que ves es de ahora mismo.
         </p>
         <div className="resumen-mini" style={{ display: 'block' }}>
-          <strong>La app propone, tú validas. Nunca enlaza sola.</strong> Cada pago sin movimiento enseña su propuesta
-          como una píldora en la columna <strong>Movimiento</strong>: pulsas el texto y queda enlazado, pulsas la ✕ y
-          se descarta. Lo hace así porque un acierto falso, cerrado en silencio, deja un ingreso dado por cobrado sin
-          haberlo cobrado.
+          <strong>La app propone, tú validas. Nunca cierra una línea sola.</strong> Cada pago sin movimiento enseña su
+          propuesta como una píldora en la columna <strong>Movimiento</strong>: pulsas el texto y queda enlazado, pulsas
+          la ✕ y se descarta. Lo hace así porque un acierto falso, cerrado en silencio, deja un ingreso dado por cobrado
+          sin haberlo cobrado. La única excepción son los ingresos del banco que tú ya habías dejado resueltos: al subir
+          el CSV reciben su pago solos, sin cambiarles el estado ni la nota, y se quita con el ✎ de su línea en
+          Movimientos.
         </div>
 
         <h4>Los dos botones</h4>
         <ul>
           <li>
-            <strong>Subir pagos de LarpManager</strong> — el export de pagos, en `.csv` o en `.xlsx`. Se guarda entero,
+            <strong>Subir pagos de LarpManager</strong> — el export de pagos, en `.csv`, `.xlsx` o `.xls`. Se guarda entero,
             pero contra el banco solo se cruzan las transferencias y las filas sin método de pago, que son las que
             acaban llegando a la cuenta. Las de pasarela (Stripe, Redsys) y los apuntes internos (larpmoney,
             larpmanager) se guardan pero no se cruzan: ese dinero no aparece en el banco línea a línea. Subir el mismo
@@ -560,8 +577,7 @@ const SECCIONES_COLABORADORES = [
     cuerpo: (
       <p>
         Use your email address and the password you chose when you accepted the invitation. If you have forgotten it,
-        use <strong>Forgot your password?</strong> on the sign-in screen. The password field on its own is for the
-        administrator — you need to fill in your email too.
+        use <strong>Forgot your password?</strong> on the sign-in screen.
       </p>
     ),
   },
@@ -596,13 +612,16 @@ const SECCIONES_COLABORADORES = [
           Use <strong>Upload invoice</strong>. On a phone this opens the camera, so you can photograph a receipt on the
           spot instead of keeping it in your pocket.
         </p>
-        <p>Fill in:</p>
+        <p>You can choose several files at once. Then fill in:</p>
         <ul>
           <li><strong>Description</strong> — what it was for (&quot;petrol&quot;, &quot;gaffer tape&quot;).</li>
-          <li><strong>Amount</strong> — what you paid.</li>
-          <li><strong>Date</strong> — when you paid it.</li>
           <li><strong>Choose project...</strong> — which project it belongs to. This is how the money gets counted in the right place.</li>
         </ul>
+        <p>
+          The amount, the supplier and the date are read from the invoice itself, so you do not type them. If
+          something was read wrong, correct it afterwards in the table under <strong>Accounts</strong>. If a file was
+          already uploaded, you are told so and it is not added twice.
+        </p>
         <p>
           You are not assigned to a project in advance: you pick one every time you upload. The first time you upload
           something for a project, it appears from then on under <strong>Your projects</strong>.
@@ -638,6 +657,11 @@ const SECCIONES_COLABORADORES = [
           ['Rejected', 'Something is wrong. The reason is shown next to the invoice.'],
           ['Paid', 'Included in a payment to you.'],
         ]} />
+        <p>
+          While an invoice is <strong>accepted</strong> and the project is still open, you can <strong>Edit</strong> its
+          description, date and amount, or <strong>Remove</strong> it. Once it is paid, or the project is closed, it can
+          no longer be changed.
+        </p>
         <p>
           You can also be given an <strong>advance</strong>, before any invoice — administration adds it with its date
           and whether it was cash or bank. When they pay you, that payment is the difference between your accepted

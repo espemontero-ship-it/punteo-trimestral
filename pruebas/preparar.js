@@ -24,6 +24,8 @@ if (process.env.PRUEBAS_EN_LA_NUBE !== '1') {
 }
 
 delete process.env.ANTHROPIC_API_KEY;
+delete process.env.SMTP_USER;
+delete process.env.SMTP_APP_PASSWORD;
 
 const { asegurarEsquemaReembolso } = await import('../lib/lotes.cjs');
 const { asegurarColumnasMotivo } = await import('../lib/facturaMatcher.cjs');
