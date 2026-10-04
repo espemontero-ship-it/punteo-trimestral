@@ -70,8 +70,13 @@ export default function Home() {
   const [envioEtiqueta, setEnvioEtiqueta] = useState('');
   const [envioPreview, setEnvioPreview] = useState(null);
   const [cargandoEnvioPreview, setCargandoEnvioPreview] = useState(false);
-  const [generandoEnvio, setGenerandoEnvio] = useState(false);
+  const [descargandoEnvio, setDescargandoEnvio] = useState(false);
+  const [marcandoEnvio, setMarcandoEnvio] = useState(false);
   const [confirmarEnvio, setConfirmarEnvio] = useState(false);
+  const [enviosAnteriores, setEnviosAnteriores] = useState(null);
+  const [refrescoEnvio, setRefrescoEnvio] = useState(0);
+  const [envioADeshacer, setEnvioADeshacer] = useState(null);
+  const [deshaciendoEnvio, setDeshaciendoEnvio] = useState(false);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -215,37 +220,82 @@ export default function Home() {
       .then(r => { if (!cancelado) setEnvioPreview(r); })
       .finally(() => { if (!cancelado) setCargandoEnvioPreview(false); });
     return () => { cancelado = true; };
-  }, [modalAbierto, envioHasta]);
+  }, [modalAbierto, envioHasta, refrescoEnvio]);
 
-  async function generarEnvio() {
-    setGenerandoEnvio(true);
+  useEffect(() => {
+    if (modalAbierto !== 'envio') return;
+    let cancelado = false;
+    apiFetch('/api/envios/anteriores', undefined, { mensajeError: 'No se pudo cargar la lista de envíos anteriores.' })
+      .then(r => { if (!cancelado && r) setEnviosAnteriores(r.envios); });
+    return () => { cancelado = true; };
+  }, [modalAbierto, refrescoEnvio]);
+
+  async function bajarZip(url, opciones, nombreArchivo, mensajeError) {
     try {
-      const res = await fetch('/api/envios', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hasta: envioHasta, etiqueta: envioEtiqueta || null }),
-      });
+      const res = await fetch(url, opciones);
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        mostrarToast((data && data.error) || 'No se pudo generar el envío.', 'error');
-        return;
+        mostrarToast((data && data.error) || mensajeError, 'error');
+        return false;
       }
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const enlace = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `${(envioEtiqueta || `envio-${envioHasta}`).replace(/[^a-z0-9]+/gi, '-')}.zip`;
+      a.href = enlace;
+      a.download = `${nombreArchivo.replace(/[^a-z0-9]+/gi, '-')}.zip`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
-      mostrarToast('Descarga lista.', 'ok');
-      setModalAbierto(null);
-      await cargar();
+      URL.revokeObjectURL(enlace);
+      return true;
     } catch {
-      mostrarToast('No se pudo generar el envío.', 'error');
-    } finally {
-      setGenerandoEnvio(false);
+      mostrarToast(mensajeError, 'error');
+      return false;
+    }
+  }
+
+  async function descargarArchivoEnvio() {
+    setDescargandoEnvio(true);
+    const ok = await bajarZip('/api/envios/descargar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hasta: envioHasta, etiqueta: envioEtiqueta || null }),
+    }, envioEtiqueta || `envio-${envioHasta}`, 'No se pudo generar el archivo.');
+    setDescargandoEnvio(false);
+    if (ok) mostrarToast('Descarga lista. No se ha marcado nada como enviado.', 'ok');
+  }
+
+  async function marcarComoEnviado() {
+    setMarcandoEnvio(true);
+    const r = await apiFetch('/api/envios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hasta: envioHasta, etiqueta: envioEtiqueta || null }),
+    }, { mensajeError: 'No se pudo marcar el envío.' });
+    setMarcandoEnvio(false);
+    if (r) {
+      mostrarToast(`Marcado como enviado: ${r.movimientos} movimiento(s) y ${r.facturas} factura(s).`, 'ok');
+      setRefrescoEnvio(n => n + 1);
+      await cargar();
+    }
+  }
+
+  async function volverADescargarEnvio(envio) {
+    const nombre = envio.etiqueta || `envio-${envio.hasta}`;
+    const ok = await bajarZip(`/api/envios/${envio.id}/descargar`, undefined, nombre, 'No se pudo volver a generar el archivo.');
+    if (ok) mostrarToast('Descarga lista.', 'ok');
+  }
+
+  async function deshacerEnvioConfirmado() {
+    if (!envioADeshacer) return;
+    setDeshaciendoEnvio(true);
+    const r = await apiFetch(`/api/envios/${envioADeshacer.id}/deshacer`, { method: 'POST' }, { mensajeError: 'No se pudo deshacer el envío.' });
+    setDeshaciendoEnvio(false);
+    setEnvioADeshacer(null);
+    if (r) {
+      mostrarToast(`Envío deshecho: ${r.movimientos} movimiento(s) y ${r.facturas} factura(s) vuelven a estar pendientes.`, 'ok');
+      setRefrescoEnvio(n => n + 1);
+      await cargar();
     }
   }
 
@@ -501,7 +551,7 @@ export default function Home() {
         onCancelar={() => setConfirmarBorrarImportacion(null)}
       />
 
-      <Modal abierto={modalAbierto === 'envio'} titulo="Generar envío a gestoría" onCerrar={() => setModalAbierto(null)} ancho={520}>
+      <Modal abierto={modalAbierto === 'envio'} titulo="Enviar a gestoría" onCerrar={() => setModalAbierto(null)} ancho={640}>
         <p className="muted">Incluye todo lo resuelto y sin enviar todavía con fecha hasta el día elegido — también lo recuperado tarde de fechas anteriores (ej. una factura futura que llega después).</p>
         <div className="fila" style={{ gap: 8 }}>
           <label className="muted" style={{ fontSize: 13 }}>
@@ -522,22 +572,85 @@ export default function Home() {
           )
         )}
         <div style={{ height: 8 }} />
-        <button
-          className="grande"
-          disabled={generandoEnvio || !envioPreview || envioPreview.movimientos === 0}
-          onClick={() => setConfirmarEnvio(true)}
-        >
-          {generandoEnvio ? 'Generando...' : 'Generar envío (descargar .zip)'}
-        </button>
+        <div className="fila" style={{ gap: 8 }}>
+          <button
+            type="button"
+            className="secundario"
+            disabled={descargandoEnvio || !envioPreview || envioPreview.movimientos === 0}
+            onClick={descargarArchivoEnvio}
+          >
+            {descargandoEnvio ? 'Generando...' : 'Descargar archivo'}
+          </button>
+          <button
+            type="button"
+            className="secundario"
+            disabled={marcandoEnvio || !envioPreview || envioPreview.movimientos === 0}
+            onClick={() => setConfirmarEnvio(true)}
+          >
+            {marcandoEnvio ? 'Marcando...' : 'Marcar como enviado'}
+          </button>
+        </div>
+        <p className="muted" style={{ fontSize: 12 }}>
+          Descargar el archivo no marca nada: puedes hacerlo las veces que quieras. Solo <strong>Marcar como enviado</strong> da por enviado lo que lleva.
+        </p>
+
+        <div style={{ height: 12 }} />
+        <h4 style={{ margin: '0 0 8px' }}>Envíos anteriores</h4>
+        {enviosAnteriores === null && <p className="muted">Cargando...</p>}
+        {enviosAnteriores && enviosAnteriores.length === 0 && <p className="muted">Todavía no se ha marcado ningún envío.</p>}
+        {enviosAnteriores && enviosAnteriores.length > 0 && (
+          <table style={{ width: '100%', fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: 'left' }}>
+                <th>Envío</th>
+                <th>Marcado</th>
+                <th>Movimientos</th>
+                <th>Facturas</th>
+                <th></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {enviosAnteriores.map(envio => (
+                <tr key={envio.id}>
+                  <td>{envio.etiqueta || `Hasta ${envio.hasta}`}</td>
+                  <td className="muted">{envio.creado_en ? new Date(envio.creado_en).toLocaleDateString('es-ES') : '—'}</td>
+                  <td>{envio.movimientos}</td>
+                  <td>{envio.facturas}</td>
+                  <td>
+                    <button type="button" className="secundario" onClick={() => volverADescargarEnvio(envio)}>Volver a descargar</button>
+                  </td>
+                  <td>
+                    <button type="button" className="secundario" onClick={() => setEnvioADeshacer(envio)}>Deshacer envío</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Modal>
 
       <ConfirmDialog
         abierto={confirmarEnvio}
-        titulo="¿Generar el envío?"
-        mensaje="Se descarga el .zip con las facturas numeradas y el excel final con las notas. Todo lo incluido queda marcado como ya enviado."
-        textoConfirmar="Descargar"
-        onConfirmar={() => { setConfirmarEnvio(false); generarEnvio(); }}
+        titulo="¿Marcar como enviado?"
+        mensaje={envioPreview
+          ? `Los ${envioPreview.movimientos} movimiento(s) y ${envioPreview.facturas} factura(s) de este envío quedan marcados como enviados y dejan de salir como pendientes. Si te equivocas, se puede deshacer desde Envíos anteriores.`
+          : ''}
+        textoConfirmar="Marcar como enviado"
+        onConfirmar={() => { setConfirmarEnvio(false); marcarComoEnviado(); }}
         onCancelar={() => setConfirmarEnvio(false)}
+      />
+
+      <ConfirmDialog
+        abierto={!!envioADeshacer}
+        titulo={envioADeshacer ? `¿Deshacer el envío ${envioADeshacer.etiqueta || 'hasta ' + envioADeshacer.hasta}?` : ''}
+        mensaje={envioADeshacer
+          ? `Sus ${envioADeshacer.movimientos} movimiento(s) y ${envioADeshacer.facturas} factura(s) vuelven a quedar pendientes de enviar. No se borra nada: solo deja de contar como enviado. El archivo que ya descargaste no cambia.`
+          : ''}
+        textoConfirmar={deshaciendoEnvio ? 'Deshaciendo...' : 'Deshacer envío'}
+        peligroso
+        onConfirmar={deshacerEnvioConfirmado}
+        onCancelar={() => setEnvioADeshacer(null)}
       />
     </div>
   );

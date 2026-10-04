@@ -254,10 +254,23 @@ const SECCIONES_ADMIN = [
           se envió una vez no vuelve a salir.
         </p>
         <p>
-          Se descarga un <strong>.zip</strong> con las facturas numeradas y el excel original con las notas escritas
-          encima, más las columnas que sabe la app: Nota gestoría, Proveedor, Proyecto, Facturas, Jugador y LarpManager.
-          Las facturas de colaboradores que se pagaron entran en el mismo paquete y con la misma numeración. Solo cuando
-          el zip se ha generado bien se marca todo como enviado.
+          Hay dos botones. <strong>Descargar archivo</strong> genera un <strong>.zip</strong> con las facturas
+          numeradas y el excel, y <strong>no marca nada</strong>: se puede pulsar todas las veces que haga falta, con el
+          mismo contenido. Solo <strong>Marcar como enviado</strong>, que pide confirmación, da por enviado todo lo que
+          lleva: desde ahí deja de salir como pendiente y empieza a contar.
+        </p>
+        <p>
+          En el excel hay <strong>una sola pestaña por banco</strong> (bbva, openbank, paypal) con todas las líneas de
+          los extractos subidos, cada una una sola vez y por fecha, la más antigua primero. Las notas escritas y las
+          columnas que sabe la app (Nota gestoría, Proveedor, Proyecto, Facturas, Jugador y LarpManager) solo van en las
+          líneas que entran en este envío. Si algún extracto tiene las columnas en otro orden, sale en una pestaña
+          aparte para no descuadrar nada. Las facturas de colaboradores que se pagaron entran en el mismo paquete y con
+          la misma numeración.
+        </p>
+        <p>
+          Debajo, <strong>Envíos anteriores</strong> lista los que ya se marcaron. <strong>Volver a descargar</strong>{' '}
+          genera otra vez el mismo archivo sin cambiar nada. <strong>Deshacer envío</strong> devuelve sus movimientos y
+          facturas a pendientes (no borra nada) para poder prepararlo de nuevo.
         </p>
       </>
     ),
