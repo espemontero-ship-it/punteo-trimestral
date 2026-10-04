@@ -356,6 +356,7 @@ export default function Home() {
                 <button type="button" className="secundario btn-icono" title="Añadir excel del banco / paypal" onClick={() => setModalAbierto('excel')}>
                   <span className="ico">⬆</span>Excel del banco
                 </button>
+                <SubirFacturasLote onCompletado={completarLote} />
               </div>
             </div>
             <div className="div-v" />

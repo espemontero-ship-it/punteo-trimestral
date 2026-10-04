@@ -57,6 +57,12 @@ const SECCIONES_ADMIN = [
             moderno (<strong>.xlsx</strong>) como el antiguo (<strong>.xls</strong>), que la app convierte sola al subirlo.
           </li>
           <li>
+            <strong>📎 Subir facturas</strong> — junto al excel del banco, para subir varias facturas de golpe (PDF o
+            foto) sin salir de Movimientos. Es el mismo botón que hay en la pestaña Facturas y hace lo mismo: avisa si
+            alguna ya estaba subida y, cuando una encaja con una línea, la propone en la columna Factura. Nunca la
+            aplica sola.
+          </li>
+          <li>
             <strong>Devoluciones</strong> — las que todavía no se han mandado. Van como pestaña propia en el excel del
             próximo envío.
           </li>
