@@ -30,6 +30,8 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
     "@testing-library/react": "^16.3.2",
     "acorn": "^8.18.0",
     "acorn-jsx": "^5.3.2",
