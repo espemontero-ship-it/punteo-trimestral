@@ -62,6 +62,20 @@ function nombreGrupoMostrado(g) {
   return conProveedor ? conProveedor.proveedor : nombreGrupo(g.clave);
 }
 
+function textoDesvincularFactura(factura, movimiento) {
+  const numero = factura.numero;
+  const cubre = Number(factura.cubre) || 0;
+  if (cubre > 1) {
+    return `La factura ${numero} cubre ${cubre} movimientos. Al desvincularla, esos ${cubre} movimientos vuelven a quedar sin resolver. La factura sigue en Facturas, con su archivo.`;
+  }
+  const linea = `la línea del ${movimiento.fecha ? new Date(movimiento.fecha).toLocaleDateString('es-ES') : 'sin fecha'} de ${Math.abs(Number(movimiento.importe)).toFixed(2)}€`;
+  const otras = (movimiento.facturas || []).filter(f => f.id !== factura.id);
+  if (otras.length > 0) {
+    return `La factura ${numero} dejará de estar enlazada a ${linea}. La línea sigue resuelta con la otra factura (${otras.map(f => f.numero).join(', ')}). La factura ${numero} sigue en Facturas, con su archivo.`;
+  }
+  return `La factura ${numero} dejará de estar enlazada a ${linea}, que vuelve a quedar sin resolver. La factura sigue en Facturas, con su archivo.`;
+}
+
 export default function TablaMovimientos({
   proveedores, proyectos, onCambio, filtroLote,
   desde, hasta, onDesdeChange, onHastaChange, onRecalcular, recalculando, pendientes,
@@ -91,6 +105,22 @@ export default function TablaMovimientos({
   const [verTodosLm, setVerTodosLm] = useState(false);
   const [guardandoLm, setGuardandoLm] = useState(false);
   const [desvinculando, setDesvinculando] = useState(false);
+  const [confirmarDesvincularFactura, setConfirmarDesvincularFactura] = useState(null);
+  const [desvinculandoFactura, setDesvinculandoFactura] = useState(false);
+
+  async function desvincularFacturaConfirmada() {
+    if (!confirmarDesvincularFactura) return;
+    const { factura, movimiento } = confirmarDesvincularFactura;
+    setDesvinculandoFactura(true);
+    const r = await apiFetch(`/api/facturas/${factura.id}/desvincular`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movimientoId: movimiento.id }),
+    }, { mensajeOk: 'Factura desvinculada', mensajeError: 'No se pudo desvincular.' });
+    setDesvinculandoFactura(false);
+    setConfirmarDesvincularFactura(null);
+    if (r) onCambio();
+  }
 
   async function desvincularLm() {
     if (!confirmarDesvincular) return;
@@ -588,6 +618,12 @@ export default function TablaMovimientos({
               <a className="link-factura" href={`/api/facturas/${f.id}/archivo`} target="_blank" rel="noreferrer">
                 {f.numero}
               </a>
+              <button
+                type="button"
+                className="btn-editar-mini"
+                title="Desvincular factura"
+                onClick={() => setConfirmarDesvincularFactura({ factura: f, movimiento: m })}
+              >✎</button>
             </Fragment>
           ))}
         </span>
@@ -1088,6 +1124,18 @@ export default function TablaMovimientos({
         peligroso
         onConfirmar={desvincularLm}
         onCancelar={() => setConfirmarDesvincular(null)}
+      />
+
+      <ConfirmDialog
+        abierto={!!confirmarDesvincularFactura}
+        titulo="¿Desvincular esta factura?"
+        mensaje={confirmarDesvincularFactura
+          ? textoDesvincularFactura(confirmarDesvincularFactura.factura, confirmarDesvincularFactura.movimiento)
+          : ''}
+        textoConfirmar={desvinculandoFactura ? 'Desvinculando...' : 'Desvincular'}
+        peligroso
+        onConfirmar={desvincularFacturaConfirmada}
+        onCancelar={() => setConfirmarDesvincularFactura(null)}
       />
     </div>
   );

@@ -180,6 +180,15 @@ const SECCIONES_ADMIN = [
           que una factura justifique más de un movimiento.
         </p>
 
+        <h4>Desvincular una factura</h4>
+        <p>
+          Si una factura quedó enlazada a la línea equivocada, en Movimientos, columna <strong>Factura</strong>, hay un
+          <strong> ✎</strong> al lado de su número (al pasar el ratón dice <em>Desvincular factura</em>). Pide
+          confirmación, deja la línea sin resolver y la factura se queda en la pestaña Facturas, con su archivo, y la
+          app vuelve a buscarle línea. Si la factura cubre varios movimientos (el caso de Bolt), se desvinculan todos a
+          la vez. Si la línea tiene dos facturas, solo se quita la que eliges y la otra sigue enlazada.
+        </p>
+
         <h4>Los grupos</h4>
         <p>
           Las líneas del mismo proveedor se juntan bajo una fila gris, para poder resolver varias de una vez. Un grupo
