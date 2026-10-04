@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { verTokenPendiente, consumirToken } = require('../../../../lib/tokens.cjs');
-const { crearColaboradorDesdeInvitacion } = require('../../../../lib/colaboradores.cjs');
+const { crearColaboradorDesdeInvitacion, existeColaborador } = require('../../../../lib/colaboradores.cjs');
 const { crearTokenSesion, SESSION_COOKIE, DURACION_MS } = require('../../../../lib/auth.cjs');
 
 export async function GET(request, { params }) {
@@ -15,6 +15,12 @@ export async function POST(request, { params }) {
   const { password } = await request.json();
   if (!password || password.length < 8) {
     return Response.json({ error: 'La contraseña debe tener al menos 8 caracteres.' }, { status: 400 });
+  }
+
+  const pendiente = await verTokenPendiente(token, 'invitacion');
+  if (!pendiente) return Response.json({ error: 'Este enlace no es válido o ya ha caducado.' }, { status: 404 });
+  if (await existeColaborador(pendiente.usuario)) {
+    return Response.json({ error: 'Ya existe una cuenta con ese correo.' }, { status: 409 });
   }
 
   const invitacion = await consumirToken(token, 'invitacion');

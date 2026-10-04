@@ -338,7 +338,7 @@ export default function Home() {
       {pestana === 'inicio' && (
         <div className="inicio-subir">
           <p className="titulo-inicio">Subir factura suelta</p>
-          <p className="instruccion-inicio">Foto desde el móvil o PDF — se guarda y se empareja sola cuando toque.</p>
+          <p className="instruccion-inicio">Foto desde el móvil o PDF.</p>
           <SubirFactura
             etiqueta="Subir ahora"
             className="grande"

@@ -180,7 +180,7 @@ describe('aceptar una invitación', () => {
     expect((await verInvitacion(new Request('http://pruebas/'), conToken(token))).status).toBe(200);
   });
 
-  it('202. si ya existe una cuenta con ese correo, avisa con 409 y no entra', async () => {
+  it('202. si ya existe una cuenta con ese correo, avisa con 409, no entra y el enlace NO se gasta', async () => {
     await sembrarColaboradora();
     const token = await crearInvitacion({ nombre: 'Persona de prueba acceso', usuario: CORREO });
 
@@ -188,6 +188,8 @@ describe('aceptar una invitación', () => {
 
     expect(r.status).toBe(409);
     expect(cookieDe(r)).toBe('');
+    expect((await verInvitacion(new Request('http://pruebas/'), conToken(token))).status).toBe(200);
+    expect(await verificarColaborador(CORREO, 'contraseña-larga-1')).toBeNull();
   });
 });
 
