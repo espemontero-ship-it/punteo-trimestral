@@ -5,6 +5,7 @@ const { analizarFactura } = require('../../../lib/facturaMatcher.cjs');
 const { procesarFacturaSubida, asegurarColumnasMotivo } = require('../../../lib/facturaMatcher.cjs');
 const { obtenerSesion } = require('../../../lib/auth.cjs');
 const { cargarRechazos, estaRechazada } = require('../../../lib/memoria.cjs');
+const { claveDeCubre } = require('../../../lib/cubreVarios.cjs');
 
 export const maxDuration = 60;
 
@@ -15,11 +16,20 @@ export async function GET() {
             f.importes, f.totales, f.fechas, f.concepto, f.creado_en, f.motivo_tipo, f.motivo_detalle, f.motivo_candidatos, f.lectura_regex, f.leido_con_ia,
             f.proveedor, f.huella,
             c.nombre AS subido_por_nombre,
-            m.id AS movimiento_id, m.fecha AS movimiento_fecha, m.concepto AS movimiento_concepto, m.importe AS movimiento_importe
+            m.id AS movimiento_id, m.fecha AS movimiento_fecha, m.concepto AS movimiento_concepto, m.importe AS movimiento_importe,
+            COALESCE(v.n, 0) AS movimientos_cubiertos, v.suma AS movimientos_suma
      FROM facturas f
      LEFT JOIN colaboradores c ON c.id = f.subido_por
-     LEFT JOIN movimiento_facturas mf ON mf.factura_id = f.id
-     LEFT JOIN movimientos m ON m.id = mf.movimiento_id
+     LEFT JOIN LATERAL (
+       SELECT m1.id, m1.fecha, m1.concepto, m1.importe
+       FROM movimiento_facturas mf1 JOIN movimientos m1 ON m1.id = mf1.movimiento_id
+       WHERE mf1.factura_id = f.id ORDER BY m1.fecha, m1.id LIMIT 1
+     ) m ON true
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*) AS n, SUM(ABS(m2.importe)) AS suma
+       FROM movimiento_facturas mf2 JOIN movimientos m2 ON m2.id = mf2.movimiento_id
+       WHERE mf2.factura_id = f.id
+     ) v ON true
      WHERE f.lote_id IS NULL
      ORDER BY f.numero`
   );
@@ -35,11 +45,12 @@ async function sinLasRechazadas(facturas) {
     const c = f.motivo_candidatos;
     if (c.movimientoId) ids.add(Number(c.movimientoId));
     for (const x of c.candidatos || []) if (x.movimientoId) ids.add(Number(x.movimientoId));
+    for (const x of c.movimientoIds || []) ids.add(Number(x));
   }
   if (ids.size === 0) return facturas;
 
   const { rows: lineas } = await query(
-    `SELECT id, hoja, clave, importe, concepto FROM movimientos WHERE id = ANY($1::bigint[])`, [[...ids]]
+    `SELECT id, hoja, clave, importe, concepto, fecha, estado FROM movimientos WHERE id = ANY($1::bigint[])`, [[...ids]]
   );
   const porId = new Map(lineas.map(l => [String(l.id), l]));
   const rechazos = await cargarRechazos();
@@ -50,6 +61,24 @@ async function sinLasRechazadas(facturas) {
   return facturas.map(f => {
     const c = f.motivo_candidatos;
     if (!c) return f;
+
+    if (c.movimientoIds) {
+      const lineasDe = c.movimientoIds.map(id => porId.get(String(id)));
+      if (lineasDe.some(l => !l || !['sin_resolver', 'pedida_pendiente'].includes(l.estado))) {
+        return { ...f, motivo_candidatos: null };
+      }
+      const primera = lineasDe[0];
+      if (estaRechazada(rechazos, primera.hoja, primera.clave, 'cubre', claveDeCubre(f.id, c.movimientoIds))) {
+        return { ...f, motivo_candidatos: null };
+      }
+      return {
+        ...f,
+        motivo_candidatos: {
+          ...c, hoja: primera.hoja, clave: primera.clave,
+          movimientosDatos: lineasDe.map(l => ({ id: l.id, fecha: l.fecha, importe: l.importe, concepto: l.concepto })),
+        },
+      };
+    }
 
     if (c.movimientoId) {
       const linea = porId.get(String(c.movimientoId));

@@ -361,6 +361,15 @@ export default function TablaMovimientos({
     if (r) onCambio();
   }
 
+  async function aplicarCubre(c) {
+    const r = await apiFetch(`/api/facturas/${c.facturaId}/cubrir`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movimientoIds: c.movimientoIds, nota: c.concepto }),
+    }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+    if (r) onCambio();
+  }
+
   async function elegirCandidato(opcion) {
 
     const nota = opcion.facturaConcepto || '';
@@ -940,7 +949,16 @@ export default function TablaMovimientos({
             </select>
           )}
         </Celda>
-        <Celda col="Factura" />
+        <Celda col="Factura">
+          {(g.cubren || []).filter(c => viva(`cubre:${g.id}:${c.facturaId}`)).map(c => (
+            <Sugerencia
+              key={c.facturaId}
+              texto={c.texto}
+              onAplicar={() => aplicarCubre(c)}
+              onDescartar={() => rechazar(`cubre:${g.id}:${c.facturaId}`, g.claves?.length ? g.claves : [{ hoja: g.hoja, clave: g.clave }], 'cubre', c.valor)}
+            />
+          ))}
+        </Celda>
 
         <Celda col="Nota">
           {

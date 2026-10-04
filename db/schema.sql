@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS movimientos (
 CREATE TABLE IF NOT EXISTS movimiento_facturas (
   movimiento_id BIGINT NOT NULL REFERENCES movimientos(id) ON DELETE CASCADE,
   factura_id BIGINT NOT NULL REFERENCES facturas(id) ON DELETE CASCADE,
+  cubre BOOLEAN NOT NULL DEFAULT false,
   PRIMARY KEY (movimiento_id, factura_id)
 );
 

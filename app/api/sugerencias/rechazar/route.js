@@ -1,6 +1,6 @@
 const { rechazarSugerencia } = require('../../../../lib/agrupador.cjs');
 
-const TIPOS = ['nota', 'proveedor', 'proyecto', 'devolucion', 'jugador', 'combo', 'pago'];
+const TIPOS = ['nota', 'proveedor', 'proyecto', 'devolucion', 'jugador', 'combo', 'pago', 'cubre'];
 
 export async function POST(request) {
   const { hoja, clave, tipo, valor } = await request.json();

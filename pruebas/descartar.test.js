@@ -51,7 +51,7 @@ describe('descartar una sugerencia', () => {
   });
 
   it('22. la API de rechazo acepta todos los tipos que usa la pantalla', async () => {
-    const tipos = ['nota', 'proveedor', 'proyecto', 'devolucion', 'jugador', 'combo', 'pago'];
+    const tipos = ['nota', 'proveedor', 'proyecto', 'devolucion', 'jugador', 'combo', 'pago', 'cubre'];
     for (const tipo of tipos) {
       const r = await rechazarSugerencia(new Request('http://pruebas/', {
         method: 'POST',
@@ -63,7 +63,7 @@ describe('descartar una sugerencia', () => {
   });
 
   it('23. rechazar un combo o un pago se guarda de verdad, y no vuelve a salir', async () => {
-    for (const tipo of ['proyecto', 'devolucion', 'jugador', 'combo', 'pago']) {
+    for (const tipo of ['proyecto', 'devolucion', 'jugador', 'combo', 'pago', 'cubre']) {
       await rechazarSugerencia(new Request('http://pruebas/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

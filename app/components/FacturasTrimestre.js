@@ -7,7 +7,8 @@ import { useAnchosPersistidos } from '../lib/useAnchosPersistidos';
 import { parseImporte } from '../../lib/numero.cjs';
 
 import { importeDeFactura } from '../../lib/importeFactura.cjs';
-import { textoComboFacturas } from '../../lib/textoCombo.cjs';
+import { textoComboFacturas, textoCubreVarios } from '../../lib/textoCombo.cjs';
+import { claveDeCubre } from '../../lib/cubreVarios.cjs';
 
 const ETIQUETAS_TIPO = {
   emparejada_ok: 'Emparejada y cuadra',
@@ -15,6 +16,7 @@ const ETIQUETAS_TIPO = {
   match_directo: 'Emparejada',
   ambiguo: 'Varias líneas con el mismo importe',
   combo_sugerido: 'Combinación de facturas sugerida',
+  cubre_varios: 'Posible factura de varios movimientos',
   sin_importe: 'No se reconoció ningún importe',
   sin_match: 'Importe no coincide con ninguna línea',
   ya_cubierta: 'Ya cubierta por otra factura',
@@ -71,11 +73,13 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
 
     const { hoja, clave } = c;
     if (!hoja || !clave) return;
-    const valor = [f.id, ...(c.otrasFacturas || []).map(o => o.id)].join(',');
+    const valor = c.esCubre
+      ? claveDeCubre(f.id, c.movimientoIds)
+      : [f.id, ...(c.otrasFacturas || []).map(o => o.id)].join(',');
     await apiFetch('/api/sugerencias/rechazar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hoja, clave, tipo: 'combo', valor }),
+      body: JSON.stringify({ hoja, clave, tipo: c.esCubre ? 'cubre' : 'combo', valor }),
     }, { mensajeError: 'No se pudo guardar el descarte.' });
     onCambio();
   }
@@ -123,6 +127,14 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
 
   function detalleDe(activo, f) {
     if (!activo) return null;
+    if (activo.tipo === 'cubre_varios' && activo.movimientosDatos) {
+      const montoPropio = importeDeFactura(f);
+      if (montoPropio === null) return activo.detalle;
+      return textoCubreVarios({
+        propia: { monto: montoPropio, proveedor: f.proveedor },
+        movimientos: activo.movimientosDatos,
+      });
+    }
     if (activo.tipo !== 'combo_sugerido') return activo.detalle;
     const otras = activo.otrasFacturas || [];
     const monto = importeDeFactura(f);
@@ -224,6 +236,18 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
   async function elegirCandidato(f, opcion) {
 
     const nota = opcion.facturaConcepto || '';
+    if (opcion.esCubre) {
+      const r = await apiFetch(`/api/facturas/${f.id}/cubrir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ movimientoIds: opcion.movimientoIds, nota }),
+      }, { mensajeOk: 'Guardado', mensajeError: 'No se pudo guardar.' });
+      if (r) {
+        setResultadosFila(prev => { const next = { ...prev }; delete next[f.id]; return next; });
+        onCambio();
+      }
+      return;
+    }
     const facturaIds = opcion.esCombo ? [opcion.facturaId, ...opcion.otrasFacturas.map(o => o.id)] : [opcion.facturaId];
     const r = await apiFetch(`/api/movimientos/${opcion.movimientoId}/confirmar`, {
       method: 'POST',
@@ -362,6 +386,10 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       otrasFacturas: activo.otrasFacturas, facturaId: f.id,
       facturaConcepto: activo.facturaConcepto, detalle: detalleActivo,
       hoja: activo.hoja, clave: activo.clave,
+    }] : activo?.tipo === 'cubre_varios' && activo.movimientoIds ? [{
+      esCubre: true, movimientoIds: activo.movimientoIds, facturaId: f.id,
+      facturaConcepto: activo.facturaConcepto, detalle: detalleActivo,
+      hoja: activo.hoja, clave: activo.clave,
     }] : null;
     const bloqueada = f.estado === 'matcheada' || !!candidatos;
 
@@ -422,7 +450,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
                 {candidatos.map((c, i) => ({ c, i })).filter(({ i }) => viva(`sug:${f.id}:${i}`)).map(({ c, i }) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
                     <button type="button" className="secundario" style={{ textAlign: 'left', padding: '6px 10px', display: 'block', flex: 1 }} onClick={() => elegirCandidato(f, c)}>
-                      {c.esCombo ? (
+                      {c.esCombo || c.esCubre ? (
                         <div className="muted" style={{ fontSize: 11, whiteSpace: 'normal' }}>{c.detalle}</div>
                       ) : (
                         <>
@@ -494,9 +522,11 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       case 'Movimiento':
         return (
           <span className="muted">
-            {f.estado === 'matcheada'
-              ? `${f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') + ' · ' : ''}${f.movimiento_concepto?.slice(0, 40) || ''} · ${f.movimiento_importe !== undefined && f.movimiento_importe !== null ? `${Number(f.movimiento_importe).toFixed(2)}€` : ''}`
-              : '—'}
+            {f.estado === 'matcheada' && Number(f.movimientos_cubiertos) > 1
+              ? `${Number(f.movimientos_cubiertos)} movimientos · ${Number(f.movimientos_suma).toFixed(2)}€`
+              : f.estado === 'matcheada'
+                ? `${f.movimiento_fecha ? new Date(f.movimiento_fecha).toLocaleDateString('es-ES') + ' · ' : ''}${f.movimiento_concepto?.slice(0, 40) || ''} · ${f.movimiento_importe !== undefined && f.movimiento_importe !== null ? `${Number(f.movimiento_importe).toFixed(2)}€` : ''}`
+                : '—'}
           </span>
         );
 
@@ -646,7 +676,9 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
         abierto={!!confirmarCopia}
         titulo={confirmarCopia ? `¿Borrar la factura #${confirmarCopia.numero}?` : ''}
         mensaje={
-          confirmarCopia?.estado === 'matcheada' && confirmarCopia?.movimiento_id
+          confirmarCopia?.estado === 'matcheada' && Number(confirmarCopia?.movimientos_cubiertos) > 1
+            ? `Los ${Number(confirmarCopia.movimientos_cubiertos)} movimientos que cubre esta factura volverán a quedar sin resolver. No se puede deshacer.`
+            : confirmarCopia?.estado === 'matcheada' && confirmarCopia?.movimiento_id
             ? `La línea del banco de ${Number(confirmarCopia.movimiento_importe).toFixed(2)}€ del ${confirmarCopia.movimiento_fecha ? new Date(confirmarCopia.movimiento_fecha).toLocaleDateString('es-ES') : ''} volverá a quedar sin resolver. No se puede deshacer.`
             : 'Esta copia no está emparejada con ninguna línea del banco. No se puede deshacer.'
         }

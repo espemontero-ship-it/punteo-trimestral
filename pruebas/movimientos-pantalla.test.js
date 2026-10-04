@@ -223,3 +223,35 @@ describe('los filtros', () => {
     expect(screen.getByText('COMPRA PAPELERIA')).toBeTruthy();
   });
 });
+
+describe('la factura que cubre varios movimientos de un grupo', () => {
+  const grupoDeBolt = () => {
+    const ms = [1, 2, 3].map(i => unMovimiento({ id: 800 + i, concepto: 'COMPRA EN BOLT ' + i, clave: 'bolt', importe: -10 }));
+    const cubren = [{
+      facturaId: 46, numero: 46, proveedor: 'Bolt Operations', concepto: 'viajes', importe: 30,
+      movimientoIds: [801, 802, 803], valor: '46>801,802,803',
+      texto: 'factura 46 (Bolt Operations) · 3 movimientos · 30.00€',
+    }];
+    return unGrupo(ms, { cubren, proveedor: null });
+  };
+
+  it('15. el grupo enseña la factura que lo cubre, y aceptarla la enlaza a todos', async () => {
+    pintarMovimientos({ proveedores: [grupoDeBolt()] });
+
+    fireEvent.click(screen.getByText('factura 46 (Bolt Operations) · 3 movimientos · 30.00€'));
+
+    await waitFor(() => expect(red.hacia('/api/facturas/46/cubrir')).toHaveLength(1));
+    expect(red.hacia('/api/facturas/46/cubrir')[0].metodo).toBe('POST');
+    expect(red.hacia('/api/facturas/46/cubrir')[0].cuerpo).toEqual({ movimientoIds: [801, 802, 803], nota: 'viajes' });
+  });
+
+  it('16. la ✕ la rechaza guardándola, con el tipo cubre y la clave de la factura con sus movimientos', async () => {
+    pintarMovimientos({ proveedores: [grupoDeBolt()] });
+
+    fireEvent.click(screen.getByTitle('Descartar esta sugerencia'));
+
+    await waitFor(() => expect(red.hacia('/api/sugerencias/rechazar')).toHaveLength(1));
+    expect(red.hacia('/api/sugerencias/rechazar')[0].cuerpo).toMatchObject({ clave: 'bolt', tipo: 'cubre', valor: '46>801,802,803' });
+    await waitFor(() => expect(screen.queryByText('factura 46 (Bolt Operations) · 3 movimientos · 30.00€')).toBeNull());
+  });
+});

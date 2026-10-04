@@ -111,3 +111,52 @@ describe('borrar facturas seleccionadas', () => {
     expect(llamada.cuerpo.ids.sort()).toEqual([f1.id, f2.id].sort());
   });
 });
+
+describe('la factura que cubre varios movimientos', () => {
+  const unaQueCubre = () => unaFacturaSuelta({
+    id: 46, numero: 46, proveedor: 'Bolt Operations', totales: [30], concepto: 'viajes',
+    estado: 'revisar', motivo_tipo: 'cubre_varios',
+    motivo_candidatos: {
+      movimientoIds: [801, 802, 803], hoja: 'BBVA', clave: 'bolt',
+      movimientosDatos: [
+        { id: 801, fecha: '2026-09-14T00:00:00.000Z', importe: '-10.00' },
+        { id: 802, fecha: '2026-09-15T00:00:00.000Z', importe: '-10.00' },
+        { id: 803, fecha: '2026-09-16T00:00:00.000Z', importe: '-10.00' },
+      ],
+    },
+  });
+
+  it('12. se ve qué movimientos cubre, y aceptarla los enlaza todos a la vez', async () => {
+    pintarFacturasTrimestre({ facturas: [unaQueCubre()] });
+
+    const boton = screen.getByRole('button', { name: /cubre 3 movimientos que suman 30.00€/ });
+    expect(boton.textContent).toContain('14/9 10.00€ · 15/9 10.00€ · 16/9 10.00€');
+    fireEvent.click(boton);
+
+    await waitFor(() => expect(red.hacia('/api/facturas/46/cubrir')).toHaveLength(1));
+    expect(red.hacia('/api/facturas/46/cubrir')[0].cuerpo).toEqual({ movimientoIds: [801, 802, 803], nota: 'viajes' });
+  });
+
+  it('13. la ✕ la rechaza guardándola, con el tipo cubre', async () => {
+    pintarFacturasTrimestre({ facturas: [unaQueCubre()] });
+
+    fireEvent.click(screen.getByTitle('Descartar esta sugerencia'));
+
+    await waitFor(() => expect(red.hacia('/api/sugerencias/rechazar')).toHaveLength(1));
+    expect(red.hacia('/api/sugerencias/rechazar')[0].cuerpo).toMatchObject({
+      hoja: 'BBVA', clave: 'bolt', tipo: 'cubre', valor: '46>801,802,803',
+    });
+  });
+
+  it('14. ya enlazada, la columna Movimiento dice cuántos cubre y lo que suman', () => {
+    const f = unaFacturaSuelta({
+      id: 46, estado: 'matcheada', totales: [57.51],
+      movimientos_cubiertos: '5', movimientos_suma: '57.51', movimiento_id: 801,
+      movimiento_fecha: '2026-09-14T00:00:00.000Z', movimiento_concepto: 'COMPRA EN BOLT', movimiento_importe: '-8.50',
+    });
+    pintarFacturasTrimestre({ facturas: [f] });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Solo pendientes' }));
+
+    expect(screen.getByText('5 movimientos · 57.51€')).toBeTruthy();
+  });
+});

@@ -166,6 +166,16 @@ const SECCIONES_ADMIN = [
           también es para siempre, y va por esas facturas concretas: rechazar &quot;17 + 16&quot; no rechaza otras
           combinaciones futuras.
         </p>
+        <h4>Una factura para varios movimientos</h4>
+        <p>
+          Al revés también pasa: una sola factura que cubre varios movimientos de un mismo grupo, como la factura de
+          Bolt contra sus viajes pagados con tarjeta. Si la suma de esos movimientos pendientes coincide al céntimo con
+          el total de la factura, sale en la fila gris del grupo, columna <strong>Factura</strong>, una sugerencia tipo
+          <strong> factura 46 (Bolt) · 5 movimientos · 57.51€</strong>. Aceptarla enlaza la factura a todos y los deja
+          resueltos; también se puede aceptar desde la pestaña Facturas, donde salen las fechas y los importes. Si hay
+          más de una combinación posible no propone nada, y su ✕ también es para siempre. Esta es la única forma de
+          que una factura justifique más de un movimiento.
+        </p>
 
         <h4>Los grupos</h4>
         <p>
@@ -267,6 +277,7 @@ const SECCIONES_ADMIN = [
           ['Emparejada', 'Tiene su movimiento. No hay nada que hacer.'],
           ['Varias líneas con el mismo importe', 'Hay más de una candidata y la app no elige por ti: salen los botones con fecha, importe y concepto de cada una para que elijas.'],
           ['Combinación de facturas sugerida', 'Varias facturas suman el importe de una línea (típico de un PDF con dos facturas dentro). Se propone, nunca se aplica sola.'],
+          ['Posible factura de varios movimientos', 'El total de la factura coincide al céntimo con la suma de varios movimientos pendientes de un mismo grupo. Se propone, nunca se aplica sola.'],
           ['Ya cubierta por otra factura', 'Ese gasto ya tiene su justificante. No falta nada.'],
           ['Importe no coincide con ninguna línea', 'El importe está leído pero no cuadra con nada pendiente. Puede que falte subir el excel de esas fechas.'],
           ['No se reconoció ningún importe', 'No se pudo leer la cifra. Escríbela a mano en la columna Importe.'],
