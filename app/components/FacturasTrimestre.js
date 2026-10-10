@@ -652,7 +652,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
                   : '—'}
             </span>
             {f.estado === 'matcheada' && f.movimiento_id && (
-              <button type="button" className="btn-editar-mini" style={{ flex: 'none' }} title="Desvincular factura" onClick={() => setConfirmarDesvincular(f)}>✎</button>
+              <button type="button" className="btn-quitar-mini" style={{ flex: 'none' }} title="Desvincular factura" onClick={() => setConfirmarDesvincular(f)}>✕</button>
             )}
           </>
         );

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { generarExcelFinal } from '../lib/exportar.cjs';
-import { limpiarExportar, subida, descargar, leer, columna, CABECERA_PAYPAL } from './ayuda-exportar.js';
+import { limpiarExportar, subida, facturaEnlazada, descargar, leer, columna, CABECERA_PAYPAL } from './ayuda-exportar.js';
 
 beforeEach(limpiarExportar);
 afterAll(limpiarExportar);
@@ -30,32 +30,61 @@ describe('el excel de la gestoría tiene una sola pestaña por banco', () => {
     expect(ws.getRow(2).getCell(2).value).toBe('CONCEPTO');
   });
 
-  it('66b. una subida donde no se envía ninguna línea no aparece en el excel', async () => {
+  it('66b. todos los extractos subidos salen en el excel, aunque ninguna de sus líneas entre en el envío', async () => {
     const enviada = await subida({ lineas: [{ fecha: [7, 1], concepto: 'DE LA SUBIDA UNO', importe: -10, nota: 'n' }] });
-    await subida({ lineas: [{ fecha: [7, 2], concepto: 'DE LA SUBIDA DOS', importe: -20 }] });
+    await subida({ lineas: [{ fecha: [7, 2], concepto: 'DE LA SUBIDA DOS', importe: -20, estado: 'sin_resolver' }] });
 
     const ws = (await leer(await generarExcelFinal(enviada, null, { descargar }))).getWorksheet('bbva');
 
-    expect(columna(ws, 2, 3)).toEqual(['DE LA SUBIDA UNO']);
+    expect(columna(ws, 2, 3)).toEqual(['DE LA SUBIDA UNO', 'DE LA SUBIDA DOS']);
   });
 
-  it('67. las columnas de la app (nota, proveedor, facturas) solo se rellenan en las líneas que se envían', async () => {
+  it('67. a la derecha de las columnas originales van todas las de Movimientos, rellenadas en TODAS las líneas', async () => {
     const a = await subida({ lineas: [
-      { fecha: [7, 1], concepto: 'ENVIADA', importe: -10, nota: 'nota enviada', proveedor: 'Prov', facturas: '5, 6' },
-      { fecha: [7, 2], concepto: 'NO ENVIADA', importe: -20 },
+      { fecha: [7, 1], concepto: 'RESUELTA', importe: -10, nota: 'nota resuelta', proveedor: 'Prov' },
+      { fecha: [7, 2], concepto: 'SIN RESOLVER', importe: -20, estado: 'sin_resolver', nota: 'nota pendiente' },
+    ] });
+    await facturaEnlazada(a[0].id, 990005);
+    await facturaEnlazada(a[0].id, 990006);
+
+    const ws = (await leer(await generarExcelFinal([a[0]], null, { descargar }))).getWorksheet('bbva');
+    const celdas = (fila, desde = 5) => [0, 1, 2, 3, 4, 5, 6, 7].map(i => ws.getRow(fila).getCell(desde + i).value);
+
+    expect(celdas(2)).toEqual(['Banco', 'Proveedor', 'Estado', 'Factura', 'Nota', 'Proyecto', 'LarpManager', 'Jugador']);
+    expect(celdas(3)).toEqual(['bbva', 'Prov', 'resuelta', '990005, 990006', 'nota resuelta', null, null, null]);
+    expect(celdas(4)).toEqual(['bbva', null, 'pendiente', null, 'nota pendiente', null, null, null]);
+  });
+
+  it('67b. el estado sale con las mismas palabras de la pantalla, para todas las líneas', async () => {
+    const a = await subida({ lineas: [
+      { fecha: [7, 1], concepto: 'UNO', importe: -1, estado: 'sin_resolver' },
+      { fecha: [7, 2], concepto: 'DOS', importe: -2, estado: 'pedida_pendiente' },
+      { fecha: [7, 3], concepto: 'TRES', importe: -3, estado: 'factura_futura' },
+      { fecha: [7, 4], concepto: 'CUATRO', importe: -4, estado: 'ignorada' },
+      { fecha: [7, 5], concepto: 'CINCO', importe: -5, estado: 'resuelta' },
     ] });
 
-    const buffer = await generarExcelFinal([a[0]], null, { descargar });
-    const ws = (await leer(buffer)).getWorksheet('bbva');
+    const ws = (await leer(await generarExcelFinal([a[4]], null, { descargar }))).getWorksheet('bbva');
 
-    expect(ws.getRow(2).getCell(5).value).toBe('Nota gestoría');
-    expect(ws.getRow(2).getCell(6).value).toBe('Proveedor');
-    expect(ws.getRow(2).getCell(8).value).toBe('Facturas');
-    expect(ws.getRow(3).getCell(5).value).toBe('nota enviada');
-    expect(ws.getRow(3).getCell(6).value).toBe('Prov');
-    expect(ws.getRow(3).getCell(8).value).toBe('5, 6');
-    expect(ws.getRow(4).getCell(2).value).toBe('NO ENVIADA');
-    expect(ws.getRow(4).getCell(5).value).toBeNull();
+    expect(columna(ws, 7, 3)).toEqual(['pendiente', 'pedida', 'factura futura', 'ignorar', 'resuelta']);
+  });
+
+  it('67c. la hoja Devoluciones lleva todas las columnas de Movimientos y el banco, y solo las devoluciones hasta la fecha elegida', async () => {
+    const a = await subida({ lineas: [
+      { fecha: [9, 7], concepto: 'DEVOLUCION DE SEPTIEMBRE', importe: -300, devolucion: 'Ruben Coucke', nota: 'reembolso' },
+      { fecha: [10, 3], concepto: 'DEVOLUCION DE OCTUBRE', importe: -100, devolucion: 'Ana Pérez' },
+      { fecha: [9, 8], concepto: 'COMPRA NORMAL', importe: -5 },
+    ] });
+
+    const ws = (await leer(await generarExcelFinal([a[0]], null, { descargar, hasta: '2026-09-30' }))).getWorksheet('Devoluciones');
+
+    expect(ws.getRow(1).values.slice(1)).toEqual(['Fecha', 'Concepto', 'Banco', 'Proveedor', 'Importe', 'Estado', 'Factura', 'Nota', 'Proyecto', 'LarpManager', 'Jugador']);
+    expect(ws.rowCount).toBe(2);
+    expect(ws.getRow(2).getCell(2).value).toBe('DEVOLUCION DE SEPTIEMBRE');
+    expect(ws.getRow(2).getCell(3).value).toBe('bbva');
+    expect(ws.getRow(2).getCell(5).value).toBe(-300);
+    expect(ws.getRow(2).getCell(8).value).toBe('reembolso');
+    expect(ws.getRow(2).getCell(11).value).toBe('Ruben Coucke');
   });
 
   it('68. cada banco tiene su pestaña: bbva y paypal, sin mezclarse', async () => {

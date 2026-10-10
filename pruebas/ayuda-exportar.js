@@ -43,10 +43,12 @@ export async function subida({ hoja = 'bbva', cabecera = CABECERA_BBVA, titulo =
     if (l.repetida) continue;
     const { rows: [m] } = await query(
       `INSERT INTO movimientos (hoja, fila, importacion_id, fecha, concepto, importe, clave, estado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'resuelta') RETURNING id, importacion_id`,
-      [hoja, (titulo ? 3 : 2) + i, imp.id, `2026-${String(l.fecha[0]).padStart(2, '0')}-${String(l.fecha[1]).padStart(2, '0')}`, l.concepto, l.importe, l.concepto.toLowerCase()]
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, importacion_id`,
+      [hoja, (titulo ? 3 : 2) + i, imp.id, `2026-${String(l.fecha[0]).padStart(2, '0')}-${String(l.fecha[1]).padStart(2, '0')}`, l.concepto, l.importe, l.concepto.toLowerCase(), l.estado ?? 'resuelta']
     );
     if (l.nota) await query(`UPDATE movimientos SET nota_final = $2 WHERE id = $1`, [m.id, l.nota]);
+    if (l.proveedor) await query(`UPDATE movimientos SET proveedor = $2 WHERE id = $1`, [m.id, l.proveedor]);
+    if (l.devolucion) await query(`UPDATE movimientos SET es_devolucion = true, jugador_larpmanager = $2 WHERE id = $1`, [m.id, l.devolucion]);
     creados.push({
       id: m.id, importacion_id: m.importacion_id, concepto: l.concepto, nota_final: l.nota ?? null, proveedor: l.proveedor ?? null,
       proyecto_nombre: null, facturas: l.facturas ?? '', jugador_larpmanager: null, larpmanager: null,

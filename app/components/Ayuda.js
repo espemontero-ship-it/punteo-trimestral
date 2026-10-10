@@ -193,7 +193,7 @@ const SECCIONES_ADMIN = [
 
         <h4>Desvincular una factura</h4>
         <p>
-          Si una factura quedó enlazada a la línea equivocada, hay un <strong>✎</strong> para desvincularla en dos sitios:
+          Si una factura quedó enlazada a la línea equivocada, hay una <strong>✕</strong> para desvincularla en dos sitios:
           en Movimientos, columna <strong>Factura</strong>, al lado de su número, y en la pestaña Facturas, columna
           <strong> Movimiento</strong>, al lado de la línea con la que está emparejada (al pasar el ratón dice
           <em>Desvincular factura</em>). Pide
@@ -238,14 +238,14 @@ const SECCIONES_ADMIN = [
           y se vuelve a subir el CSV.
         </div>
         <p>
-          Cuando una línea ya tiene su pago, la columna enseña siempre el nombre de ese pago y aparece un <strong>✎</strong> al lado para <strong>quitar el vínculo</strong>
+          Cuando una línea ya tiene su pago, la columna enseña siempre el nombre de ese pago y aparece una <strong>✕</strong> al lado para <strong>quitar el vínculo</strong>
           si te has equivocado. El pago vuelve a la pestaña LarpManager y la línea deja de decir de quién es — pero
           <em> no cambia de estado</em>: si estaba resuelta sigue resuelta, y eso se cambia a mano en Estado.
         </p>
         <p>
           Hay una excepción: si el ingreso del banco ya estaba <strong>resuelto</strong> cuando subes el CSV, el pago
-          que le corresponde se enlaza solo a esa línea, si no tenía ya otro pago. No le cambia el estado ni la nota, solo pone de quién es, y el
-          <strong> ✎</strong> sirve para quitarlo si no era ese. A las líneas pendientes, en cambio, solo se les
+          que le corresponde se enlaza solo a esa línea, si no tenía ya otro pago. No le cambia el estado ni la nota, solo pone de quién es, y la
+          <strong> ✕</strong> sirve para quitarlo si no era ese. A las líneas pendientes, en cambio, solo se les
           propone.
         </p>
         <p>
@@ -264,7 +264,7 @@ const SECCIONES_ADMIN = [
           <strong> Confirmar devolución</strong> y <strong>Cancelar</strong>. Hasta que confirmes no se guarda nada.
         </p>
         <p>
-          Una devolución ya marcada se lee como <em>Devolución — nombre del jugador</em>, con un <strong>✎</strong> al lado
+          Una devolución ya marcada se lee como <em>Devolución — nombre del jugador</em>, con un <strong>✎</strong> al lado, en la columna Nota,
           para corregir el nombre. Una devolución no tiene proveedor ni factura: en esa columna verás un guion.
         </p>
 
@@ -276,7 +276,8 @@ const SECCIONES_ADMIN = [
         <p>
           Entra todo lo resuelto y todavía sin enviar hasta esa fecha, <strong>incluido lo recuperado tarde</strong> — una
           factura futura que llega dos meses después entra en el envío siguiente aunque su fecha sea anterior. Lo que ya
-          se envió una vez no vuelve a salir.
+          se envió una vez no vuelve a salir. Eso decide qué facturas van en el paquete y qué se marca como enviado; el excel, en
+          cambio, lleva todas las líneas de los extractos.
         </p>
         <p>
           Hay dos botones. <strong>Descargar archivo</strong> genera un <strong>.zip</strong> con las facturas
@@ -286,9 +287,9 @@ const SECCIONES_ADMIN = [
         </p>
         <p>
           En el excel hay <strong>una sola pestaña por banco</strong> (bbva, openbank, paypal) con todas las líneas de
-          los extractos subidos, cada una una sola vez y por fecha, la más antigua primero. Las notas escritas y las
-          columnas que sabe la app (Nota gestoría, Proveedor, Proyecto, Facturas, Jugador y LarpManager) solo van en las
-          líneas que entran en este envío. Si algún extracto tiene las columnas en otro orden, sale en una pestaña
+          todos los extractos subidos hasta la fecha que elijas (las posteriores no salen), sean del estado que sean, cada una una sola vez y por fecha, la más antigua primero. A la derecha de las
+          columnas originales van todas las de Movimientos (Banco, Proveedor, Estado, Factura, Nota, Proyecto,
+          LarpManager y Jugador), rellenadas en todas las líneas. La pestaña Devoluciones lleva esos mismos campos. Si algún extracto tiene las columnas en otro orden, sale en una pestaña
           aparte para no descuadrar nada. Las facturas de colaboradores que se pagaron entran en el mismo paquete y con
           la misma numeración.
         </p>
@@ -318,14 +319,14 @@ const SECCIONES_ADMIN = [
           <li><strong>Subida</strong> y <strong>Subido por</strong> — cuándo y quién.</li>
           <li><strong>Vincular</strong> — el botón <strong>Buscar</strong> vuelve a intentar el cruce solo de esa factura. Si no hay manera, se elige a mano en <strong>Elige movimiento...</strong> y se pulsa <strong>Vincular</strong>.</li>
           <li><strong>Motivo</strong> — por qué no está emparejada. Es la columna que dice qué hacer.</li>
-          <li><strong>Movimiento</strong> — el movimiento con el que quedó emparejada, con un ✎ para desvincularla si se enlazó mal.</li>
+          <li><strong>Movimiento</strong> — el movimiento con el que quedó emparejada, con una ✕ para desvincularla si se enlazó mal.</li>
         </ul>
 
         <h4>Qué te puede decir el Motivo</h4>
         <TablaEstados filas={[
           ['Emparejada', 'Tiene su movimiento. No hay nada que hacer.'],
           ['Emparejada y cuadra', 'Tiene su movimiento y los importes coinciden. No hay nada que hacer.'],
-          ['Emparejada pero NO cuadra', 'Está enlazada a un movimiento cuyo importe no es el de la factura, y el texto dice cuánto falta o sobra. La app no cambia nada sola: si está mal, desvincúlala con el ✎ de la columna Movimiento.'],
+          ['Emparejada pero NO cuadra', 'Está enlazada a un movimiento cuyo importe no es el de la factura, y el texto dice cuánto falta o sobra. La app no cambia nada sola: si está mal, desvincúlala con la ✕ de la columna Movimiento.'],
           ['Factura de un colaborador', 'La paga él y se le reembolsa, así que no se le busca línea del banco.'],
           ['Varias líneas con el mismo importe', 'Hay más de una candidata y la app no elige por ti: salen los botones con fecha, importe y concepto de cada una para que elijas.'],
           ['Combinación de facturas sugerida', 'Varias facturas suman el importe de una línea (típico de un PDF con dos facturas dentro). Se propone, nunca se aplica sola.'],
@@ -387,7 +388,7 @@ const SECCIONES_ADMIN = [
           propuesta como una píldora en la columna <strong>Movimiento</strong>: pulsas el texto y queda enlazado, pulsas
           la ✕ y se descarta. Lo hace así porque un acierto falso, cerrado en silencio, deja un ingreso dado por cobrado
           sin haberlo cobrado. La única excepción son los ingresos del banco que tú ya habías dejado resueltos: al subir
-          el CSV reciben su pago solos, sin cambiarles el estado ni la nota, y se quita con el ✎ de su línea en
+          el CSV reciben su pago solos, sin cambiarles el estado ni la nota, y se quita con la ✕ de su línea en
           Movimientos.
         </div>
 

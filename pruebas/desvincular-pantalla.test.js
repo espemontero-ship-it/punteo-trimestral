@@ -17,7 +17,7 @@ function abrir(movimientos) {
 }
 
 describe('desvincular una factura', () => {
-  it('17. cada factura enlazada lleva su ✎, y al pulsarlo pide confirmación diciendo qué pasa con la línea', () => {
+  it('17. cada factura enlazada lleva su ✕, y al pulsarlo pide confirmación diciendo qué pasa con la línea', () => {
     abrir([lineaConFactura()]);
 
     fireEvent.click(screen.getByTitle('Desvincular factura'));
@@ -58,7 +58,7 @@ describe('desvincular una factura', () => {
     expect(screen.getByText(/La línea sigue resuelta con la otra factura \(47\)/)).toBeTruthy();
   });
 
-  it('21. una línea sin factura no lleva el ✎', () => {
+  it('21. una línea sin factura no lleva la ✕', () => {
     abrir([unMovimiento({ concepto: 'SIN FACTURA', estado: 'resuelta' })]);
 
     expect(screen.queryByTitle('Desvincular factura')).toBeNull();

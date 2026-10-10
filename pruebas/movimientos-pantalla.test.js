@@ -235,6 +235,22 @@ describe('confirmar un grupo entero', () => {
   });
 });
 
+describe('los iconos de corregir y de quitar un enlace', () => {
+  it('11c. quitar un enlace (una factura o un pago de LarpManager) lleva una ✕, y el ✎ queda solo para editar la devolución', () => {
+    const conFactura = unMovimiento({ clave: 'a', concepto: 'CON FACTURA', estado: 'resuelta', facturas: [{ id: 46, numero: 46, cubre: 0 }] });
+    const conPago = unMovimiento({ clave: 'b', concepto: 'CON PAGO', importe: 45, estado: 'resuelta', pagos_larpmanager: [{ id: 88, nombre: 'Pepito Pérez', evento: 'Glitz', importe: 45 }], datos_originales: { larpmanager: null } });
+    const devolucion = unMovimiento({ clave: 'c', concepto: 'UNA DEVOLUCION', importe: -30, estado: 'resuelta', es_devolucion: true, jugador_larpmanager: 'Ana Pérez' });
+    pintarMovimientos({ proveedores: [unGrupo([conFactura]), unGrupo([conPago]), unGrupo([devolucion])] });
+    fireEvent.click(screen.getByRole('checkbox'));
+
+    const quitar = [...document.querySelectorAll('button.btn-quitar-mini')];
+    const editar = [...document.querySelectorAll('button.btn-editar-mini')];
+
+    expect(quitar.map(b => [b.textContent, b.title])).toEqual([['✕', 'Desvincular factura'], ['✕', 'Quitar el vínculo con Pepito Pérez']]);
+    expect(editar.map(b => [b.textContent, b.title])).toEqual([['✎', 'Editar devolución']]);
+  });
+});
+
 describe('los filtros', () => {
   it('13. "solo pendientes" esconde las resueltas, y al quitarlo vuelven', () => {
     const pendiente = unMovimiento({ concepto: 'SIGUE PENDIENTE' });

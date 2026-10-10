@@ -18,7 +18,7 @@ function abrirConEmparejadas(facturas) {
 }
 
 describe('desvincular una factura desde la pestaña Facturas', () => {
-  it('88. una factura emparejada lleva su ✎, y al pulsarlo pide confirmación diciendo qué pasa con la línea', () => {
+  it('88. una factura emparejada lleva su ✕, y al pulsarlo pide confirmación diciendo qué pasa con la línea', () => {
     abrirConEmparejadas([emparejada()]);
 
     fireEvent.click(screen.getByTitle('Desvincular factura'));
@@ -59,7 +59,7 @@ describe('desvincular una factura desde la pestaña Facturas', () => {
     expect(screen.getByText(/La factura 46 cubre 5 movimientos\. Al desvincularla, esos 5 movimientos vuelven a quedar sin resolver/)).toBeTruthy();
   });
 
-  it('92b. el texto del movimiento se parte en varias líneas en vez de cortarse, y el ✎ no se encoge, para que siempre se pueda leer y pulsar', () => {
+  it('92b. el texto del movimiento se parte en varias líneas en vez de cortarse, y la ✕ no se encoge, para que siempre se pueda leer y pulsar', () => {
     abrirConEmparejadas([emparejada({ movimiento_concepto: 'TRANSFERENCIAS SHOVAL SHAKKED OMER 0g2e883x9z08mhrm' })]);
 
     const boton = screen.getByTitle('Desvincular factura');
@@ -70,7 +70,7 @@ describe('desvincular una factura desde la pestaña Facturas', () => {
     expect(boton.style.flex).toBe('0 0 auto');
   });
 
-  it('92. una factura sin emparejar no lleva el ✎', () => {
+  it('92. una factura sin emparejar no lleva la ✕', () => {
     pintarFacturasTrimestre({ facturas: [unaFacturaSuelta({ estado: 'sin_match' })] });
 
     expect(screen.queryByTitle('Desvincular factura')).toBeNull();

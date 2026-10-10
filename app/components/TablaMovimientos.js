@@ -614,10 +614,10 @@ export default function TablaMovimientos({
               </a>
               <button
                 type="button"
-                className="btn-editar-mini"
+                className="btn-quitar-mini"
                 title="Desvincular factura"
                 onClick={() => setConfirmarDesvincularFactura({ factura: f, movimiento: m })}
-              >✎</button>
+              >✕</button>
             </Fragment>
           ))}
         </span>
@@ -714,10 +714,10 @@ export default function TablaMovimientos({
       <button
         key={p.id}
         type="button"
-        className="btn-editar-mini"
+        className="btn-quitar-mini"
         title={`Quitar el vínculo con ${p.nombre}`}
         onClick={() => setConfirmarDesvincular({ pago: p, movimiento: m })}
-      >✎</button>
+      >✕</button>
     ));
   }
 

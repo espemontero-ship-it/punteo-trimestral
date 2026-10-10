@@ -59,6 +59,22 @@ describe('la columna LarpManager del excel que va a la gestoría', () => {
   });
 });
 
+describe('el excel no lleva líneas posteriores a la fecha elegida', () => {
+  it('79c. con "hasta" el 31/08 salen las líneas de julio y agosto de la hoja del banco, y no las de octubre; sin límite salen todas', async () => {
+    await subida({ lineas: [
+      { fecha: [7, 1], concepto: 'LINEA DE JULIO', importe: -10 },
+      { fecha: [8, 15], concepto: 'LINEA DE AGOSTO', importe: -20 },
+      { fecha: [10, 3], concepto: 'LINEA DE OCTUBRE', importe: -30 },
+    ] });
+
+    const hastaAgosto = await contenidoDelZip(await descargarEnvio({ hasta: '2026-08-31', etiqueta: ETIQUETA }, { descargar }));
+    const todas = await contenidoDelZip(await descargarEnvio({ hasta: HASTA, etiqueta: ETIQUETA }, { descargar }));
+
+    expect(columna(hastaAgosto.libro.getWorksheet('bbva'), 2, 3)).toEqual(['LINEA DE JULIO', 'LINEA DE AGOSTO']);
+    expect(columna(todas.libro.getWorksheet('bbva'), 2, 3)).toEqual(['LINEA DE JULIO', 'LINEA DE AGOSTO', 'LINEA DE OCTUBRE']);
+  });
+});
+
 describe('descargar el archivo no marca nada', () => {
   it('71. se puede descargar varias veces, siempre igual, y nada queda marcado como enviado', async () => {
     const { lineas, facturaId } = await enviableConUnaFactura();
