@@ -644,7 +644,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
       case 'Movimiento':
         return (
           <>
-            <span className="muted">
+            <span className="muted" style={{ whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
               {f.estado === 'matcheada' && Number(f.movimientos_cubiertos) > 1
                 ? `${Number(f.movimientos_cubiertos)} movimientos · ${Number(f.movimientos_suma).toFixed(2)}€`
                 : f.estado === 'matcheada'
@@ -652,7 +652,7 @@ export default function FacturasTrimestre({ facturas, onCambio }) {
                   : '—'}
             </span>
             {f.estado === 'matcheada' && f.movimiento_id && (
-              <button type="button" className="btn-editar-mini" title="Desvincular factura" onClick={() => setConfirmarDesvincular(f)}>✎</button>
+              <button type="button" className="btn-editar-mini" style={{ flex: 'none' }} title="Desvincular factura" onClick={() => setConfirmarDesvincular(f)}>✎</button>
             )}
           </>
         );

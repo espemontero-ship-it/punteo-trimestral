@@ -59,6 +59,17 @@ describe('desvincular una factura desde la pestaña Facturas', () => {
     expect(screen.getByText(/La factura 46 cubre 5 movimientos\. Al desvincularla, esos 5 movimientos vuelven a quedar sin resolver/)).toBeTruthy();
   });
 
+  it('92b. el texto del movimiento se parte en varias líneas en vez de cortarse, y el ✎ no se encoge, para que siempre se pueda leer y pulsar', () => {
+    abrirConEmparejadas([emparejada({ movimiento_concepto: 'TRANSFERENCIAS SHOVAL SHAKKED OMER 0g2e883x9z08mhrm' })]);
+
+    const boton = screen.getByTitle('Desvincular factura');
+    const texto = boton.previousElementSibling;
+
+    expect(texto.textContent).toContain('TRANSFERENCIAS SHOVAL SHAKKED OMER');
+    expect(texto.style.whiteSpace).toBe('normal');
+    expect(boton.style.flex).toBe('0 0 auto');
+  });
+
   it('92. una factura sin emparejar no lleva el ✎', () => {
     pintarFacturasTrimestre({ facturas: [unaFacturaSuelta({ estado: 'sin_match' })] });
 
