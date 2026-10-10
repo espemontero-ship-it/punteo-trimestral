@@ -1,6 +1,6 @@
 const { put } = require('@vercel/blob');
-const { query } = require('../../../lib/db.cjs');
-const { parsearArchivoLarpManager, emparejarIngresosConLarpManager, asegurarTablaPagosLarpManager } = require('../../../lib/larpmanager.cjs');
+const { eliminarBlob } = require('../../../lib/blob.cjs');
+const { parsearArchivoLarpManager, procesarSubidaLarpManager } = require('../../../lib/larpmanager.cjs');
 
 export const maxDuration = 60;
 
@@ -20,19 +20,15 @@ export async function POST(request) {
       return Response.json({ error: 'Ninguna fila del archivo se puede cruzar con el banco (todas son de pasarela o apuntes internos).' }, { status: 400 });
     }
 
-    await asegurarTablaPagosLarpManager();
-
-    const blob = await put(`larpmanager/${Date.now()}-${file.name || 'pagos.csv'}`, buffer, {
-      access: 'private',
-      contentType: 'text/csv',
+    const { resultados, nadaNuevo } = await procesarSubidaLarpManager({
+      filas,
+      nombreArchivo: file.name,
+      guardarArchivo: async () => (await put(`larpmanager/${Date.now()}-${file.name || 'pagos.csv'}`, buffer, {
+        access: 'private',
+        contentType: 'text/csv',
+      })).url,
+      borrarArchivo: eliminarBlob,
     });
-    const { rows } = await query(
-      `INSERT INTO importaciones (hoja, origen, ruta_blob, nombre_archivo) VALUES ('larpmanager','larpmanager',$1,$2) RETURNING id`,
-      [blob.url, file.name || null]
-    );
-    const importacionId = rows[0].id;
-
-    const resultados = await emparejarIngresosConLarpManager(filas, importacionId);
 
     const emparejadas = resultados.filter(r => r.tipo === 'match' || r.tipo === 'match_ya_resuelta').length;
     return Response.json({
@@ -41,8 +37,9 @@ export async function POST(request) {
       filasCruzadas: aCruzar,
       filasGuardadasSinCruzar: filas.length - aCruzar,
       emparejadas,
+      nadaNuevo,
     });
   } catch (err) {
-    return Response.json({ error: err.message || 'No se pudo procesar el CSV.' }, { status: 500 });
+    return Response.json({ error: err.message || 'No se pudo procesar el CSV.' }, { status: err.status || 500 });
   }
 }

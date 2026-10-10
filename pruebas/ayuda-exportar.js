@@ -9,6 +9,7 @@ export const limpiarExportar = async () => {
   await query(`DELETE FROM movimientos WHERE importacion_id IN (SELECT id FROM importaciones WHERE nombre_archivo LIKE $1)`, [`${PREFIJO}%`]);
   await query(`DELETE FROM importaciones WHERE nombre_archivo LIKE $1`, [`${PREFIJO}%`]);
   await query(`DELETE FROM envios_gestoria WHERE etiqueta LIKE $1`, [`${PREFIJO}%`]);
+  await query(`DELETE FROM larpmanager_pagos WHERE nombre_real LIKE $1`, [`${PREFIJO}%`]);
 };
 
 export const dia = (mes, d) => new Date(Date.UTC(2026, mes - 1, d));

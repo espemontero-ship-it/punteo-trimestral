@@ -1,6 +1,7 @@
-const { listarPagosLarpManagerSinEmparejar } = require('../../../lib/larpmanager.cjs');
+const { listarPagosLarpManagerSinEmparejar, listarLineasConMasDeUnPago } = require('../../../lib/larpmanager.cjs');
 
 export async function GET() {
   const pagos = await listarPagosLarpManagerSinEmparejar();
-  return Response.json({ pagos });
+  const lineasConDosPagos = await listarLineasConMasDeUnPago();
+  return Response.json({ pagos, lineasConDosPagos });
 }

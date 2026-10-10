@@ -34,6 +34,31 @@ async function contenidoDelZip(buffer) {
   return { nombres, libro };
 }
 
+describe('la columna LarpManager del excel que va a la gestoría', () => {
+  it('79b. enseña el pago realmente enlazado a la línea, no el texto guardado; sin pago enlazado, el texto guardado de siempre', async () => {
+    const lineas = await subida({ lineas: [
+      { fecha: [7, 1], concepto: 'INGRESO UNO', importe: 13 },
+      { fecha: [7, 2], concepto: 'INGRESO DOS', importe: 20 },
+      { fecha: [7, 3], concepto: 'INGRESO TRES', importe: 30 },
+    ] });
+    await query(`UPDATE movimientos SET datos_originales = '{"larpmanager": "no encontrada"}'::jsonb WHERE id = $1`, [lineas[0].id]);
+    await query(`UPDATE movimientos SET datos_originales = '{}'::jsonb WHERE id = $1`, [lineas[1].id]);
+    await query(`UPDATE movimientos SET datos_originales = '{"larpmanager": "texto de siempre sin pago"}'::jsonb WHERE id = $1`, [lineas[2].id]);
+    await query(
+      `INSERT INTO larpmanager_pagos (nombre_real, evento, importe, fecha, movimiento_id, estado)
+       VALUES ($1, 'Glitz', 13, '2026-07-01', $2, 'resuelta'), ($3, NULL, 20, '2026-07-02', $4, 'resuelta')`,
+      [`${PREFIJO} Pepito Pérez`, lineas[0].id, `${PREFIJO} Sin Evento`, lineas[1].id]
+    );
+
+    const { libro } = await contenidoDelZip(await descargarEnvio({ hasta: HASTA, etiqueta: ETIQUETA }, { descargar }));
+    const hoja = libro.getWorksheet('bbva');
+    let columnaLm = null;
+    hoja.getRow(2).eachCell((celda, n) => { if (celda.value === 'LarpManager') columnaLm = n; });
+
+    expect(columna(hoja, columnaLm, 3)).toEqual([`${PREFIJO} Pepito Pérez — Glitz`, `${PREFIJO} Sin Evento`, 'texto de siempre sin pago']);
+  });
+});
+
 describe('descargar el archivo no marca nada', () => {
   it('71. se puede descargar varias veces, siempre igual, y nada queda marcado como enviado', async () => {
     const { lineas, facturaId } = await enviableConUnaFactura();
