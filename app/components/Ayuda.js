@@ -398,7 +398,7 @@ const SECCIONES_ADMIN = [
             pero contra el banco solo se cruzan las transferencias y las filas sin método de pago, que son las que
             acaban llegando a la cuenta. Las de pasarela (Stripe, Redsys) y los apuntes internos (larpmoney,
             larpmanager, lm) se guardan pero no se cruzan: ese dinero no aparece en el banco línea a línea. Subir el mismo
-            archivo dos veces no duplica nada.
+            archivo dos veces no duplica nada ni deja una subida vacía en &quot;Archivos subidos&quot;.
           </li>
           <li>
             <strong>Recalcular</strong> — vuelve a cruzar sin salir y volver a entrar. Sirve sobre todo justo después

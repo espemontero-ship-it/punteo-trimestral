@@ -9,6 +9,6 @@ export async function GET(request, { params }) {
     ]);
     return Response.json({ candidatos, historial });
   } catch (err) {
-    return Response.json({ error: err.message || 'No se pudieron cargar las líneas.' }, { status: 500 });
+    return Response.json({ error: err.message || 'No se pudieron cargar las líneas.' }, { status: err.status || 500 });
   }
 }

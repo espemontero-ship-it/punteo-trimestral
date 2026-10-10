@@ -136,6 +136,27 @@ describe('las sugerencias de línea del banco', () => {
   });
 });
 
+describe('el aviso de ingresos con más de un pago enlazado', () => {
+  const doble = {
+    movimiento_id: 9, fecha: '2026-08-18T00:00:00.000Z', importe: '160.00', concepto: 'TRANSFERENCIAS SHOVAL SHAKKED',
+    pagos: [{ id: 1, nombre: 'Omer Shoval', evento: 'X', fecha: '2026-08-15' }, { id: 2, nombre: 'Omer Shoval', evento: 'X', fecha: '2026-10-10' }],
+  };
+
+  it('380. si hay ingresos con más de un pago enlazado lo avisa con la lista, y si no hay ninguno no dice nada', async () => {
+    montar([pago()], { '/api/larpmanager-sin-emparejar': { pagos: [pago()], lineasConDosPagos: [doble] } });
+
+    expect(await screen.findByText(/Hay 1 ingreso del banco con más de un pago de LarpManager enlazado/)).toBeTruthy();
+    expect(screen.getByText(/TRANSFERENCIAS SHOVAL SHAKKED/)).toBeTruthy();
+  });
+
+  it('381b. sin ingresos con dos pagos no sale ningún aviso', async () => {
+    montar([pago()]);
+
+    await screen.findByText('Zaphod Beeblebrox');
+    expect(screen.queryByText(/más de un pago de LarpManager enlazado/)).toBeNull();
+  });
+});
+
 describe('cambiar el estado de un pago y vincularlo a mano', () => {
   it('369. el desplegable de estado manda el estado elegido; si ya tiene línea, no se puede cambiar', async () => {
     montar([pago({ id: 1 }), pago({ id: 2, nombre_real: 'Con Linea', estado: 'resuelta', movimiento_id: 9, movimiento_fecha: '2026-09-29', movimiento_importe: '13', movimiento_concepto: 'X' })], { '/api/larpmanager-pagos/1/estado': { estado: 'ignorada' } });

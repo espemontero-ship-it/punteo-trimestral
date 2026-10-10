@@ -8,6 +8,6 @@ export async function POST(request, { params }) {
     const resultado = await rechazarSugerenciaLarpManager(Number(id), Number(movimientoId));
     return Response.json(resultado);
   } catch (err) {
-    return Response.json({ error: err.message || 'No se pudo rechazar.' }, { status: 500 });
+    return Response.json({ error: err.message || 'No se pudo rechazar.' }, { status: err.status || 500 });
   }
 }

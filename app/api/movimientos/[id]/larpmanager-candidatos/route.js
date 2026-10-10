@@ -6,6 +6,6 @@ export async function GET(request, { params }) {
     const candidatos = await listarPagosCandidatosParaMovimiento(Number(id));
     return Response.json({ candidatos });
   } catch (err) {
-    return Response.json({ error: err.message || 'No se pudieron cargar los pagos.' }, { status: 500 });
+    return Response.json({ error: err.message || 'No se pudieron cargar los pagos.' }, { status: err.status || 500 });
   }
 }

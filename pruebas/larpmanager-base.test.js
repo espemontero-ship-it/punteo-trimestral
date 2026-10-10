@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import { limpiar, sembrarLinea, lineaPorId } from './ayuda.js';
 import {
-  parsearCSV, emparejarIngresosConLarpManager, vincularPagoAMano, repararPagosDoblados, activarReglaUnPagoPorLinea,
+  parsearCSV, emparejarIngresosConLarpManager, vincularPagoAMano, repararPagosDoblados, activarReglaUnPagoPorLinea, marcarPagosComoNumerados,
 } from '../lib/larpmanager.cjs';
 import { POST as resolverLm } from '../app/api/movimientos/[id]/resolver-larpmanager/route.js';
 import { query } from '../lib/db.cjs';
@@ -71,6 +71,29 @@ describe('la regla de la base de datos: una línea del banco, un solo pago', () 
 
     expect((await pagoPorId(otro)).movimiento_id).toBeNull();
     expect((await lineaPorId(linea.id)).estado).toBe('sin_resolver');
+  });
+});
+
+describe('la numeración de los pagos', () => {
+  it('378. los pagos que guarda un archivo nuevo nacen ya numerados, para que nada los vuelva a numerar al arrancar', async () => {
+    const csv = Buffer.from(['Member,Method,Event,Net,Date,Info', `"${ANA} - Ana",Wire,Glitz,20,10/07/2026,`].join('\r\n'));
+
+    await emparejarIngresosConLarpManager(parsearCSV(csv), null);
+
+    const { rows } = await query(`SELECT firma_version FROM larpmanager_pagos WHERE nombre_real = $1`, [ANA]);
+    expect(rows.map(r => r.firma_version)).toEqual([2]);
+  });
+
+  it('379. al arrancar, un pago que ya tiene firma queda marcado como numerado SIN cambiarle el número de orden', async () => {
+    const firma = `${MARCA}-firma-379`;
+    const id = await pago({ firma, orden: 1 });
+    await query(`UPDATE larpmanager_pagos SET firma_version = 1 WHERE id = $1`, [id]);
+
+    await marcarPagosComoNumerados();
+
+    const p = await pagoPorId(id);
+    expect(p.firma_version).toBe(2);
+    expect(p.orden).toBe(1);
   });
 });
 

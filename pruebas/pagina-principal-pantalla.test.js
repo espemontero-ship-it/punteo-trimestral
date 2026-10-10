@@ -235,6 +235,21 @@ describe('subir el excel del banco y ver las subidas', () => {
   });
 });
 
+describe('subir pagos de LarpManager', () => {
+  it('411. un archivo que no trae nada nuevo lo dice así, sin hablar de filas guardadas', async () => {
+    montarFetch({ '/api/larpmanager': { resultados: [], totalFilasCsv: 12, filasCruzadas: 10, filasGuardadasSinCruzar: 2, emparejadas: 0, nadaNuevo: true } });
+    abrirPestana('larpmanager');
+    pintar();
+    fireEvent.click(await screen.findByRole('button', { name: /Subir pagos de LarpManager/ }));
+
+    const entrada = document.querySelector('input[type=file][name=file]');
+    fireEvent.change(entrada, { target: { files: [new File(['x'], 'pagos.csv', { type: 'text/csv' })] } });
+    fireEvent.submit(entrada.closest('form'));
+
+    expect(await screen.findByText(/Este archivo no traía nada nuevo: sus 12 filas ya estaban guardadas, así que no se ha registrado como una subida/)).toBeTruthy();
+  });
+});
+
 describe('la pantalla de Ayuda', () => {
   it('403. enseña todas las secciones de administración y cambia a la versión para colaboradores', () => {
     render(<Ayuda />);

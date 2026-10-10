@@ -157,10 +157,12 @@ export default function Home() {
       });
       if (data) {
 
-        setMensajeLarpManager(
-          `${data.emparejadas} de ${data.resultados.length} ingreso(s) emparejados. ` +
-          `Del CSV se han guardado ${data.totalFilasCsv} filas: ${data.filasCruzadas} se cruzan con el banco ` +
-          `y ${data.filasGuardadasSinCruzar} no (pasarelas de pago y apuntes internos).`
+        setMensajeLarpManager(data.nadaNuevo
+          ? `Este archivo no traía nada nuevo: sus ${data.totalFilasCsv} filas ya estaban guardadas, así que no se ha registrado como una subida.` +
+            (data.emparejadas > 0 ? ` Se han emparejado ${data.emparejadas} ingreso(s).` : '')
+          : `${data.emparejadas} de ${data.resultados.length} ingreso(s) emparejados. ` +
+            `Del CSV se han guardado ${data.totalFilasCsv} filas: ${data.filasCruzadas} se cruzan con el banco ` +
+            `y ${data.filasGuardadasSinCruzar} no (pasarelas de pago y apuntes internos).`
         );
         await cargar();
       }

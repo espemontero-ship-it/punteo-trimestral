@@ -1,6 +1,6 @@
 const { put } = require('@vercel/blob');
 const { eliminarBlob } = require('../../../lib/blob.cjs');
-const { parsearArchivoLarpManager, procesarSubidaLarpManager } = require('../../../lib/larpmanager.cjs');
+const { parsearArchivoLarpManager, procesarSubidaLarpManager, tipoDeArchivo } = require('../../../lib/larpmanager.cjs');
 
 export const maxDuration = 60;
 
@@ -25,7 +25,7 @@ export async function POST(request) {
       nombreArchivo: file.name,
       guardarArchivo: async () => (await put(`larpmanager/${Date.now()}-${file.name || 'pagos.csv'}`, buffer, {
         access: 'private',
-        contentType: 'text/csv',
+        contentType: tipoDeArchivo(file.name),
       })).url,
       borrarArchivo: eliminarBlob,
     });

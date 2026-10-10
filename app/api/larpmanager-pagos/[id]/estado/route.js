@@ -7,6 +7,6 @@ export async function POST(request, { params }) {
     const resultado = await cambiarEstadoPago(Number(id), estado);
     return Response.json(resultado);
   } catch (err) {
-    return Response.json({ error: err.message || 'No se pudo cambiar el estado.' }, { status: 500 });
+    return Response.json({ error: err.message || 'No se pudo cambiar el estado.' }, { status: err.status || 500 });
   }
 }

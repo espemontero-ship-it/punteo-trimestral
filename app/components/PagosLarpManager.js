@@ -55,6 +55,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
   const [detalle, setDetalle] = useState(null);
   const [verTodas, setVerTodas] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [dobles, setDobles] = useState([]);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -62,6 +63,7 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
       mensajeError: 'No se pudieron cargar los pagos.',
     });
     setPagos((data && data.pagos) || []);
+    setDobles((data && data.lineasConDosPagos) || []);
     setCargando(false);
   }, []);
 
@@ -328,6 +330,24 @@ export default function PagosLarpManager({ onAbrirSubida, onCambio }) {
           </div>
         </div>
       </div>
+
+      {dobles.length > 0 && (
+        <div className="resumen-mini" style={{ display: 'block', marginBottom: 12 }}>
+          <strong>
+            {dobles.length === 1
+              ? 'Hay 1 ingreso del banco con más de un pago de LarpManager enlazado.'
+              : `Hay ${dobles.length} ingresos del banco con más de un pago de LarpManager enlazado.`}
+          </strong>{' '}
+          Cada ingreso debería tener uno solo.
+          <ul>
+            {dobles.map(d => (
+              <li key={d.movimiento_id}>
+                {dia(d.fecha)} · {eur(d.importe)} · {d.concepto}: {d.pagos.map(p => `${p.nombre}${p.fecha ? ` (${dia(p.fecha)})` : ''}`).join(', ')}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <p className="muted">
         Los pagos que LarpManager da por hechos, y si su ingreso está o no en el banco. Al entrar aquí se cruzan otra
