@@ -5,7 +5,7 @@ export default defineConfig({
     include: ['pruebas/**/*.test.js'],
     exclude: ['pruebas/**/*-pantalla.test.js'],
     setupFiles: ['./pruebas/preparar.js'],
-    fileParallelism: false,
+    maxWorkers: 4,
     testTimeout: 20000,
     server: {
       deps: { inline: [/lib[\/].*\.cjs$/] },

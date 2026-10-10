@@ -244,7 +244,7 @@ const SECCIONES_ADMIN = [
         </p>
         <p>
           Hay una excepción: si el ingreso del banco ya estaba <strong>resuelto</strong> cuando subes el CSV, el pago
-          que le corresponde se enlaza solo a esa línea. No le cambia el estado ni la nota, solo pone de quién es, y el
+          que le corresponde se enlaza solo a esa línea, si no tenía ya otro pago. No le cambia el estado ni la nota, solo pone de quién es, y el
           <strong> ✎</strong> sirve para quitarlo si no era ese. A las líneas pendientes, en cambio, solo se les
           propone.
         </p>
@@ -397,7 +397,7 @@ const SECCIONES_ADMIN = [
             <strong>Subir pagos de LarpManager</strong> — el export de pagos, en `.csv`, `.xlsx` o `.xls`. Se guarda entero,
             pero contra el banco solo se cruzan las transferencias y las filas sin método de pago, que son las que
             acaban llegando a la cuenta. Las de pasarela (Stripe, Redsys) y los apuntes internos (larpmoney,
-            larpmanager) se guardan pero no se cruzan: ese dinero no aparece en el banco línea a línea. Subir el mismo
+            larpmanager, lm) se guardan pero no se cruzan: ese dinero no aparece en el banco línea a línea. Subir el mismo
             archivo dos veces no duplica nada.
           </li>
           <li>

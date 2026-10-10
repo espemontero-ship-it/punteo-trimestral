@@ -3,7 +3,7 @@ import { limpiar, sembrarLinea, lineaPorId, HOJA } from './ayuda.js';
 import {
   parsearCSV, emparejarIngresosConLarpManager, listarPagosLarpManagerSinEmparejar, vincularPagoAMano, desvincularPago,
   cambiarEstadoPago, rechazarSugerenciaLarpManager, listarCandidatosParaPago, listarPagosCandidatosParaMovimiento,
-  historialDeJugador, resolverPagoLarpManager, asegurarTablaPagosLarpManager, asegurarTablaAlias,
+  historialDeJugador, resolverPagoLarpManager, asegurarTablaPagosLarpManager, asegurarTablaAlias, corregirPagosQueNoLlegan,
 } from '../lib/larpmanager.cjs';
 import { POST as vincularRuta } from '../app/api/larpmanager-pagos/[id]/vincular/route.js';
 import { POST as rechazarRuta } from '../app/api/larpmanager-pagos/[id]/rechazar/route.js';
@@ -136,6 +136,64 @@ describe('cómo propone la app los pagos de LarpManager para las líneas del ban
     expect(String(pago.movimiento_id)).toBe(String(linea.id));
     expect(pago.estado).toBe('resuelta');
     expect(await lineaPorId(linea.id)).toMatchObject({ estado: 'resuelta', nota_final: 'ya la había confirmado' });
+  });
+});
+
+describe('los pagos que no llegan al banco', () => {
+  it('217b. un pago con "lm" en Info es un apunte interno: se guarda pero no se cruza con el banco', async () => {
+    const linea = await sembrarLinea({ importe: 13, concepto: conceptoDe('BEEBLEBROX', 'ZAPHOD'), fecha: '2026-09-29' });
+
+    const { resultados } = await subirPagos({ metodo: '', info: 'lm' });
+
+    const [pago] = await pagoDe();
+    expect(pago.entra_en_cruce).toBe(false);
+    expect(resultadoDe(resultados, linea).tipo).toBe('no_encontrado');
+  });
+
+  it('217c. un pago ya guardado con "lm" que aún entraba en el cruce se corrige, sin tocar los enlazados ni los que llegan por transferencia', async () => {
+    await subirPagos({ metodo: '', info: 'x' }, { nombre: TRILLIAN, metodo: 'Wire', neto: 7 }, { nombre: TRILLIAN, metodo: '', info: 'y', neto: 20 });
+    const linea = await sembrarLinea({ importe: 20, concepto: 'LINEA DE PRUEBA' });
+    await query(`UPDATE larpmanager_pagos SET datos_originales = jsonb_set(datos_originales, '{Info}', '"lm"'), entra_en_cruce = true WHERE nombre_real IN ($1, $2)`, [ZAPHOD, TRILLIAN]);
+    await query(`UPDATE larpmanager_pagos SET movimiento_id = $1 WHERE nombre_real = $2 AND importe = 20`, [linea.id, TRILLIAN]);
+
+    await corregirPagosQueNoLlegan();
+
+    const { rows } = await query(`SELECT nombre_real, importe::float AS importe, entra_en_cruce FROM larpmanager_pagos WHERE nombre_real IN ($1, $2) ORDER BY nombre_real, importe`, [ZAPHOD, TRILLIAN]);
+    expect(rows).toEqual([
+      { nombre_real: TRILLIAN, importe: 7, entra_en_cruce: true },
+      { nombre_real: TRILLIAN, importe: 20, entra_en_cruce: true },
+      { nombre_real: ZAPHOD, importe: 13, entra_en_cruce: false },
+    ]);
+  });
+});
+
+describe('un movimiento del banco solo justifica un pago', () => {
+  it('218b. una línea que ya tiene su pago no recibe otro al subir un archivo nuevo: el pago nuevo se propone a la línea pendiente que le corresponde', async () => {
+    const yaEnlazada = await sembrarLinea({ importe: 160, concepto: conceptoDe('BEEBLEBROX', 'ZAPHOD'), fecha: '2026-10-09', estado: 'resuelta' });
+    await subirPagos({ neto: 160, fecha: '15/08/2026' });
+    const [primero] = await pagoDe();
+    expect(String(primero.movimiento_id)).toBe(String(yaEnlazada.id));
+    const pendiente = await sembrarLinea({ importe: 160, concepto: conceptoDe('BEEBLEBROX', 'ZAPHOD'), fecha: '2026-08-18' });
+
+    const { resultados } = await subirPagos({ neto: 160, fecha: '15/08/2026' }, { neto: 160, fecha: '10/10/2026' });
+
+    const pagos = await pagoDe();
+    expect(pagos).toHaveLength(2);
+    expect(pagos.filter(p => String(p.movimiento_id) === String(yaEnlazada.id))).toHaveLength(1);
+    expect(pagos.find(p => String(p.id) !== String(primero.id)).movimiento_id).toBeNull();
+    expect(resultadoDe(resultados, yaEnlazada)).toBeUndefined();
+    expect(resultadoDe(resultados, pendiente)).toMatchObject({ tipo: 'match' });
+    expect((await lineaPorId(pendiente.id)).estado).toBe('sin_resolver');
+  });
+
+  it('218c. un pago nunca se enlaza solo a una línea que ya tiene otro pago, aunque se llame directamente', async () => {
+    const linea = await sembrarLinea({ importe: 160, concepto: conceptoDe('BEEBLEBROX', 'ZAPHOD'), fecha: '2026-09-29', estado: 'resuelta' });
+    await subirPagos({ neto: 160, fecha: '28/09/2026' });
+    await subirPagos({ neto: 160, fecha: '28/09/2026' }, { neto: 160, fecha: '30/09/2026' });
+
+    const enlazados = (await pagoDe()).filter(p => String(p.movimiento_id) === String(linea.id));
+
+    expect(enlazados).toHaveLength(1);
   });
 });
 

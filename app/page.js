@@ -449,7 +449,7 @@ export default function Home() {
       </Modal>
 
       <Modal abierto={modalAbierto === 'larpmanager'} titulo="Subir pagos de LarpManager" onCerrar={() => setModalAbierto(null)}>
-        <p className="muted">Sube el CSV de pagos que exportas de LarpManager. Se guarda entero y queda registrado en &quot;Archivos subidos&quot;. Contra el banco se cruzan las transferencias y las filas sin método de pago, que son las que acaban llegando a la cuenta; las de pasarela (Stripe, Redsys) y los apuntes internos (larpmoney, larpmanager) se guardan pero no se cruzan.</p>
+        <p className="muted">Sube el CSV de pagos que exportas de LarpManager. Se guarda entero y queda registrado en &quot;Archivos subidos&quot;. Contra el banco se cruzan las transferencias y las filas sin método de pago, que son las que acaban llegando a la cuenta; las de pasarela (Stripe, Redsys) y los apuntes internos (larpmoney, larpmanager, lm) se guardan pero no se cruzan.</p>
         <form onSubmit={subirLarpManager}>
           <input type="file" name="file" accept=".csv,.xlsx,.xls" />
           <div style={{ height: 12 }} />
