@@ -368,6 +368,7 @@ input.campo-proveedor {
   background: var(--border); border-radius: 2px;
 }
 .resize-handle:hover::after, .resize-handle:active::after { background: var(--text); }
+.fila-tabla-cabecera .celda:last-child .resize-handle { right: 8px; }
 
 .celda.col-concepto { box-shadow: 3px 0 6px -3px rgba(0,0,0,.12); }
 
