@@ -8,6 +8,6 @@ export async function POST(request, { params }) {
     const resultado = await vincularPagoAMano(Number(id), Number(movimientoId));
     return Response.json(resultado);
   } catch (err) {
-    return Response.json({ error: err.message || 'No se pudo vincular.' }, { status: 500 });
+    return Response.json({ error: err.message || 'No se pudo vincular.' }, { status: err.status || 500 });
   }
 }

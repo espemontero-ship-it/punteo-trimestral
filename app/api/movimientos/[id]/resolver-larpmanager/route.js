@@ -7,6 +7,6 @@ export async function POST(request, { params }) {
     await resolverPagoLarpManager(Number(id), candidato);
     return Response.json({ ok: true });
   } catch (err) {
-    return Response.json({ error: err.message || 'No se pudo resolver.' }, { status: 500 });
+    return Response.json({ error: err.message || 'No se pudo resolver.' }, { status: err.status || 500 });
   }
 }

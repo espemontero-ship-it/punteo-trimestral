@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { limpiar, sembrarLinea } from './ayuda.js';
-import { parsearCSV, procesarSubidaLarpManager, listarLineasConMasDeUnPago } from '../lib/larpmanager.cjs';
+import { parsearCSV, procesarSubidaLarpManager, listarLineasConMasDeUnPago, activarReglaUnPagoPorLinea } from '../lib/larpmanager.cjs';
 import { query } from '../lib/db.cjs';
 
 const MARCA = 'PRUEBA-subida';
@@ -10,6 +10,7 @@ async function limpiarTodo() {
   await limpiar();
   await query(`DELETE FROM larpmanager_pagos WHERE nombre_real LIKE $1`, [`${MARCA}%`]);
   await query(`DELETE FROM importaciones WHERE nombre_archivo LIKE $1`, [`${MARCA}%`]);
+  await activarReglaUnPagoPorLinea();
 }
 beforeEach(limpiarTodo);
 afterAll(limpiarTodo);
@@ -93,6 +94,7 @@ describe('las líneas del banco con más de un pago enlazado', () => {
     const simple = await sembrarLinea({ importe: 20, concepto: 'INGRESO CON UN PAGO', fecha: '2026-07-11', estado: 'resuelta' });
     await procesarSubidaLarpManager({ filas: filasDe('Ana', 'Beto', 'Cleo'), nombreArchivo: ARCHIVO, ...archivoDeMentira() });
     const pagos = await pagosGuardados();
+    await query(`DROP INDEX IF EXISTS larpmanager_pagos_un_pago_por_linea`);
     await query(`UPDATE larpmanager_pagos SET movimiento_id = $1 WHERE id = ANY($2::bigint[])`, [doble.id, [pagos[0].id, pagos[1].id]]);
     await query(`UPDATE larpmanager_pagos SET movimiento_id = $1 WHERE id = $2`, [simple.id, pagos[2].id]);
 
