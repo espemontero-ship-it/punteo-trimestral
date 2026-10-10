@@ -722,6 +722,12 @@ export default function TablaMovimientos({
   }
 
   function celdaLarpManager(m) {
+    const pagos = m.pagos_larpmanager || [];
+    if (pagos.length > 0) {
+      const nombres = pagos.map(p => (p.evento ? `${p.nombre} — ${p.evento}` : p.nombre)).join(', ');
+      return <>{nombres}{editarVinculoLm(m)}</>;
+    }
+
     const guardado = m.datos_originales?.larpmanager;
 
     if (m.estado === 'resuelta') {

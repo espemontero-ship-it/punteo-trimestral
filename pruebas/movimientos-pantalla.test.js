@@ -56,6 +56,25 @@ describe('el bloque de LarpManager', () => {
     expect(screen.getByText('Pepito Pérez')).toBeTruthy();
   });
 
+  it('1b. si la línea tiene un pago enlazado, enseña el nombre de ese pago aunque el texto guardado sea otro, en blanco o "no encontrada"', () => {
+    const pago = { id: 88, nombre: 'Pepito Pérez', evento: 'Glitz', importe: 45 };
+    const casos = [
+      unIngreso({ estado: 'resuelta', pagos_larpmanager: [pago], datos_originales: { larpmanager: 'no encontrada' } }),
+      unIngreso({ estado: 'resuelta', pagos_larpmanager: [pago], datos_originales: { larpmanager: null } }),
+      unIngreso({ estado: 'sin_resolver', pagos_larpmanager: [pago], datos_originales: { larpmanager: 'no encontrada' } }),
+    ];
+
+    for (const m of casos) {
+      const { unmount } = pintarMovimientos({ proveedores: [unGrupo([m])] });
+      fireEvent.click(screen.getByRole('checkbox'));
+
+      expect(screen.getByText('Pepito Pérez — Glitz')).toBeTruthy();
+      expect(screen.queryByText('no encontrada')).toBeNull();
+      expect(screen.getByTitle('Quitar el vínculo con Pepito Pérez')).toBeTruthy();
+      unmount();
+    }
+  });
+
   it('2. pulsar Vincular pide los candidatos y abre el panel', async () => {
     red = fetchDeMentira({ 'larpmanager-candidatos': { candidatos: [] } });
     const m = unIngreso();

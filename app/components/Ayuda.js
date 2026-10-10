@@ -238,7 +238,7 @@ const SECCIONES_ADMIN = [
           y se vuelve a subir el CSV.
         </div>
         <p>
-          Cuando una línea ya tiene su pago, aparece un <strong>✎</strong> al lado para <strong>quitar el vínculo</strong>
+          Cuando una línea ya tiene su pago, la columna enseña siempre el nombre de ese pago y aparece un <strong>✎</strong> al lado para <strong>quitar el vínculo</strong>
           si te has equivocado. El pago vuelve a la pestaña LarpManager y la línea deja de decir de quién es — pero
           <em> no cambia de estado</em>: si estaba resuelta sigue resuelta, y eso se cambia a mano en Estado.
         </p>
