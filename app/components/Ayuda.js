@@ -283,20 +283,22 @@ const SECCIONES_ADMIN = [
           Hay dos botones. <strong>Descargar archivo</strong> genera un <strong>.zip</strong> con las facturas
           numeradas y el excel, y <strong>no marca nada</strong>: se puede pulsar todas las veces que haga falta, con el
           mismo contenido. Solo <strong>Marcar como enviado</strong>, que pide confirmación, da por enviado todo lo que
-          lleva: desde ahí deja de salir como pendiente y empieza a contar.
+          lleva: desde ahí deja de salir como pendiente y empieza a contar. Además guarda una copia de todos los
+          movimientos, facturas, pagos de LarpManager y pagos a colaboradores tal como están en ese momento, para poder
+          comparar con el envío siguiente.
         </p>
         <p>
           En el excel hay <strong>una sola pestaña por banco</strong> (bbva, openbank, paypal) con todas las líneas de
           todos los extractos subidos hasta la fecha que elijas (las posteriores no salen), sean del estado que sean, cada una una sola vez y por fecha, la más antigua primero. A la derecha de las
           columnas originales van todas las de Movimientos (Banco, Proveedor, Estado, Factura, Nota, Proyecto,
           LarpManager y Jugador), rellenadas en todas las líneas. La pestaña Devoluciones lleva esos mismos campos. Si algún extracto tiene las columnas en otro orden, sale en una pestaña
-          aparte para no descuadrar nada. Las facturas de colaboradores que se pagaron entran en el mismo paquete y con
+          aparte para no descuadrar nada; y un extracto sin ninguna línea hasta esa fecha no deja pestaña. Las facturas de colaboradores que se pagaron entran en el mismo paquete y con
           la misma numeración.
         </p>
         <p>
           Debajo, <strong>Envíos anteriores</strong> lista los que ya se marcaron. <strong>Volver a descargar</strong>{' '}
           genera otra vez el mismo archivo sin cambiar nada. <strong>Deshacer envío</strong> devuelve sus movimientos y
-          facturas a pendientes (no borra nada) para poder prepararlo de nuevo.
+          facturas a pendientes (no borra nada, salvo la copia que se guardó al marcarlo) para poder prepararlo de nuevo.
         </p>
       </>
     ),

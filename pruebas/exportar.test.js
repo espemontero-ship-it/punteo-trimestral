@@ -39,6 +39,19 @@ describe('el excel de la gestoría tiene una sola pestaña por banco', () => {
     expect(columna(ws, 2, 3)).toEqual(['DE LA SUBIDA UNO', 'DE LA SUBIDA DOS']);
   });
 
+  it('66c. un extracto sin ninguna línea en el envío no deja una pestaña solo con la cabecera, y la siguiente se llama como el banco', async () => {
+    const vacio = await subida({
+      cabecera: ['F. CONTABLE', 'EXTRA', 'CONCEPTO', 'IMPORTE', 'SALDO'],
+      lineas: [{ fecha: [10, 5], concepto: 'DE OCTUBRE', importe: -50, nota: 'n' }],
+    });
+    const bueno = await subida({ lineas: [{ fecha: [7, 1], concepto: 'DE JULIO', importe: -10, nota: 'n' }] });
+
+    const wb = await leer(await generarExcelFinal([...vacio, ...bueno], null, { descargar, hasta: '2026-09-30' }));
+
+    expect(wb.worksheets.map(w => w.name)).toEqual(['bbva']);
+    expect(columna(wb.getWorksheet('bbva'), 2, 3)).toEqual(['DE JULIO']);
+  });
+
   it('67. a la derecha de las columnas originales van todas las de Movimientos, rellenadas en TODAS las líneas', async () => {
     const a = await subida({ lineas: [
       { fecha: [7, 1], concepto: 'RESUELTA', importe: -10, nota: 'nota resuelta', proveedor: 'Prov' },
